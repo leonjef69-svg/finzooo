@@ -62,6 +62,9 @@ const minutes = handlerOriginal("utils/ordenarMovimientos.ts", "minutosDeHora", 
 const dates = moduleOf("utils/movementDates.ts", name => name.endsWith("linkedTransfers") ? linked : name.endsWith("format") ? { horaDe } : { minutosDeHora: minutes });
 const Header = moduleOf("components/MovementDateHeader.tsx", name => name === "react-native" ? { Text: "Text" } : dates).default;
 Object.assign(ui, linked, dates, { MovementDateHeader: Header, horaDe });
+ui.visiblePersonalMovement = handlerOriginal("utils/personalHistory.ts", "visiblePersonalMovement", {}, current("utils/personalHistory.ts"));
+const isSavingsMovement = handlerOriginal("utils/savingsActions.ts", "isSavingsMovement", {}, current("utils/savingsActions.ts"));
+ui.matchesPersonalMovementFilter = handlerOriginal("utils/savingsActions.ts", "matchesPersonalMovementFilter", { isSavingsMovement }, current("utils/savingsActions.ts"));
 const rows = dates.movementRowsByDay([tx, { ...tx, id: 2 }, { ...tx, id: 3, date: "2026-10-13" }], item => item.date, items => linked.compactPersonalTransferRows(items));
 const renderHome = variable("screens/Home.tsx", "dibujarFila", { ...ui, visibleRecentRows: rows, marcadas: new Set(), selectMode: false, colorScheme: "light", FilaMovimiento: HomeCard, alTocarFila() {} });
 const rendered = rows.map((item, index) => renderHome({ item, index }));

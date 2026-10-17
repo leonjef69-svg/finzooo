@@ -8,7 +8,7 @@ import { captureAccountTask } from "@/utils/accountTask";
 
 export default function SavingsDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { goals, deleteGoal, isPremium, showToast, t } = useAppData();
+  const { goals, commitSavingsAction, isPremium, showToast, t } = useAppData();
   const deleting = useRef(false), mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const goal = goals.find((g) => String(g.id) === id);
@@ -26,12 +26,12 @@ export default function SavingsDetailRoute() {
         const task = captureAccountTask(auth.currentUser?.uid ?? "", () => mounted.current);
         if (!task.current()) return;
         deleting.current = true;
-        try { if (await task.wait(() => deleteGoal(goalId)) && task.current()) router.replace("/savings"); }
+        try { if (await task.wait(() => commitSavingsAction({ kind: "delete", goalId })) && task.current()) router.replace("/savings"); }
         catch { if (task.current()) showToast(t("toast.localSaveFailed")); }
         finally { deleting.current = false; }
       }}
       onAdd={() => irUnaVez(isPremium ? `/savings/move?id=${id}&mode=add` : "/premium")}
-      onWithdraw={() => irUnaVez(isPremium ? `/savings/move?id=${id}&mode=withdraw` : "/premium")}
+      onWithdraw={() => irUnaVez(isPremium ? `/savings/move?id=${id}&mode=use` : "/premium")}
     />
   );
 }

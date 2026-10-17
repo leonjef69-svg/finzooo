@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import Detail from "@/screens/Detail";
+import SavingsReceipt from "@/screens/SavingsReceipt";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 import { useEffect, useRef } from "react";
@@ -14,6 +15,15 @@ export default function TransactionDetailRoute() {
   const transaction = transactions.find((t) => String(t.id) === id);
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
+  if (transaction?.internalTransfer === "goal") return <SavingsReceipt transaction={transaction} onBack={safeBack} onDelete={async txId => {
+    if (deleting.current) return false;
+    const task = captureAccountTask(auth.currentUser?.uid ?? "", () => mounted.current);
+    if (!task.current()) return false;
+    deleting.current = true;
+    try { const saved = await task.wait(() => deleteTransaction(txId)); if (saved && task.current()) safeBack(); return saved && task.current(); }
+    catch { if (task.current()) showToast(t("toast.localSaveFailed")); return false; }
+    finally { deleting.current = false; }
+  }} />;
 
   return (
     <Detail

@@ -19,8 +19,8 @@ for (const key of ["home.deleteAll", "home.deleteAllTitle", "home.deleteAllMessa
 }
 assert.match(
   home,
-  /movimientosBorrablesDelMes = useMemo\(\(\) => monthTx\.filter\([^\n]+internalTransfer/,
-  "solo deben considerarse movimientos normales del mes visible",
+  /movimientosBorrablesDelMes = useMemo\(\(\) => monthTx\.filter\([^\n]+historyRemovable/,
+  "el mes visible respeta el plan comprobado: ordinarios, ahorro y transferencias totalmente devueltas",
 );
 assert.match(home, /onBulkDelete\(movimientosBorrablesDelMes\.map/);
 

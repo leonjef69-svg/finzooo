@@ -1,5 +1,22 @@
 # Pruebas y auditores
 
+17/10 Ahorro: 238 pruebas y 8 auditores aprobados con --sin-tarjetas;
+TypeScript/ESLint completos. verificar-ahorro-unificado-real y
+verificar-metas-edicion-historial-real fallan contra 866b969 por liberar una
+meta completada automáticamente y avisar de apartado inexistente, no por API
+faltante. Ejecutan cálculos, planificadores y formularios originales: reserva
+única, edición 20→10 con objetivo intacto, formulario atrasado rechazado,
+compra con una fila y sin ingreso/devolución ficticia, cancelación/borrador y
+categoría conservada en montaje repetido. Filtro Ahorro, orden/selección,
+parejas completamente devueltas por enlaces, meses distintos y 10.000 filas.
+verificar-lote-borrado-real amplía los callbacks/almacén originales con SQLite:
+metas/recibos juntos, fallo de disco, confirmación perdida, reinicio, fuentes
+vigentes y fila oculta no resucitada por reparación. React/puente Android
+adaptados, no escritura física financiera. Revisión visual de lista, formularios
+y previsualización cancelada en emulador sin modificar dinero real. Falta ciclo
+guardado/restaurado con cuenta de prueba autorizada y segundo teléfono; no
+cierra auditoría global ni casos antiguos de hj. Tarjetas fuera de alcance.
+
 16/10 Nube: 236 pruebas y 8 auditores aprobados con --sin-tarjetas;
 TypeScript/ESLint completos. verificar-nube-transferencias-antiguas-real usa
 guardado/merger originales y comprueba tres transferencias v1 anteriores a las

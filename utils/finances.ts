@@ -124,6 +124,9 @@ export function totalsForMonth(
   let transfersInUnits = 0n;
   for (const tx of txs) {
     if (!tx.date.startsWith(monthKey)) continue;
+    // La reserva de metas se descuenta UNA vez, desde goals.saved. Su recibo
+    // visible no es otra salida real de Personal ni un gasto/ingreso.
+    if (tx.internalTransfer === "goal") continue;
     if (tx.internalTransfer) {
       if (tx.type === "expense") transfersOutUnits += moneyUnits(tx.amount);
       else transfersInUnits += moneyUnits(tx.amount);

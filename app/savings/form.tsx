@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import GoalFormSheet from "@/screens/GoalFormSheet";
 import PremiumLocked from "@/components/PremiumLocked";
 import MissingItem from "@/components/MissingItem";
@@ -7,7 +7,7 @@ import { irUnaVez, safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function SavingsFormRoute() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { goals, addOrUpdateGoal, isPremium, t } = useAppData();
+  const { goals, commitSavingsAction, isPremium, t } = useAppData();
   const goal = id ? goals.find((g) => String(g.id) === id) : undefined;
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
@@ -18,8 +18,10 @@ export default function SavingsFormRoute() {
     <GoalFormSheet
       goal={goal}
       onClose={safeBack}
-      onSave={(g) => {
-        if (addOrUpdateGoal(g, Boolean(id))) router.replace(`/savings/${g.id}`);
+      onSave={async (goal, initial, expectedSaved) => {
+        const saved = await commitSavingsAction({ kind: id ? "edit" : "create", goal, initial, ...(id ? { saved: goal.saved, expectedSaved } : {}) });
+        if (saved) safeBack();
+        return saved;
       }}
     />
   );

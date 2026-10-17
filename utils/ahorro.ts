@@ -1,4 +1,5 @@
 import type { Goal } from "@/types";
+import { sumMoney, moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 
 /** El objetivo editado decide si una meta está cumplida; no el estado viejo. */
 export function metaConEstadoActual(goal: Goal): Goal {
@@ -32,9 +33,9 @@ export function metaConEstadoActual(goal: Goal): Goal {
  * ningún lado.
  */
 
-/** Lo que suman todas las metas sin cumplir. */
+/** Alcanzar el objetivo no gasta ni libera dinero. Solo un retiro lo libera. */
 export function totalApartado(goals: Goal[]): number {
-  return goals.reduce((suma, g) => (g.completed ? suma : suma + g.saved), 0);
+  return sumMoney(goals.map(g => g.saved));
 }
 
 /**
@@ -44,7 +45,7 @@ export function totalApartado(goals: Goal[]): number {
  * ninguna pantalla.
  */
 export function saldoLibre(disponible: number, apartado: number): number {
-  return disponible - apartado;
+  return moneyFromUnits(moneyUnits(disponible) - moneyUnits(apartado));
 }
 
 /**
@@ -69,7 +70,7 @@ export function maximoAApartar(disponible: number, apartado: number): number {
  * se deja decidir.
  */
 export function hayDescuadre(disponible: number, apartado: number): boolean {
-  return apartado > disponible;
+  return apartado > 0 && apartado > disponible;
 }
 
 /** Cuánto falta para respaldar todo lo apartado. Cero si no falta nada. */

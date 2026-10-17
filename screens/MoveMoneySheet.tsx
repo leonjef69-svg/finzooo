@@ -3,13 +3,13 @@ import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "r
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
-import ConfirmDialog from "@/components/ConfirmDialog";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import type { Goal } from "@/types";
 import { useColorScheme } from "nativewind";
+import { useSavingsBalance } from "@/utils/useSavingsBalance";
 
 export default function MoveMoneySheet({
   mode,
@@ -20,11 +20,12 @@ export default function MoveMoneySheet({
   mode: "add" | "withdraw";
   goal: Goal;
   onClose: () => void;
-  onConfirm: (amount: number) => void;
+  onConfirm: (amount: number) => Promise<boolean> | boolean | void;
 }) {
-  const { userCurrency, fmt, t, maximoAApartar: tope, showToast } = useAppData();
+  const { userCurrency, fmt, t, showToast } = useAppData();
+  const { free: libre, max: tope } = useSavingsBalance();
   const [amount, setAmount] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [saving, setSaving] = useState(false);
   const confirmLock = useRef(false);
   const isAdd = mode === "add";
   const amt = parseAmountInput(amount, userCurrency);
@@ -55,16 +56,15 @@ export default function MoveMoneySheet({
     };
   }, []);
 
-  function confirmMove() {
+  async function confirmMove() {
     if (!valid || confirmLock.current) return;
     confirmLock.current = true;
+    setSaving(true);
     try {
-      onConfirm(amt);
-      setConfirming(false);
+      await onConfirm(amt);
     } catch {
-      confirmLock.current = false;
       showToast(t("toast.localSaveFailed"));
-    }
+    } finally { confirmLock.current = false; setSaving(false); }
   }
 
   return (
@@ -85,7 +85,7 @@ export default function MoveMoneySheet({
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between mb-1">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">
-            {isAdd ? t("moveMoney.addTitle") : t("moveMoney.withdrawTitle")}
+            {isAdd ? t("savings.save") : t("savings.returnPersonal")}
           </Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
             onPress={onClose}
@@ -116,6 +116,11 @@ export default function MoveMoneySheet({
             {t("moveMoney.cannotWithdrawMore")}
           </Text>
         )}
+        <View className="mb-2 flex-row justify-center gap-2">
+          {[20, 50, isAdd ? Math.min(tope, Math.max(0, goal.target - goal.saved)) : goal.saved].filter((value, index, list) => value > 0 && value <= (isAdd ? tope : goal.saved) && list.indexOf(value) === index).map(value => (
+            <TouchableOpacity key={value} onPress={() => setAmount(String(value))} className="rounded-full bg-slate-100 px-3 py-2 dark:bg-noche-3"><Text className="text-xs font-bold text-slate-600 dark:text-slate-200">{fmt(value)}</Text></TouchableOpacity>
+          ))}
+        </View>
         {/* CUÁNTO SE PUEDE APARTAR, Y POR QUÉ NO MÁS.
             Se enseña siempre, no solo al pasarse: saberlo ANTES de escribir
             evita el intento. Y al pasarse se pone en rojo con el número
@@ -129,27 +134,23 @@ export default function MoveMoneySheet({
             {t(sePasa ? "moveMoney.overFree" : "moveMoney.freeAvailable", { amount: fmt(tope) })}
           </Text>
         )}
+        <View className="mt-2 rounded-xl bg-violet-50 p-3 dark:bg-violet-950">
+          <Text className="text-sm font-bold text-violet-700 dark:text-violet-200">{t(isAdd ? "savings.directionAdd" : "savings.directionWithdraw", { name: goal.name })}</Text>
+          <Text className="mt-2 text-xs text-slate-600 dark:text-slate-200">{t("savings.previewGoal", { amount: fmt(goal.saved + (isAdd ? amt : -amt)) })}</Text>
+          <Text className="mt-1 text-xs text-slate-600 dark:text-slate-200">{t("savings.previewPersonal", { amount: fmt(libre + (isAdd ? -amt : amt)) })}</Text>
+        </View>
         <TouchableOpacity
-          disabled={!valid}
-          onPress={() => (isAdd ? confirmMove() : setConfirming(true))}
+          disabled={!valid || saving}
+          onPress={confirmMove}
           className={`w-full mt-4 py-4 rounded-2xl items-center ${
             isAdd ? "bg-emerald-600" : "bg-rose-500"
-          } ${!valid ? "opacity-40" : ""}`}
+          } ${!valid || saving ? "opacity-40" : ""}`}
         >
-          <Text className="text-white font-bold">{isAdd ? t("moveMoney.add") : t("moveMoney.withdraw")}</Text>
+          <Text className="text-white font-bold">{t("savings.confirmAmount", { amount: fmt(amt) })}</Text>
         </TouchableOpacity>
         </ScrollView>
       </View>
 
-      <ConfirmDialog
-        visible={confirming}
-        title={t("moveMoney.confirmWithdrawTitle", { amount: fmt(amt) })}
-        message={t("moveMoney.confirmWithdrawMessage", { name: goal.name })}
-        confirmLabel={t("moveMoney.withdraw")}
-        cancelLabel={t("common.cancel")}
-        onCancel={() => setConfirming(false)}
-        onConfirm={confirmMove}
-      />
     </Animated.View>
   );
 }

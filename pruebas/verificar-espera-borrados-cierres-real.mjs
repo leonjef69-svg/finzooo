@@ -139,10 +139,10 @@ function routeHarness(file, outcome) {
   const storage = { getAccountStorageSession: () => h.session };
   const account = moduleOriginal("utils/accountTask.ts", { "@/utils/firebase": { auth }, "@/utils/storage": storage });
   const remove = async () => { h.calls++; await h.gate.promise; if (outcome === "throw") throw new Error("native-write-failed"); return outcome === "ok"; };
-  const app = { goals: [{ id: 20 }], transactions: [{ id: 20 }], isPremium: true, deleteGoal: remove, deleteTransaction: remove,
+  const app = { goals: [{ id: 20 }], transactions: [{ id: 20 }], isPremium: true, deleteGoal: remove, commitSavingsAction: remove, deleteTransaction: remove,
     t: key => key, showToast: value => h.toasts.push(value) };
   const dependencies = { "expo-router": { router: { replace: path => h.navigations.push(path) }, useLocalSearchParams: () => ({ id: "20" }) },
-    "@/screens/Detail": { default: () => null }, "@/screens/SavingsDetail": { default: () => null },
+    "@/screens/Detail": { default: () => null }, "@/screens/SavingsDetail": { default: () => null }, "@/screens/SavingsReceipt": { default: () => null },
     "@/contexts/AppDataContext": { useAppData: () => app }, "@/utils/firebase": { auth }, "@/utils/accountTask": account,
     "@/utils/nav": { safeBack: () => h.navigations.push("back"), irUnaVez: path => h.navigations.push(path), useRedirectIfOrphaned: () => false },
     react: { useRef: value => ({ current: value }), useEffect: work => { const stop = work(); if (stop) h.cleanups.push(stop); } },

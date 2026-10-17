@@ -4,15 +4,15 @@ import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import { nextId } from "@/utils/id";
-import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
-import { fmtDate } from "@/utils/format";
 import { fechaLocalISO } from "@/utils/date";
 import { metaConEstadoActual } from "@/utils/ahorro";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
 import { useColorScheme } from "nativewind";
+import { useSavingsBalance } from "@/utils/useSavingsBalance";
 
 export default function GoalFormSheet({
   goal,
@@ -21,14 +21,26 @@ export default function GoalFormSheet({
 }: {
   goal?: Goal;
   onClose: () => void;
-  onSave: (g: Goal) => void;
+  onSave: (g: Goal, initial?: number, expectedSaved?: number) => Promise<boolean> | boolean | void;
 }) {
-  const { userCurrency, t, monthNames } = useAppData();
+  const { userCurrency, t, fmt, showToast } = useAppData();
+  const { free: libre, max: maximoAApartar } = useSavingsBalance();
   const [name, setName] = useState(goal?.name || "");
   const [target, setTarget] = useState(goal ? String(goal.target) : "");
+  const [initial, setInitial] = useState("");
+  const [saved, setSaved] = useState(goal ? String(goal.saved) : "");
+  const [originalSaved] = useState(goal?.saved ?? 0);
+  const desiredSaved = parseAmountInput(saved, userCurrency);
+  const savedError = amountInputError(saved, userCurrency);
+  const initialAmount = parseAmountInput(initial, userCurrency);
+  const delta = goal ? desiredSaved - originalSaved : initialAmount;
+  const [goalId] = useState(() => goal?.id ?? nextId());
   const saveLock = useRef(false);
   const [guardando, setGuardando] = useState(false);
-  const valid = name.trim().length > 0 && parseAmountInput(target, userCurrency) > 0;
+  const initialError = amountInputError(initial, userCurrency);
+  const stale = Boolean(goal && goal.saved !== originalSaved);
+  const valid = !stale && name.trim().length > 0 && parseAmountInput(target, userCurrency) > 0
+    && (goal ? !savedError && desiredSaved >= 0 && desiredSaved <= originalSaved + maximoAApartar : !initialError && initialAmount <= maximoAApartar);
   const createdDate = goal?.createdDate || fechaLocalISO();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -90,7 +102,8 @@ export default function GoalFormSheet({
               className="w-full bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100"
             />
           </View>
-          <View>
+          <View className="flex-row gap-3">
+          <View className="flex-1 min-w-0">
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("goalForm.targetLabel")}</Text>
             <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5">
               <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
@@ -106,9 +119,31 @@ export default function GoalFormSheet({
               />
             </View>
           </View>
-          <Text className="text-[11px] text-slate-500 dark:text-slate-300 px-1">
-            {t("goalForm.createdLabel", { date: fmtDate(createdDate, monthNames) })}
-          </Text>
+          {goal && <View className="flex-1 min-w-0">
+            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("savingsDetail.saved")}</Text>
+            <View className="flex-row items-center rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-4 py-3.5 dark:border-noche-borde dark:bg-noche-2">
+              <Text className="mr-1 font-bold text-slate-500 dark:text-slate-300">{currencySymbolFor(userCurrency)}</Text>
+              <TextInput disableFullscreenUI accessibilityLabel={t("savingsDetail.saved")} value={saved} keyboardType="decimal-pad"
+                onChangeText={value => setSaved(sanitizeAmountInput(value, userCurrency))} onFocus={() => onFieldFocus("saved")} onBlur={() => onFieldBlur("saved")}
+                placeholder="0.00" placeholderTextColor="#94a3b8" className="min-w-0 flex-1 text-lg font-extrabold text-slate-900 dark:text-slate-100" />
+            </View>
+          </View>}
+          </View>
+          {!goal && <View>
+            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("savings.initial")}</Text>
+            <TextInput disableFullscreenUI value={initial} keyboardType="decimal-pad" onChangeText={v => setInitial(sanitizeAmountInput(v, userCurrency))}
+              onFocus={() => onFieldFocus("initial")} onBlur={() => onFieldBlur("initial")} placeholder="0.00" placeholderTextColor="#94a3b8"
+              className="rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold text-slate-900 dark:border-noche-borde dark:bg-noche-2 dark:text-slate-100" />
+            <Text className={`mt-2 text-xs ${initialAmount > maximoAApartar ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>{t("savings.previewPersonal", { amount: fmt(libre - initialAmount) })}</Text>
+            {initialError && <Text className="mt-1 text-xs text-rose-500">{t(initialError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
+          </View>}
+          {goal && <View className="rounded-xl bg-violet-50 p-3 dark:bg-violet-950">
+            {stale && <Text className="mb-2 text-xs font-bold text-rose-500">{t("savings.reopenGoal")}</Text>}
+            {delta !== 0 && <Text className="mb-1 text-xs font-semibold text-violet-700 dark:text-violet-200">{t(delta > 0 ? "savings.editAdd" : "savings.editReturn", { amount: fmt(Math.abs(delta)) })}</Text>}
+            <Text className="text-xs text-slate-600 dark:text-slate-200">{t("savings.previewPersonal", { amount: fmt(libre - delta) })}</Text>
+            {savedError && <Text className="mt-1 text-xs text-rose-500">{t(savedError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
+            {delta > maximoAApartar && <Text className="mt-1 text-xs text-rose-500">{t("moveMoney.overFree", { amount: fmt(maximoAApartar) })}</Text>}
+          </View>}
         </View>
         <View className="flex-row gap-3 mt-6">
           <TouchableOpacity onPress={onClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center">
@@ -116,23 +151,25 @@ export default function GoalFormSheet({
           </TouchableOpacity>
           <TouchableOpacity
             disabled={!valid || guardando}
-            onPress={() => {
+            onPress={async () => {
               if (saveLock.current) return;
               saveLock.current = true;
               setGuardando(true);
-              onSave(metaConEstadoActual({
+              try { await onSave(metaConEstadoActual({
                 ...goal,
-                id: goal?.id || nextId(),
+                id: goalId,
                 name: name.trim(),
                 target: parseAmountInput(target, userCurrency),
-                saved: goal?.saved || 0,
+                saved: goal ? desiredSaved : 0,
                 createdDate,
                 completed: goal ? goal.completed : false,
-              }));
+              }), goal ? undefined : initialAmount, goal ? originalSaved : undefined); }
+              catch { showToast(t("toast.localSaveFailed")); }
+              finally { saveLock.current = false; setGuardando(false); }
             }}
             className={`flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center ${!valid || guardando ? "opacity-40" : ""}`}
           >
-            <Text className="font-bold text-white">{t("common.save")}</Text>
+            <Text className="font-bold text-white">{t(goal ? "savings.saveChanges" : "common.save")}</Text>
           </TouchableOpacity>
         </View>
         </ScrollView>

@@ -162,8 +162,8 @@ export function resumenFinanciero(
   if (espacio.kind === "personal") {
     const expenses = sumAmounts(delMes.filter((item) => item.type === "expense" && !item.internalTransfer));
     const income = sumAmounts(delMes.filter((item) => item.type === "income" && !item.internalTransfer));
-    const transfersOut = sumAmounts(delMes.filter((item) => item.type === "expense" && item.internalTransfer));
-    const transfersIn = sumAmounts(delMes.filter((item) => item.type === "income" && item.internalTransfer));
+    const transfersOut = sumAmounts(delMes.filter((item) => item.type === "expense" && item.internalTransfer && item.internalTransfer !== "goal"));
+    const transfersIn = sumAmounts(delMes.filter((item) => item.type === "income" && item.internalTransfer && item.internalTransfer !== "goal"));
     const budget = budgets[mes] ?? 0;
     const previousBalance = saldoAnteriorDe(mes, budgets, espacio.transactions, carryoverCleared);
     return {

@@ -6,6 +6,9 @@ import { useColorScheme } from "nativewind";
 import Anuncio from "@/components/Anuncio";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
+import SavingsMovementRow from "@/components/SavingsMovementRow";
+import { visiblePersonalMovement } from "@/utils/personalHistory";
+import { matchesPersonalMovementFilter, type PersonalMovementFilter } from "@/utils/savingsActions";
 import MonthSelector from "@/components/MonthSelector";
 import MovementDateHeader from "@/components/MovementDateHeader";
 import { catInfo } from "@/constants/categories";
@@ -56,6 +59,7 @@ const Fila = memo(function Fila({
   onOpenTransferGroup: () => void;
   timeLabel?: string;
 }) {
+  if (tx.internalTransfer === "goal") return <SavingsMovementRow transaction={tx} fmt={fmt} t={t} onPress={() => onOpenDetail(tx.id)} timeLabel={timeLabel} />;
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
@@ -136,8 +140,9 @@ export default function History({
     { id: "expense", label: t("history.filterExpense") },
     { id: "income", label: t("history.filterIncome") },
     { id: "transfer", label: t("history.filterTransfer") },
+    { id: "savings", label: t("savings.label") },
   ] as const;
-  const [filter, setFilter] = useState<"all" | "expense" | "income" | "transfer">("all");
+  const [filter, setFilter] = useState<PersonalMovementFilter>("all");
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -155,10 +160,7 @@ export default function History({
   );
   const categoriesForMonth = useMemo(
     () => Array.from(new Set(allMonthTx
-      .filter((transaction) => filter === "all"
-        || (filter === "transfer"
-          ? Boolean(transaction.internalTransfer)
-          : !transaction.internalTransfer && transaction.type === filter))
+      .filter((transaction) => matchesPersonalMovementFilter(transaction, filter))
       .map((transaction) => transaction.category)))
       .sort((a, b) => t(catInfo(a).label).localeCompare(t(catInfo(b).label))),
     [allMonthTx, filter, t],
@@ -197,15 +199,15 @@ export default function History({
     const query = search.trim().toLowerCase();
     // Al buscar se recorre todo el historial. Sin búsqueda, el selector de mes
     // conserva su comportamiento normal y los totales siguen siendo mensuales.
-    const searchScope = query ? transactions : allMonthTx;
+    const searchScope = (query ? transactions : allMonthTx).filter(visiblePersonalMovement);
     const monthTx = searchScope
-      .filter((t) => filter === "all" || (filter === "transfer" ? Boolean(t.internalTransfer) : !t.internalTransfer && t.type === filter))
+      .filter((t) => matchesPersonalMovementFilter(t, filter))
       .filter((tx) => !categoryFilter || tx.category === categoryFilter)
       .filter((tx) => (!minAmount || tx.amount >= parsedMinAmount) && (!maxAmount || tx.amount <= parsedMaxAmount))
       .filter((tx) => {
         if (!query) return true;
         const c = catInfo(tx.category);
-        const haystack = `${tx.description} ${tx.notes || ""} ${tx.amount} ${fmt(tx.amount)} ${t(c.label)} ${methodLabel(tx.method, t)}`.toLowerCase();
+        const haystack = `${tx.description} ${tx.notes || ""} ${tx.amount} ${fmt(tx.amount)} ${tx.internalTransfer === "goal" ? t("savings.label") : t(c.label)} ${methodLabel(tx.method, t)}`.toLowerCase();
         return haystack.includes(query);
       })
       .sort(compararMovimientos);

@@ -1,226 +1,124 @@
-import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { BackHandler, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PiggyBank, Plus, MoreHorizontal, CheckCircle2, CircleHelp, ArrowUpRight } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Plus, Sparkles, PiggyBank, CheckCircle2 } from "lucide-react-native";
-import { GOAL_COLOR_HEX } from "@/constants/colors";
-import { CARD_SHADOW } from "@/constants/style";
+import { useColorScheme } from "nativewind";
+import SavingsMovementRow from "@/components/SavingsMovementRow";
+import { compararMovimientos } from "@/utils/ordenarMovimientos";
+import { irUnaVez } from "@/utils/nav";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import GoalFormSheet from "@/screens/GoalFormSheet";
+import MoveMoneySheet from "@/screens/MoveMoneySheet";
+import UseSavingsSheet from "@/screens/UseSavingsSheet";
+import { visiblePersonalMovement } from "@/utils/personalHistory";
 
-export default function SavingsList({
-  goals,
-  onBack,
-  onAdd,
-  onOpen,
-  disponible,
-  apartado,
-  libre,
-  descuadre,
-  monthLabel,
-  onAllocate,
-  soloLectura = false,
-}: {
-  goals: Goal[];
-  onBack: () => void;
-  onAdd: () => void;
-  onOpen: (id: number) => void;
-  disponible: number;
-  apartado: number;
-  libre: number;
-  descuadre: boolean;
-  monthLabel: string;
-  onAllocate: () => void;
-  /** Se acabó la prueba y ya había metas: se ven enteras, pero no se crea ni se mueve plata. */
-  soloLectura?: boolean;
+export default function SavingsList({ goals, onBack, disponible, apartado, libre, descuadre, monthLabel, soloLectura = false }: {
+  goals: Goal[]; onBack: () => void; onAdd?: () => void; onOpen?: (id: number) => void;
+  disponible: number; apartado: number; libre: number; descuadre: boolean; monthLabel: string;
+  onAllocate?: () => void; soloLectura?: boolean;
 }) {
-  const { fmt, t } = useAppData();
-  const [tab, setTab] = useState<"resumen" | "metas">("resumen");
-  const [goalLimit, setGoalLimit] = useState(40);
+  const { fmt, t, commitSavingsAction, transactions, visualStyle } = useAppData();
+  const { colorScheme } = useColorScheme();
+  const peach = visualStyle === "peachOlive" && colorScheme !== "dark";
+  const [help, setHelp] = useState(false);
+  const recent = transactions.filter(row => (row.internalTransfer === "goal" || row.goalFundingAllocations?.length) && visiblePersonalMovement(row)).sort(compararMovimientos).slice(0, 3);
   const insets = useSafeAreaInsets();
-  useEffect(() => setGoalLimit(40), [goals.length, tab]);
-
-  return (
-    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
-        <BackButton onPress={onBack} />
-        <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savingsList.title")}</Text>
-        {tab === "metas" && !soloLectura ? (
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.addGoal")} hitSlop={6}
-            onPress={onAdd}
-            className="w-10 h-10 rounded-full bg-emerald-600 items-center justify-center"
-          >
-            <Plus size={18} color="#ffffff" />
-          </TouchableOpacity>
-        ) : (
-          <View className="w-10" />
-        )}
-      </View>
-
-      <View className="px-5 mb-1">
-        <View className="bg-slate-100 dark:bg-noche-2 rounded-xl p-1 flex-row">
-          {(["resumen", "metas"] as const).map((id) => (
-            <TouchableOpacity
-              key={id}
-              onPress={() => setTab(id)}
-              className={`flex-1 py-2.5 rounded-xl items-center ${tab === id ? "bg-emerald-600" : ""}`}
-            >
-              <Text className={`text-sm font-bold ${tab === id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
-                {id === "resumen" ? t("savingsList.tabSummary") : t("savingsList.tabGoals")}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
-        scrollEventThrottle={160}
-        onScroll={({ nativeEvent }) => {
-          const cercaDelFinal = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 240;
-          if (cercaDelFinal && goalLimit < goals.length) setGoalLimit(limit => Math.min(limit + 40, goals.length));
-        }}
-      >
-        {/* POR QUÉ NO SE PUEDE TOCAR NADA, antes que los números: sin esto, los botones que
-            faltan parecen un fallo de la app. */}
-        {soloLectura && <AvisoSoloLectura />}
-        {tab === "resumen" && (
-          <View>
-            <LinearGradient
-              colors={["#059669", "#0f766e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="rounded-3xl p-5 mt-3"
-            >
-              {/* EL NÚMERO GRANDE ES LO LIBRE, NO "EL AHORRO DEL MES".
-                  Antes enseñaba presupuesto + ingresos − gastos, que ni es
-                  ahorro ni cuadra con Inicio: a Inicio se le suma el saldo
-                  anterior y a esto no. Dos pantallas, dos números, el mismo
-                  mes.
-
-                  Lo libre es lo que de verdad hace falta saber aquí: cuánto
-                  se puede gastar sin tocar las metas. */}
-              <View className="flex-row items-center gap-1.5 mb-1">
-                <Sparkles size={14} color="#a7f3d0" />
-                <Text className="text-emerald-100 text-xs font-bold">
-                  {t("savingsList.freeTitle", { month: monthLabel })}
-                </Text>
-              </View>
-              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className={`text-3xl font-extrabold ${libre >= 0 ? "text-white" : "text-rose-200"}`}>
-                {fmt(libre)}
-              </Text>
-
-              {/* De dónde sale ese número, con las dos piezas a la vista. Sin
-                  esto es un número más que hay que creerse. */}
-              <View className="flex-row gap-4 mt-3 pt-3 border-t border-emerald-400/30">
-                <View className="flex-1 min-w-0">
-                  <Text className="text-emerald-100 text-[10px]">{t("savingsList.availableLabel")}</Text>
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-white text-sm font-bold">{fmt(disponible)}</Text>
-                </View>
-                <View className="flex-1 min-w-0">
-                  <Text className="text-emerald-100 text-[10px]">{t("savingsList.setAsideLabel")}</Text>
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-white text-sm font-bold">− {fmt(apartado)}</Text>
-                </View>
-              </View>
-            </LinearGradient>
-
-            {/* HAY MÁS APARTADO QUE DINERO.
-                Pasa por dos caminos legítimos —se gastó parte de lo apartado,
-                o se puso el saldo anterior en cero— y ninguno es un fallo. La
-                app NO baja la meta sola: que un número de dinero baje sin que
-                nadie lo tocara es de las cosas que hacen desconfiar. Se avisa
-                y se deja decidir. */}
-            {descuadre && (
-              <View className="rounded-2xl bg-amber-50 dark:bg-amber-900/20 border-[1.5px] border-amber-200 dark:border-amber-800 p-4 mt-3">
-                <Text className="text-xs font-extrabold text-amber-700 dark:text-amber-300 mb-1">
-                  {t("savingsList.mismatchTitle")}
-                </Text>
-                <Text className="text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
-                  {t("savingsList.mismatchBody", {
-                    apartado: fmt(apartado),
-                    disponible: fmt(disponible),
-                  })}
-                </Text>
-              </View>
-            )}
-            <Text className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed mt-4 px-1">
-              {t("savingsList.explanation")}
-            </Text>
-            {libre > 0 && !soloLectura && (
-              <TouchableOpacity
-                onPress={onAllocate}
-                className="mt-4 bg-emerald-50 rounded-2xl p-4 flex-row items-center gap-3"
-              >
-                <View className="w-9 h-9 rounded-xl bg-emerald-100 items-center justify-center">
-                  <PiggyBank size={16} color="#059669" />
-                </View>
-                <Text className="text-sm font-bold text-emerald-700 flex-1">
-                  {t("savingsList.moveToGoal", { amount: fmt(libre) })}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {tab === "metas" && (
-          <View className="mt-3">
-            {goals.length === 0 && (
-              <View className="items-center py-16 px-4 bg-slate-50 dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
-                <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t("savingsList.noGoals")}</Text>
-              </View>
-            )}
-            <View className="gap-3">
-              {goals.slice(0, goalLimit).map((g, i) => {
-                const pct = g.target > 0 ? Math.min(100, (g.saved / g.target) * 100) : 0;
-                const color = GOAL_COLOR_HEX[i % GOAL_COLOR_HEX.length];
-                return (
-                  <TouchableOpacity
-                    key={g.id}
-                    onPress={() => onOpen(g.id)}
-                    className="bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde rounded-2xl p-4"
-                    style={CARD_SHADOW}
-                  >
-                    <View className="flex-row items-center gap-3 mb-3">
-                      <View
-                        className="w-11 h-11 rounded-2xl items-center justify-center"
-                        style={{ backgroundColor: color.bg }}
-                      >
-                        <PiggyBank size={20} color={color.fg} />
-                      </View>
-                      <View className="flex-1 min-w-0">
-                        <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>
-                          {g.name}
-                        </Text>
-                        <Text className="text-xs text-slate-500 dark:text-slate-300">
-                          {g.completed ? t("savingsDetail.completed") : t("savingsDetail.inProgress")}
-                        </Text>
-                      </View>
-                      {g.completed && <CheckCircle2 size={18} color="#10b981" />}
-                    </View>
-                    <View className="w-full h-2 bg-slate-100 dark:bg-noche-2 rounded-full overflow-hidden mb-2">
-                      <View
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: color.fg }}
-                      />
-                    </View>
-                    <View className="flex-row items-center justify-between">
-                      <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} className="mr-2 flex-1 text-xs font-semibold text-slate-600 dark:text-slate-200">
-                        {t("savingsList.savedOfTarget", { saved: fmt(g.saved), target: fmt(g.target) })}
-                      </Text>
-                      <Text className="text-xs font-extrabold" style={{ color: color.fg }}>
-                        {Math.round(pct)}%
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-      </ScrollView>
+  const [panel, setPanel] = useState<{ kind: "create" } | { kind: "edit" | "add" | "withdraw" | "use"; id: number } | null>(null);
+  const [menu, setMenu] = useState<number | null>(null), [deleting, setDeleting] = useState<Goal | null>(null);
+  const [goalLimit, setGoalLimit] = useState(40);
+  const lock = useRef(false);
+  const closePanel = () => { if (!lock.current) setPanel(null); };
+  useEffect(() => {
+    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (lock.current) return true;
+      if (panel) { setPanel(null); return true; }
+      if (menu !== null) { setMenu(null); return true; }
+      return false;
+    });
+    return () => handler.remove();
+  }, [panel, menu]);
+  useEffect(() => { if (panel && "id" in panel && !goals.some(goal => goal.id === panel.id)) setPanel(null); }, [goals, panel]);
+  // El panel usa la meta vigente, no una copia vieja de cuando se abrió.
+  const selected = panel && "id" in panel ? goals.find(goal => goal.id === panel.id) : undefined;
+  async function commit(action: Parameters<typeof commitSavingsAction>[0]) {
+    if (lock.current || soloLectura) return false;
+    lock.current = true;
+    try {
+      const saved = await commitSavingsAction(action);
+      if (saved) { setPanel(null); setDeleting(null); setMenu(null); }
+      return saved;
+    } finally { lock.current = false; }
+  }
+  return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-row items-center gap-2 px-5 pt-2 pb-3">
+      <BackButton onPress={onBack} />
+      <Text className="flex-1 text-xl font-extrabold text-slate-900 dark:text-slate-100">{t("savingsList.title")}</Text>
+      {!soloLectura && <TouchableOpacity accessibilityRole="button" onPress={() => setPanel({ kind: "create" })} className="min-w-[152px] flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3">
+        <Plus size={19} color="white" /><Text className="text-sm font-extrabold text-white">{t("savings.newGoal")}</Text>
+      </TouchableOpacity>}
     </View>
-  );
+    <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+      onScroll={({ nativeEvent: e }) => { if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - 200) setGoalLimit(n => Math.min(n + 40, goals.length)); }} scrollEventThrottle={160}>
+      {soloLectura && <AvisoSoloLectura />}
+      <LinearGradient colors={peach ? ["#fae2cf", "#f2cbb0"] : ["#047857", "#0f766e"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 20, padding: 16 }}>
+        <View className="flex-row items-center justify-between gap-2">
+          <Text className={`flex-1 text-[11px] ${peach ? "text-slate-700" : "text-emerald-100"}`}>{t("savings.personalMoney", { month: monthLabel })}</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("savings.help")} onPress={() => setHelp(value => !value)} className="h-8 w-8 items-center justify-center"><CircleHelp size={16} color={peach ? "#526b43" : "#d1fae5"} /></TouchableOpacity>
+        </View>
+        <Text className={`text-sm font-semibold ${peach ? "text-slate-800" : "text-emerald-100"}`}>{t("savings.personalAvailable")}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className={`mt-1 text-3xl font-extrabold ${libre < 0 ? peach ? "text-rose-700" : "text-rose-200" : peach ? "text-slate-900" : "text-white"}`}>{fmt(libre)}</Text>
+        <View className={`mt-3 flex-row items-center justify-between gap-3 border-t pt-3 ${peach ? "border-slate-700/15" : "border-white/20"}`}>
+          <Text className={`flex-1 text-xs font-semibold ${peach ? "text-slate-600" : "text-emerald-100"}`}>{t("savings.inGoals")}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`max-w-[60%] text-lg font-bold ${peach ? "text-slate-900" : "text-white"}`}>{fmt(apartado)}</Text>
+        </View>
+      </LinearGradient>
+      {help && <View className="mt-2 rounded-xl bg-slate-50 p-3 dark:bg-noche-2"><Text className="text-xs leading-5 text-slate-600 dark:text-slate-200">{t("savings.explain")}</Text><Text className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.older")}</Text></View>}
+      {descuadre && <View className="mt-3 rounded-2xl bg-amber-50 p-3 dark:bg-amber-950">
+        <Text className="text-xs font-bold text-amber-800 dark:text-amber-200">{t("savingsList.mismatchTitle")}</Text>
+        <Text className="mt-1 text-xs text-amber-800 dark:text-amber-200">{t("savingsList.mismatchBody", { apartado: fmt(apartado), disponible: fmt(disponible) })}</Text>
+      </View>}
+      <View className="mt-5 mb-3 flex-row items-center justify-between">
+        <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("savings.myGoals")}</Text>
+        <Text className="text-xs text-slate-500 dark:text-slate-300">{goals.length === 1 ? t("savings.oneGoal") : t("savings.count", { count: goals.length })}</Text>
+      </View>
+      {goals.length === 0 && <View className="items-center rounded-2xl bg-slate-50 p-6 dark:bg-noche-2"><PiggyBank size={30} color="#7c3aed" /><Text className="mt-3 text-center text-sm text-slate-500 dark:text-slate-300">{t("savingsList.noGoals")}</Text></View>}
+      {goals.slice(0, goalLimit).map(goal => {
+        const pct = Math.min(100, Math.max(0, goal.target > 0 ? goal.saved / goal.target * 100 : 0));
+        return <View key={goal.id} className="mb-3 rounded-2xl border-[1.5px] border-slate-200 bg-white p-3.5 dark:border-noche-borde dark:bg-noche-2">
+          <View className="flex-row items-center gap-2">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950"><PiggyBank size={19} color="#65764a" /></View>
+            <View className="min-w-0 flex-1"><Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={2}>{goal.name}</Text><Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{goal.completed ? t("savingsDetail.completed") : t("savings.goalSubtitle")}</Text></View>
+            {goal.completed && <CheckCircle2 size={17} color="#059669" />}
+            {!soloLectura && <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("savings.options", { name: goal.name })} onPress={() => setMenu(menu === goal.id ? null : goal.id)} className="h-10 w-10 items-center justify-center"><MoreHorizontal size={21} color="#64748b" /></TouchableOpacity>}
+          </View>
+          <View className="mt-3 mb-2 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-noche-3"><View className="h-full rounded-full bg-emerald-600" style={{ width: `${pct}%` }} /></View>
+          <View className="mb-3 flex-row items-start justify-between gap-2">
+            <View className="min-w-0 flex-1"><Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("savingsDetail.saved")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{fmt(goal.saved)}</Text></View>
+            <View className="min-w-0 flex-1 items-end"><Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("goalForm.targetLabel")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{fmt(goal.target)}</Text></View>
+          </View>
+          {!soloLectura && <View className="flex-row gap-2">
+            <TouchableOpacity accessibilityRole="button" onPress={() => setPanel({ kind: "add", id: goal.id })} className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-emerald-600 py-2.5"><Plus size={15} color="white" /><Text className="text-sm font-bold text-white">{t("savings.save")}</Text></TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" disabled={goal.saved <= 0} onPress={() => setPanel({ kind: "use", id: goal.id })} className={`flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-slate-50 py-2.5 dark:bg-noche-3 ${goal.saved <= 0 ? "opacity-40" : ""}`}><ArrowUpRight size={15} color="#65764a" /><Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("savings.use")}</Text></TouchableOpacity>
+          </View>}
+          {!soloLectura && <TouchableOpacity accessibilityRole="button" onPress={() => setPanel({ kind: "edit", id: goal.id })} className="mt-1 items-center py-2"><Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{t("goalForm.editTitle")}</Text></TouchableOpacity>}
+          {menu === goal.id && !soloLectura && <View className="mt-2 flex-row gap-2 border-t border-slate-100 pt-2 dark:border-noche-borde">
+            <TouchableOpacity onPress={() => { setPanel({ kind: "edit", id: goal.id }); setMenu(null); }} className="flex-1 items-center py-2"><Text className="text-sm font-bold text-slate-600 dark:text-slate-200">{t("common.edit")}</Text></TouchableOpacity>
+            {goal.saved > 0 && <TouchableOpacity onPress={() => { setPanel({ kind: "withdraw", id: goal.id }); setMenu(null); }} className="flex-1 items-center py-2"><Text className="text-center text-xs font-bold text-violet-700 dark:text-violet-300">{t("savings.returnPersonal")}</Text></TouchableOpacity>}
+            <TouchableOpacity onPress={() => setDeleting(goal)} className="flex-1 items-center py-2"><Text className="text-sm font-bold text-rose-500">{t("common.delete")}</Text></TouchableOpacity>
+          </View>}
+        </View>;
+      })}
+      {recent.map(tx => <SavingsMovementRow key={tx.id} transaction={tx} fmt={fmt} t={t} onPress={() => irUnaVez(`/transaction/${tx.id}`)} />)}
+    </ScrollView>
+    {panel?.kind === "create" || panel?.kind === "edit" && selected ? <GoalFormSheet goal={selected} onClose={closePanel} onSave={(goal, initial, expectedSaved) => commit({ kind: panel.kind === "edit" ? "edit" : "create", goal, initial, ...(panel.kind === "edit" ? { saved: goal.saved, expectedSaved } : {}) })} /> : null}
+    {(panel?.kind === "add" || panel?.kind === "withdraw") && selected && <MoveMoneySheet mode={panel.kind} goal={selected} onClose={closePanel} onConfirm={amount => commit({ kind: panel.kind === "add" ? "add" : "withdraw", goalId: selected.id, amount })} />}
+    {panel?.kind === "use" && selected && <UseSavingsSheet goal={selected} onClose={closePanel} onSave={transaction => commit({ kind: "use", goalId: selected.id, transaction })} />}
+    <ConfirmDialog visible={Boolean(deleting)} title={t("savingsDetail.confirmDeleteTitle")} message={t("savings.deleteBody", { amount: fmt(goals.find(goal => goal.id === deleting?.id)?.saved ?? 0) })}
+      confirmLabel={t("common.delete")} cancelLabel={t("common.cancel")} onCancel={() => { if (!lock.current) setDeleting(null); }} onConfirm={() => { if (deleting) void commit({ kind: "delete", goalId: deleting.id }); }} />
+  </View>;
 }

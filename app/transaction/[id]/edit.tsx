@@ -10,7 +10,7 @@ export default function EditTransactionRoute() {
   const transaction = transactions.find((t) => String(t.id) === id);
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
-  if (!transaction) return <MissingItem onBack={safeBack} />;
+  if (!transaction || transaction.internalTransfer) return <MissingItem onBack={safeBack} />;
 
   return (
     <AddSheet

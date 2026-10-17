@@ -7,11 +7,12 @@ const read = createSourceReader({ revision: process.env.FINO_MOVEMENT_TIME_BASEL
 const opened = new Date(2026, 9, 14, 8, 5).getTime(), saved = new Date(2026, 9, 14, 8, 12).getTime();
 const horaDe = handlerOriginal("utils/format.ts", "horaDe", {}, read("utils/format.ts"));
 const deps = { transaction: undefined, time: horaDe(opened), type: "expense", amount: "10", category: "comida", icono: undefined, iconColor: "green", date: "2026-10-14", method: "cash", description: "Prueba", notes: "", userCurrency: "PEN", parseAmountInput: Number, nextId: () => 100, horaDe, Date: { now: () => saved } };
+deps.source = undefined;
 const original = handlerOriginal("screens/AddSheet.tsx", "createMovement", deps, read("screens/AddSheet.tsx"));
 assert.equal(original().time, horaDe(saved), "la hora se toma al guardar, no al abrir el formulario siete minutos antes");
 for (const time of [undefined, "", "3:21 p.m."]) {
   const tx = { id: 12, type: "expense", amount: 5, category: "comida", date: "2020-01-01", time, origin: "imported" };
-  const edit = handlerOriginal("screens/AddSheet.tsx", "createMovement", { ...deps, transaction: tx, time: time || horaDe(opened) }, read("screens/AddSheet.tsx"));
+  const edit = handlerOriginal("screens/AddSheet.tsx", "createMovement", { ...deps, source: tx, transaction: tx, time: time || horaDe(opened) }, read("screens/AddSheet.tsx"));
   assert.equal(edit().time, time, "editar conserva la hora original incluso cuando falta");
 }
 for (const unknown of [0, -1, NaN, Infinity, 1e25]) assert.equal(horaDe(unknown), "", "no fabrica una hora para un instante ausente/inválido");

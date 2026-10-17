@@ -31,7 +31,7 @@ export type PersonalLinkedTransfer = {
   id: number;
   type?: "expense" | "income";
   amount?: number;
-  internalTransfer?: "family" | "box";
+  internalTransfer?: "family" | "box" | "goal";
   internalTransferLink?: string;
   internalTransferSpaceId?: string;
   internalTransferSpaceName?: string;
@@ -142,7 +142,7 @@ export function allocatePersonalReturn(items: LinkedSpaceMovement[], amount: num
 export function personalTransferStatuses(items: PersonalLinkedTransfer[]): Map<number, TransferStatus> {
   const returnedById = new Map<number, number>();
   for (const item of items) {
-    if (item.type !== "income" || !item.internalTransfer || !Array.isArray(item.internalTransferAllocations)) continue;
+    if (item.type !== "income" || !item.internalTransfer || item.internalTransfer === "goal" || !Array.isArray(item.internalTransferAllocations)) continue;
     for (const allocation of item.internalTransferAllocations) {
       if (!Number.isFinite(allocation.transactionId) || !Number.isFinite(allocation.amount) || allocation.amount <= 0) continue;
       returnedById.set(allocation.transactionId, money((returnedById.get(allocation.transactionId) || 0) + allocation.amount));
@@ -150,7 +150,7 @@ export function personalTransferStatuses(items: PersonalLinkedTransfer[]): Map<n
   }
   const result = new Map<number, TransferStatus>();
   for (const item of items) {
-    if (item.type !== "expense" || !item.internalTransfer || !Number.isFinite(item.amount) || (item.amount || 0) <= 0) continue;
+    if (item.type !== "expense" || !item.internalTransfer || item.internalTransfer === "goal" || !Number.isFinite(item.amount) || (item.amount || 0) <= 0) continue;
     const returned = returnedById.get(item.id) || 0;
     result.set(item.id, item.internalTransferSettled
       ? (item.internalTransferConsumedAmount ?? Math.max(0, (item.amount || 0) - returned)) > CENT ? "consumed" : "returned"
@@ -168,7 +168,7 @@ export function compactPersonalTransferRows<T extends PersonalTransferMovement>(
   const settledByKey = new Map<string, number>();
   const consumedByKey = new Map<string, number>();
   for (const item of items) {
-    if (!item.internalTransfer || !Number.isFinite(item.amount) || item.amount <= 0) continue;
+    if (!item.internalTransfer || item.internalTransfer === "goal" || !Number.isFinite(item.amount) || item.amount <= 0) continue;
     const identity = item.internalTransferSpaceId || item.internalTransferSpaceName || "legacy";
     const key = `${item.internalTransfer}:${identity}`;
     const current = summaries.get(key) || { key, sent: 0, returned: 0, pending: 0, count: 0, status: "pending" as const, spaceName: item.internalTransferSpaceName };
@@ -193,7 +193,7 @@ export function compactPersonalTransferRows<T extends PersonalTransferMovement>(
   }
   const emitted = new Set<string>();
   return items.flatMap(item => {
-    if (!item.internalTransfer) return [{ key: `movement:${item.id}`, item }];
+    if (!item.internalTransfer || item.internalTransfer === "goal") return [{ key: `movement:${item.id}`, item }];
     const identity = item.internalTransferSpaceId || item.internalTransferSpaceName || "legacy";
     const key = `${item.internalTransfer}:${identity}`;
     if (emitted.has(key)) return [];

@@ -1,5 +1,35 @@
 # Entregas de Fino
 
+## 17/10/2026 — Ahorro compacto, edición conjunta y uso del ahorro (desarrollo)
+
+Marca `17oct-metas-edicion-y-movimientos`; base 866b969. Vista única con Saldo
+disponible de Personal y En metas; Nueva meta destacado, importes etiquetados
+y Editar meta con objetivo/ahorrado juntos. Avisos breves y sin recorte. Una
+meta completa mantiene el apartado hasta usarlo o devolverlo expresamente.
+
+Usar ahorro crea una compra normal y baja la meta en el mismo lote, sin ingreso
+ni devolución ficticia. Devolver a Personal sigue separado. Guardados cifrados
+con reserva, fuentes/sesión vigentes y confirmación; errores no cierran el panel
+como si se hubiera guardado. Borrador conserva categoría al abrir/cancelar.
+
+Recibos de Ahorro y pares Familia/Caja completamente devueltos se pueden quitar
+del historial visible, conservando respaldo y saldos de todos los meses. Acción
+explicada antes de confirmar; no borra transferencias incompletas/consumidas ni
+reconstruye registros antiguos. Filas violetas de Inicio alineadas y seleccionables;
+filtro Ahorro incluye las compras pagadas con metas. Borrado ordinario sin cambiar.
+
+238 pruebas/8 auditores sin tarjetas y TypeScript/ESLint generales aprobados.
+Regresiones nuevas contra 866b969 rojas por comportamiento real. Pruebas de lote
+con SQLite y originales cubren caída/confirmación perdida/restauración y varios
+meses; no sustituyen la escritura financiera en Android físico. Revisión visual
+del emulador sin guardar aportes, compras, retiros ni borrados; mismos registros,
+dos metas, S/49 apartado y S/13 disponible.
+
+**Sigue/falta:** ciclo financiero guardado/restaurado con cuenta desechable
+autorizada y segundo teléfono; integración de transferencias con lo reservado
+y casos antiguos de hj aparte. Sin APK/AAB/OTA/Play ni despliegue Firebase;
+entrega de desarrollo mediante Metro, no cierre de auditoría global.
+
 ## 16/10/2026 — Nube: copia antigua comprobada y pausa inmediata (desarrollo)
 
 Marca `16oct-nube-copia-interruptor`; base 8f0d1ec. Tres transferencias de la

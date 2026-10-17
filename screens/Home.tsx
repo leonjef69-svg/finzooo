@@ -1,4 +1,7 @@
 import ConfirmDialog from "@/components/ConfirmDialog";
+import SavingsMovementRow from "@/components/SavingsMovementRow";
+import { saldoLibre } from "@/utils/ahorro";
+import { removablePersonalHistoryIds, visiblePersonalMovement } from "@/utils/personalHistory";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import MonthSelector from "@/components/MonthSelector";
@@ -131,6 +134,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
   transferGroup?: TransferGroupSummary;
   timeLabel?: string;
 }) {
+  if (tx.internalTransfer === "goal") return <View className="px-5"><SavingsMovementRow transaction={tx} fmt={fmt} t={t} onPress={() => onPress(tx.id, false)} timeLabel={timeLabel} selectMode={selectMode} selected={marcada} /></View>;
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
@@ -259,6 +263,7 @@ export default function Home({
     pagosProgramados,
     marcarPagoDelMes,
     visualStyle,
+    apartado,
   } = useAppData();
   const { avisoPagoId, avisoMes, avisoTap } = useLocalSearchParams<{
     avisoPagoId?: string; avisoMes?: string; avisoTap?: string;
@@ -440,7 +445,7 @@ export default function Home({
     [monthTx, mk],
   );
   // Una transferencia resumida nunca incluye otros días bajo esta fecha.
-  const compactMonthRows = useMemo(() => movementRowsByDay(monthTx, item => item.date,
+  const compactMonthRows = useMemo(() => movementRowsByDay(monthTx.filter(visiblePersonalMovement), item => item.date,
     dayItems => compactPersonalTransferRows(dayItems)), [monthTx]);
   const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
   const recentMovementTypes = useMemo(() => availableRecentMovementTypes(monthTx), [monthTx]);
@@ -454,7 +459,8 @@ export default function Home({
   // transferido a cada tipo de espacio. Toda salida enlazada nació al elegir
   // "Desde Personal" y toda entrada enlazada es una devolución; el dinero
   // externo no crea una mitad en Personal y por eso no entra en la cuenta.
-  const available = availablePersonalBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent, transfersOut, transfersIn });
+  const personalTotal = availablePersonalBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent, transfersOut, transfersIn });
+  const available = saldoLibre(personalTotal, apartado);
   const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;
   const visiblePct = Math.max(0, Math.min(100, pct));
   const progressColor = pct >= 100 ? "#fb7185" : pct >= 80 ? "#fbbf24" : peachOlive ? "#65764a" : "#6ee7b7";
@@ -556,7 +562,8 @@ export default function Home({
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
   const [confirmandoSeleccionados, setConfirmandoSeleccionados] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
-  const movimientosBorrablesDelMes = useMemo(() => monthTx.filter((m) => !m.internalTransfer), [monthTx]);
+  const historyRemovable = useMemo(() => removablePersonalHistoryIds(transactions), [transactions]);
+  const movimientosBorrablesDelMes = useMemo(() => monthTx.filter(m => historyRemovable.has(m.id)), [monthTx, historyRemovable]);
   const seleccionadosBorrables = useMemo(() => selected.filter((id) =>
     movimientosBorrablesDelMes.some((tx) => tx.id === id)
   ), [selected, movimientosBorrablesDelMes]);
@@ -582,10 +589,14 @@ export default function Home({
     setSelectMode((v) => !v);
     setSelected([]);
   }
+  const historyNotice = useRef(() => showToast(t("history.returnBeforeRemove")));
+  historyNotice.current = () => showToast(t("history.returnBeforeRemove"));
   const toggleSelected = useCallback((id: number) => {
-    if (transactions.find((item) => item.id === id)?.internalTransfer) return;
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }, [transactions]);
+    const row = visibleRecentRows.find(item => item.item.id === id);
+    const ids = row?.groupItems?.map(item => item.id) ?? [id];
+    if (ids.some(value => !historyRemovable.has(value))) { historyNotice.current(); return; }
+    setSelected(prev => ids.every(value => prev.includes(value)) ? prev.filter(value => !ids.includes(value)) : [...new Set([...prev, ...ids])]);
+  }, [historyRemovable, visibleRecentRows]);
 
   /* Un Set en vez de un array: preguntar "¿está marcado este?" pasa de recorrer la lista
      entera a mirar una sola vez. Con dos marcados da igual; con el mes lleno, no. */
@@ -770,6 +781,11 @@ export default function Home({
                   {hideBalance ? "• • • • • •" : fmt(available)}
                 </Text>
               </View>
+              {apartado > 0 && <TouchableOpacity onPress={() => irUnaVez("/savings")} className="mt-1 py-1">
+                <Text className={`text-xs font-semibold ${peachOlive ? "text-violet-800" : "text-violet-100"}`}>
+                  {t("savings.inGoals")}: {hideBalance ? "••••" : fmt(apartado)} · {t("savings.viewGoals")}
+                </Text>
+              </TouchableOpacity>}
               <View className="mt-2">
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`text-sm font-bold ${peachOlive ? "text-emerald-800" : "text-emerald-100"}`}>
                   {t("home.budgetedOf", { amount: formatBudgetDisplay(hideBalance, budget, fmt) })}
@@ -1070,7 +1086,7 @@ export default function Home({
       <ConfirmDialog
         visible={confirmandoBorrarTodo}
         title={t("home.deleteAllTitle", { count: movimientosBorrablesDelMes.length, month: monthLabel })}
-        message={t("home.deleteAllMessage")}
+        message={t("history.removeMixedBody")}
         confirmLabel={t("home.deleteAllConfirm")}
         cancelLabel={t("common.cancel")}
         danger
@@ -1080,7 +1096,7 @@ export default function Home({
       <ConfirmDialog
         visible={confirmandoSeleccionados}
         title={t("home.deleteSelectedTitle", { count: seleccionadosBorrables.length })}
-        message={t("home.deleteSelectedMessage")}
+        message={t("history.removeMixedBody")}
         confirmLabel={t("common.delete")}
         cancelLabel={t("common.cancel")}
         danger

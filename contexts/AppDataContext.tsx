@@ -65,6 +65,9 @@ import { nextId, reserveIdsAbove, issuedCreationId } from "@/utils/id";
 import { identityForExplicitEdit, recordOriginOf } from "@/utils/recordOrigin";
 import { mergeTransactionCopies, mergeGoalCopies, mergeMutationMetadata, prepareTransactionMutation, rememberDeletion } from "@/utils/recordMerge";
 import { goalWithFundingChange } from "@/utils/goalFunding";
+import { prepareSavingsAction, type SavingsAction } from "@/utils/savingsActions";
+import { preparePersonalHistoryRemoval, removablePersonalHistoryIds } from "@/utils/personalHistory";
+import { fechaLocalISO } from "@/utils/date";
 import { randomUUID } from "expo-crypto";
 import { applyImportedTransactions } from "@/utils/importCommit";
 import { learnCategory, suggestCategory } from "@/utils/classifier";
@@ -137,7 +140,7 @@ import { finishPersonalReturn, mergePersonalReturn, personalReturnIsCurrent, rec
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, metaConEstadoActual, saldoLibre, totalApartado } from "@/utils/ahorro";
-import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
+import { availablePersonalBalance, disponiblePersonalEnFecha, totalsForMonth } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 import { amountInputError, isSafeMoneyAmount } from "@/utils/amount";
@@ -332,6 +335,7 @@ type AppDataContextValue = {
    */
   reprogramarAvisos: () => void;
   addOrUpdateGoal: (g: Goal, requireExisting?: boolean) => boolean;
+  commitSavingsAction: (action: SavingsAction) => Promise<boolean>;
   deleteGoal: (id: number) => Promise<boolean>;
   addMoneyToGoal: (amount: number, goalId: number) => void;
   withdrawMoneyFromGoal: (goalId: number, amount: number) => void;
@@ -3141,6 +3145,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           }
         : t2
       ),
+      ...(existing?.hiddenFromHistory === true && existing.internalTransfer ? { hiddenFromHistory: true } : {}),
       updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1),
     };
     setTransactions((prev) =>
@@ -3181,8 +3186,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       (prev) => learnCategory(merchantText, category, prev)));
   }
 
-  async function commitTransactionMutation(upserts: Transaction[], ids: number[]): Promise<boolean> {
-    if (!upserts.length && !ids.length) return true;
+  async function commitTransactionMutation(upserts: Transaction[], ids: number[], historyIds: number[] = []): Promise<boolean> {
+    if (!upserts.length && !ids.length && !historyIds.length) return true;
     const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
     const task = captureAccountTask(owner, () => version === localSessionVersion.current);
     if (!ready || !hasOnboarded || !task.current() || hasUnreadableLocalData() || Platform.OS !== "android") return false;
@@ -3196,7 +3201,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           ]));
           const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, metadata = cloudSyncMetaRef.current;
           const source = mergeTransactionCopies(base, diskRows, deleted, diskDeleted, metadata, diskMeta);
-          const next = prepareTransactionMutation(source.transactions, source.deletedIds, source.metadata, upserts, ids, randomUUID, issuedCreationId);
+          const historyChanges = historyIds.length ? preparePersonalHistoryRemoval(source.transactions, historyIds) : [];
+          const preserved = upserts.map(row => source.transactions.some(prior => prior.id === row.id && prior.internalTransfer && prior.hiddenFromHistory === true)
+            ? { ...row, hiddenFromHistory: true } : row);
+          const next = prepareTransactionMutation(source.transactions, source.deletedIds, source.metadata, [...preserved, ...historyChanges], ids, randomUUID, issuedCreationId);
           const currency = currencyForReturn.current, boxes = leerCajasEnMemoria() ?? diskBoxes;
           let reservation: PrivateBoxMoneyLocalWrite | undefined;
           return {
@@ -3237,8 +3245,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   async function deleteTransaction(id: number) {
     const transaction = transactionsLive.current.find((item) => item.id === id);
     if (transaction?.internalTransfer) {
-      showToast(t("toast.transferManagedInSpace"));
-      return false;
+      if (transaction.hiddenFromHistory === true) return true;
+      if (!removablePersonalHistoryIds(transactionsLive.current).has(id)) { showToast(t("history.returnBeforeRemove")); return false; }
+      const saved = await commitTransactionMutation([], [], [id]);
+      if (saved) showToast(t("history.recordRemoved"));
+      return saved;
     }
     const saved = await removeTransactions([id]);
     if (saved) showToast(t("toast.transactionDeleted"));
@@ -3258,19 +3269,89 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function deleteTransactions(ids: number[]) {
-    const protectedIds = new Set(transactionsLive.current.filter((item) => item.internalTransfer).map((item) => item.id));
-    const deletableIds = ids.filter((id) => !protectedIds.has(id));
+    const eligible = removablePersonalHistoryIds(transactionsLive.current);
+    const deletableIds = [...new Set(ids)].filter(id => eligible.has(id));
     if (!deletableIds.length) {
-      if (ids.length) showToast(t("toast.transferManagedInSpace"));
+      if (ids.length) showToast(t("history.returnBeforeRemove"));
       return false;
     }
-    const saved = await removeTransactions(deletableIds);
+    const ordinary = deletableIds.filter(id => !transactionsLive.current.find(row => row.id === id)?.internalTransfer);
+    const internal = deletableIds.filter(id => transactionsLive.current.find(row => row.id === id)?.internalTransfer);
+    const saved = internal.length ? await commitTransactionMutation([], ordinary, internal) : await removeTransactions(ordinary);
     if (saved) showToast(
       t(deletableIds.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {
         count: deletableIds.length,
       })
     );
     return saved;
+  }
+
+  async function commitSavingsAction(action: SavingsAction): Promise<boolean> {
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!isPremium || !ready || !hasOnboarded || !task.current() || hasUnreadableLocalData() || Platform.OS !== "android" || goalWriteReserved.current) return false;
+    try {
+      const saved = await withLocalAccountOperation(async () => {
+        await task.wait(() => flushPendingSaves());
+        return saveJSONBatchNow([STORAGE_KEYS.goals, STORAGE_KEYS.deletedGoalIds, STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cloudSyncMeta], async () => {
+          const [diskGoals, diskDeletedGoals, diskRows, diskDeleted, diskMeta, diskBoxes] = await task.wait(() => Promise.all([
+            loadJSON<Goal[]>(STORAGE_KEYS.goals, []), loadJSON<number[]>(STORAGE_KEYS.deletedGoalIds, []),
+            loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []), loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []),
+            loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}), loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS),
+          ]));
+          const baseGoals = goalsLive.current, baseRows = transactionsLive.current, deletedGoals = deletedGoalIdsRef.current,
+            deleted = deletedTransactionIdsRef.current, metadata = cloudSyncMetaRef.current, fields = cloudFieldsRef.current, currency = currencyForReturn.current;
+          const rows = mergeTransactionCopies(baseRows, diskRows, deleted, diskDeleted, metadata, diskMeta);
+          const source = mergeGoalCopies(baseGoals, diskGoals, deletedGoals, diskDeletedGoals, metadata, diskMeta);
+          const date = action.kind === "expense" || action.kind === "use" ? action.transaction.date : fechaLocalISO();
+          const total = disponiblePersonalEnFecha(date, fields?.budgets ?? budgets, rows.transactions, fields?.carryoverCleared ?? carryoverCleared);
+          let intended = action;
+          if (action.kind === "create") {
+            if (source.deletedIds.includes(action.goal.id)) throw new Error("savings-invalid-action");
+            intended = { ...action, goal: { ...action.goal, creationId: action.goal.creationId ?? issuedCreationId(action.goal.id) } };
+          }
+          const plan = prepareSavingsAction(source.goals, intended, total, (goal, delta) => {
+            const id = nextId();
+            return { id, creationId: issuedCreationId(id), type: delta > 0 ? "expense" : "income", amount: Math.abs(delta), category: "otros",
+              date, time: horaDe(Date.now()), method: "transfer", description: goal.name, notes: "", origin: "manual", internalTransfer: "goal",
+              internalTransferLink: randomUUID(), internalTransferSpaceId: String(goal.id), internalTransferSpaceName: goal.name };
+          });
+          let nextMeta = mergeMutationMetadata(rows.metadata, source.metadata);
+          if (plan.removed.length) nextMeta = rememberDeletion(nextMeta, "goal", plan.removed, recordOriginOf);
+          const nextRows = prepareTransactionMutation(rows.transactions, rows.deletedIds, nextMeta, plan.upserts, [], randomUUID, issuedCreationId);
+          const nextGoals = mergeGoalCopies(plan.goals, [], [...new Set([...source.deletedIds, ...plan.removed.map(goal => goal.id)])], [], nextRows.metadata, {});
+          let reservation: PrivateBoxMoneyLocalWrite | undefined;
+          return {
+            entries: [[STORAGE_KEYS.goals, nextGoals.goals], [STORAGE_KEYS.deletedGoalIds, nextGoals.deletedIds],
+              [STORAGE_KEYS.transactions, nextRows.transactions], [STORAGE_KEYS.deletedTransactionIds, nextRows.deletedIds], [STORAGE_KEYS.cloudSyncMeta, nextGoals.metadata]],
+            stillValid: () => task.current() && isPremium && goalsLive.current === baseGoals && transactionsLive.current === baseRows
+              && deletedGoalIdsRef.current === deletedGoals && deletedTransactionIdsRef.current === deleted && cloudSyncMetaRef.current === metadata
+              && cloudFieldsRef.current === fields && currencyForReturn.current === currency,
+            reserve: () => {
+              reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: baseRows, deletedIds: deleted, currency, boxes: leerCajasEnMemoria() ?? diskBoxes });
+              goalWriteReserved.current = true;
+              return () => { goalWriteReserved.current = false; reservation?.release(); };
+            },
+            committed: () => {
+              if (!reservation) throw new Error("private-box-source-changed");
+              reservation.publish(() => {
+                goalWritePublishing.current = true;
+                try {
+                  setGoals(nextGoals.goals); setDeletedGoalIds(nextGoals.deletedIds);
+                  setTransactions(nextRows.transactions); setDeletedTransactionIds(nextRows.deletedIds);
+                  cloudSyncMetaRef.current = nextGoals.metadata; setCloudSyncMeta(nextGoals.metadata);
+                } finally { goalWritePublishing.current = false; }
+              });
+            },
+          };
+        });
+      });
+      if (task.current()) showToast(t(saved ? action.kind === "delete" ? "toast.goalDeleted" : "savings.saved" : "toast.localSaveFailed"));
+      return saved;
+    } catch {
+      if (task.current()) showToast(t("savings.changed"));
+      return false;
+    }
   }
 
   function addOrUpdateGoal(g: Goal, requireExisting = false) {
@@ -3470,6 +3551,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     clearAutoCaptureLog,
     goals,
     addOrUpdateGoal,
+    commitSavingsAction,
     deleteGoal,
     addMoneyToGoal,
     withdrawMoneyFromGoal,

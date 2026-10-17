@@ -39,6 +39,7 @@ export type MovimientoDelSaldo = {
   date: string;
   type: "income" | "expense";
   amount: number;
+  internalTransfer?: unknown;
 };
 
 /** ¿Este mes tiene cerrada la puerta de entrada? */
@@ -63,6 +64,7 @@ function netoPorMes(
     neto[mes] = (neto[mes] ?? 0n) + moneyUnits(monto || 0);
   }
   for (const tx of transactions) {
+    if (tx.internalTransfer === "goal") continue;
     const mes = tx.date.slice(0, 7);
     if (mes >= hasta) continue;
     neto[mes] = (neto[mes] ?? 0n) + moneyUnits(tx.type === "income" ? tx.amount : -tx.amount);

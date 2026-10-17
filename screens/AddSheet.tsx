@@ -27,34 +27,46 @@ import { useColorScheme } from "nativewind";
 export default function AddSheet({
   initialType,
   transaction,
+  draft,
+  title,
+  caption,
+  maxAmount,
+  lockedType,
   currentMonth,
   onClose,
   onSave,
 }: {
   initialType?: "expense" | "income";
   transaction?: Transaction;
+  /** Borrador al volver de elegir ahorro; sigue siendo un alta, no edición. */
+  draft?: Transaction;
+  title?: string;
+  caption?: string;
+  maxAmount?: number;
+  lockedType?: "expense" | "income";
   currentMonth: Month;
   onClose: () => void;
-  onSave: (t: Transaction) => void;
+  onSave: (t: Transaction) => Promise<boolean> | boolean | void;
 }) {
-  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
+  const { userCurrency, userCountry, t, showToast, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
     useAppData();
+  const source = transaction ?? draft;
   const [type, setType] = useState<"expense" | "income">(
-    initialType || transaction?.type || "expense"
+    lockedType || source?.type || initialType || "expense"
   );
-  const [amount, setAmount] = useState(transaction ? String(transaction.amount) : "");
+  const [amount, setAmount] = useState(source ? String(source.amount) : "");
   const [category, setCategory] = useState(
-    transaction?.category || (type === "expense" ? "comida" : "salario")
+    source?.category || (type === "expense" ? "comida" : "salario")
   );
-  const [icono, setIcono] = useState<string | undefined>(transaction?.icono);
+  const [icono, setIcono] = useState<string | undefined>(source?.icono);
   const [iconColor, setIconColor] = useState(
-    transaction?.iconColor ?? catInfo(transaction?.category ?? (initialType === "income" ? "salario" : "comida")).color
+    source?.iconColor ?? catInfo(source?.category ?? (initialType === "income" ? "salario" : "comida")).color
   );
-  const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
+  const [date, setDate] = useState(source?.date || defaultDateForMonth(currentMonth));
   const time = transaction?.time;
-  const [method, setMethod] = useState(initialPaymentMethod(transaction));
-  const [description, setDescription] = useState(transaction?.description || "");
-  const [notes, setNotes] = useState(transaction?.notes || "");
+  const [method, setMethod] = useState(initialPaymentMethod(source));
+  const [description, setDescription] = useState(source?.description || "");
+  const [notes, setNotes] = useState(source?.notes || "");
   const [showMethod, setShowMethod] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +130,12 @@ export default function AddSheet({
     olvidarCategoriaRecienCreada();
   }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
 
+  const initializedType = useRef(type);
   useEffect(() => {
+    // Abrir/restaurar un borrador no significa cambiar su tipo. Conservar
+    // su categoría (p. ej. Otros al usar una meta) y la que eligió el usuario.
+    if (initializedType.current === type) return;
+    initializedType.current = type;
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
     if (!transaction) setIcono(undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,7 +145,7 @@ export default function AddSheet({
   // monto, así que una fecha escrita a mano de cualquier forma se guardaba
   // igual y rompía la app al mostrarla.
   const dateOk = isValidISODate(date);
-  const valid = parseAmountInput(amount, userCurrency) > 0 && dateOk;
+  const valid = parseAmountInput(amount, userCurrency) > 0 && dateOk && (maxAmount === undefined || parseAmountInput(amount, userCurrency) <= maxAmount);
   const amountError = amountInputError(amount, userCurrency);
 
   // ÚNICO mecanismo responsable de reaccionar al teclado en esta pantalla:
@@ -307,19 +324,24 @@ export default function AddSheet({
     exitAfterKeyboardHidden(onClose);
   }
 
-  function handleSave(t: Transaction) {
+  function handleSave(tx: Transaction) {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
-    exitAfterKeyboardHidden(() => onSave(t));
+    exitAfterKeyboardHidden(() => {
+      try {
+        Promise.resolve(onSave(tx)).catch(() => showToast(t("toast.localSaveFailed")))
+          .finally(() => { submittingRef.current = false; setSubmitting(false); });
+      } catch { submittingRef.current = false; setSubmitting(false); showToast(t("toast.localSaveFailed")); }
+    });
   }
 
   function createMovement(): Transaction {
     return {
       // Mantiene los campos que este formulario no modifica, como el origen,
       // la cuenta y los datos usados para detectar movimientos duplicados.
-      ...transaction,
-      id: transaction?.id || nextId(),
+      ...source,
+      id: source?.id || nextId(),
       type,
       amount: parseAmountInput(amount, userCurrency),
       category,
@@ -364,7 +386,7 @@ export default function AddSheet({
             className="font-extrabold text-lg"
             style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
           >
-            {transaction ? t("addSheet.editTitle") : t("addSheet.newTitle")}
+            {title || (transaction ? t("addSheet.editTitle") : t("addSheet.newTitle"))}
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
@@ -379,7 +401,8 @@ export default function AddSheet({
           </TouchableOpacity>
         </View>
 
-        {!transaction && (
+        {caption && <Text className="px-5 pb-3 text-xs leading-5 text-violet-700 dark:text-violet-300">{caption}</Text>}
+        {!transaction && !lockedType && (
           <View className="px-5 mb-3">
             <View className="bg-slate-100 dark:bg-noche-2 rounded-xl p-1 flex-row">
               {(["expense", "income"] as const).map((opt) => (
@@ -444,6 +467,7 @@ export default function AddSheet({
                 />
               </View>
               {amountError ? <Text className="mt-1 text-xs text-red-600 dark:text-red-400">{t(amountError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text> : null}
+              {maxAmount !== undefined && parseAmountInput(amount, userCurrency) > maxAmount && <Text className="mt-1 text-xs text-red-600 dark:text-red-400">{t("moveMoney.cannotWithdrawMore")}</Text>}
             </View>
 
             <View className="flex-row items-start gap-2.5">

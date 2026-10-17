@@ -47,7 +47,7 @@ export function transferidoPendienteDelMes(
   mes: string,
 ): number {
   const neto = transactions
-    .filter((movimiento) => movimiento.date.startsWith(mes) && movimiento.internalTransfer)
+    .filter((movimiento) => movimiento.date.startsWith(mes) && movimiento.internalTransfer && movimiento.internalTransfer !== "goal")
     .reduce(
       (total, movimiento) =>
         total + (movimiento.type === "expense" ? movimiento.amount : -movimiento.amount),

@@ -46,6 +46,9 @@ function setterCallback(name) {
   visit(tree); return found;
 }
 const reservation = load("utils/privateBoxMoneyLocalWrite.ts");
+const savings = baseline ? {} : load("utils/savingsActions.ts", name => name.endsWith("recordOrigin") || name.endsWith("goalFunding") ? financial : undefined);
+const history = baseline ? {} : load("utils/personalHistory.ts", name => name.endsWith("recordOrigin") ? financial : undefined);
+const balances = load("utils/finances.ts");
 const merges = load("utils/mergeTransactions.ts", name => name.endsWith("recordOrigin") || name.endsWith("goalFunding") ? financial : undefined);
 const originalQueue = declaration("utils/localAccountVault.ts", "withLocalAccountOperation").replace(/^export\s+/, "");
 const row = { id: 10, creationId: "movement-a", type: "expense", amount: 100, category: "otros", description: "Dato ficticio", date: "2026-10-10", updatedAt: 1 };
@@ -92,12 +95,14 @@ function harness(file = ":memory:", initialRows = [row], initialGoals = [goal]) 
   h.get = get; h.put = put;
   const auth = { get currentUser() { return h.uid ? { uid: h.uid } : null; } };
   const task = load("utils/accountTask.ts", name => name.endsWith("firebase") ? { auth } : name.endsWith("storage") ? h.storage : undefined);
-  const ctx = { ...financial, ...merges, ...reservation, ...h.storage, ...task, ready: true, hasOnboarded: true, isPremium: true,
+  let savingsSequence = 1000;
+  const ctx = { ...financial, ...merges, ...reservation, ...h.storage, ...task, ...savings, ...history, ...balances, ready: true, hasOnboarded: true, isPremium: true,
+    budgets: { "2026-10": 500 }, carryoverCleared: [], cloudFieldsRef: { current: null }, fechaLocalISO: () => "2026-10-16", horaDe: () => "10:00 a.m.", nextId: () => ++savingsSequence,
     auth, Platform: { OS: "android" }, localSessionVersion: { current: 1 },
     transactionsLive: { current: plain(initialRows) }, goalsLive: { current: plain(initialGoals) },
     deletedTransactionIdsRef: { current: [] }, deletedGoalIdsRef: { current: [] }, cloudSyncMetaRef: { current: { profile: 5 } },
     goalWriteReserved: { current: false }, goalWritePublishing: { current: false }, pendingTransactionDeletes: { current: new Set() },
-    currencyForReturn: { current: "PEN" }, returnReceipt: { current: null }, randomUUID, issuedCreationId: () => undefined,
+    currencyForReturn: { current: "PEN" }, returnReceipt: { current: null }, randomUUID, issuedCreationId: id => id > 1000 ? `issued-${id}` : undefined,
     CAJAS_VACIAS: emptyBoxes, leerCajasEnMemoria: () => null, canonical: JSON.stringify,
     unlinkCreditPaymentsForHomeTransactions: async () => {}, showToast: value => h.toasts.push(value), t: key => key,
     setTransactions: value => {
@@ -131,6 +136,7 @@ function harness(file = ":memory:", initialRows = [row], initialGoals = [goal]) 
     const original = setterCallback(name); return original ? `globalThis.${name} = (${original});` : "";
   }).join("\n");
   const names = ["commitTransactionMutation", "removeTransactions", "deleteTransaction", "repairLinkedTransferTransactions", "deleteGoal", "withdrawMoneyFromGoal"];
+  if (!baseline) names.push("commitSavingsAction", "deleteTransactions");
   vm.runInNewContext(js("let operation = Promise.resolve();\n" + originalQueue + "\n" + setters + "\n" + names.map(name => declaration("contexts/AppDataContext.tsx", name, name !== "commitTransactionMutation")).join("\n")), ctx);
   h.ctx = ctx;
   h.restartLists = async () => {
@@ -156,6 +162,73 @@ if (process.argv[2] === "--crash-worker") {
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "fino-delete-batch-"));
 try {
+  if (!baseline) {
+    for (const kind of ["edit", "use"]) for (const failure of [null, "rollback", "lost-ack"]) {
+      const funded = { ...goal, saved: 20 }, h = harness(":memory:", [], [funded]); await h.seed(); h.failure = failure;
+      const action = kind === "edit" ? { kind, goal: { ...funded, target: 40 }, saved: 10, expectedSaved: 20 }
+        : { kind, goalId: goal.id, transaction: { ...row, amount: 20, date: "2026-10-16" } };
+      const saved = await h.ctx.commitSavingsAction(action);
+      assert.equal(saved, failure !== "rollback");
+      assert.equal(h.ctx.goalsLive.current[0].saved, saved ? kind === "edit" ? 10 : 0 : 20);
+      assert.equal(h.ctx.transactionsLive.current.length, saved ? 1 : 0, "no se publica gasto sin bajar meta ni meta sin su registro");
+      const restored = await h.restartLists(); assert.equal(restored.goals.goals[0].saved, h.ctx.goalsLive.current[0].saved);
+      assert.equal(restored.records.transactions.length, saved ? 1 : 0);
+      if (saved && kind === "use") {
+        assert.equal(restored.records.transactions[0].internalTransfer, undefined);
+        assert.equal(restored.records.transactions[0].goalFundingAllocations[0].amount, 20);
+      }
+    }
+    for (const failure of [null, "rollback", "lost-ack"]) {
+      const sent = { ...row, id: 40, creationId: "sent", date: "2026-09-10", internalTransfer: "family", internalTransferSpaceId: "family-one", internalTransferLink: "sent-link" };
+      const returned = { ...sent, id: 41, creationId: "returned", type: "income", date: "2026-10-16", internalTransferLink: "return-link", internalTransferAllocations: [{ transactionId: 40, amount: 100 }] };
+      const h = harness(":memory:", [sent, returned], []); await h.seed(); h.failure = failure;
+      const before = balances.disponiblePersonalEnFecha("2026-10-16", h.ctx.budgets, h.ctx.transactionsLive.current, []);
+      const saved = await h.ctx.deleteTransaction(sent.id); assert.equal(saved, failure !== "rollback");
+      assert.equal(h.ctx.transactionsLive.current.length, 2); assert.equal(h.ctx.transactionsLive.current.filter(history.visiblePersonalMovement).length, saved ? 0 : 2);
+      assert.equal(balances.disponiblePersonalEnFecha("2026-10-16", h.ctx.budgets, h.ctx.transactionsLive.current, []), before);
+      const restored = await h.restartLists(); assert.equal(restored.records.transactions.filter(history.visiblePersonalMovement).length, saved ? 0 : 2);
+      if (saved) {
+        h.failure = null;
+        assert.equal(await h.ctx.repairLinkedTransferTransactions([{ ...sent, updatedAt: Date.now() }]), true);
+        assert.equal(h.ctx.transactionsLive.current.filter(history.visiblePersonalMovement).length, 0, "una revisión de Familia no resucita la fila quitada");
+      }
+    }
+    for (const failure of [null, "rollback", "lost-ack"]) {
+      const h = harness(":memory:", [], [{ ...goal, saved: 0 }]); await h.seed(); h.failure = failure;
+      const result = await h.ctx.commitSavingsAction({ kind: "add", goalId: goal.id, amount: 200 });
+      assert.equal(result, failure !== "rollback", "el aporte solo confirma el lote comprobado, incluso con ACK perdido");
+      assert.equal(h.ctx.goalsLive.current[0].saved, result ? 200 : 0);
+      assert.equal(h.ctx.transactionsLive.current.length, result ? 1 : 0, "meta y recibo se publican juntos o ninguno");
+      assert.equal(h.ctx.goalWriteReserved.current, false);
+      const restarted = await h.restartLists();
+      assert.equal(restarted.goals.goals[0].saved, result ? 200 : 0); assert.equal(restarted.records.transactions.length, result ? 1 : 0);
+      if (result) {
+        h.failure = null;
+        assert.equal(await h.ctx.commitSavingsAction({ kind: "delete", goalId: goal.id }), true);
+        assert.equal(h.ctx.goalsLive.current.length, 0); assert.equal(h.ctx.transactionsLive.current.length, 2);
+        assert.equal(h.ctx.transactionsLive.current[1].internalTransfer, "goal");
+        assert.equal(h.ctx.deletedGoalIdsRef.current.includes(goal.id), true);
+      }
+    }
+    {
+      const h = harness(":memory:", [], [goal]); await h.seed(); h.gate = deferred();
+      const pending = h.ctx.commitSavingsAction({ kind: "add", goalId: goal.id, amount: 200 }); await tick();
+      assert.equal(h.ctx.goalsLive.current[0].saved, 0); assert.equal(h.ctx.transactionsLive.current.length, 0);
+      assert.equal(h.ctx.goalWriteReserved.current, true);
+      assert.throws(() => h.ctx.setTransactions([] .concat(row)), /private-box-source-changed/);
+      h.gate.resolve(); assert.equal(await pending, true); assert.equal(h.ctx.goalsLive.current[0].saved, 200);
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "add", goalId: goal.id, amount: 301 }), false);
+      assert.equal(h.ctx.transactionsLive.current.length, 1, "rechazar sobregiro no crea recibo");
+    }
+    {
+      const h = harness(":memory:", [], []); await h.seed();
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "create", goal: { ...goal, creationId: "created-goal" }, initial: 200 }), true);
+      const expense = { ...row, amount: 400, date: "2026-10-16" };
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "expense", transaction: expense, allocations: [{ goalId: goal.id, amount: 100 }] }), true);
+      assert.equal(h.ctx.goalsLive.current[0].saved, 100); assert.equal(h.ctx.transactionsLive.current.length, 2);
+      assert.equal(balances.disponiblePersonalEnFecha("2026-10-16", h.ctx.budgets, h.ctx.transactionsLive.current, []), 100);
+    }
+  }
   // Este caso también ejecuta el manejador anterior: allí se borra de memoria
   // y anuncia éxito aunque el disco rechace el guardado. No depende de API nueva.
   for (const kind of ["transaction", "goal"]) {

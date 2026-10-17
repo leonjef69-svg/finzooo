@@ -1,5 +1,17 @@
 # Lo que hay que rellenar en Play Console
 
+17/10/2026 — Ahorro: recibos de apartado/devolución en los movimientos de
+Personal, con referencia a la meta y operación de su libro de aportes. Una
+compra pagada con metas conserva `goalFundingAllocations` (ID/nombre de meta,
+importe e ID de operación) en el gasto; no añade un ingreso ficticio.
+`hiddenFromHistory` permite quitar recibos y pares completamente devueltos
+del historial VISIBLE conservando el respaldo financiero. No es borrado de
+los datos: los pares, fechas y referencias siguen cifrados en la cuenta y
+pueden viajar en su copia Pro existente. La confirmación lo explica; no se
+promete eliminación permanente. Revisar esta retención antes de distribuir,
+junto a las discrepancias legales ya documentadas. Sin permiso Android,
+proveedor o categoría de datos nueva; no se publica una política ni ficha.
+
 16/10/2026 — Ocultación de Inicio: se recuerda el ojo de los importes y la
 tarjeta de saldo anterior por mes en `finzo:homeVisibility`, preferencia local
 cifrada por cuenta. No cambia importes ni se sube a Firebase; usa el archivo y

@@ -63,12 +63,12 @@ save(); assert.equal(saved, 2);
 // Apartar/retirar: el manejador conectado a ambos botones confirma una vez.
 let confirmed = 0;
 const confirmLock = { current: false };
-const moveDeps = { valid: true, confirmLock, amt: 20, onConfirm() { confirmed++; }, setConfirming() {}, showToast() {}, t };
+const moveDeps = { valid: true, confirmLock, amt: 20, onConfirm() { confirmed++; }, setSaving() {}, setConfirming() {}, showToast() {}, t };
 const confirm = handler("screens/MoveMoneySheet.tsx", "confirmMove", moveDeps);
-confirm(); confirm(); assert.equal(confirmed, 1);
+const moving = confirm(); confirm(); assert.equal(confirmed, 1); await moving;
 confirmLock.current = false;
 const moveBroken = handler("screens/MoveMoneySheet.tsx", "confirmMove", { ...moveDeps, onConfirm() { throw Error("fallo"); } });
-moveBroken(); assert.equal(confirmLock.current, false); confirm(); assert.equal(confirmed, 2);
+await moveBroken(); assert.equal(confirmLock.current, false); await confirm(); assert.equal(confirmed, 2);
 confirmLock.current = false;
 handler("screens/MoveMoneySheet.tsx", "confirmMove", { ...moveDeps, valid: false })();
 assert.equal(confirmed, 2);

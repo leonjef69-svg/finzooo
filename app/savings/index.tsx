@@ -1,11 +1,13 @@
 import PremiumLocked from "@/components/PremiumLocked";
 import SavingsList from "@/screens/SavingsList";
+import { useSavingsBalance } from "@/utils/useSavingsBalance";
 import { useAppData } from "@/contexts/AppDataContext";
 import { candadoPremium, puedeTocar } from "@/utils/candado";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function SavingsIndexRoute() {
-  const { t, isPremium, goals, disponible, apartado, libre, descuadre, monthLabel } = useAppData();
+  const { t, isPremium, goals } = useAppData();
+  const { total: disponible, apartado, free: libre, descuadre, monthLabel } = useSavingsBalance();
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
 

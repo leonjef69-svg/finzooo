@@ -48,8 +48,8 @@ ok(/metaConEstadoActual\(g\)/.test(codigoContextoMetas),
 console.log("\n--- CUANTO HAY APARTADO ---");
 ok(totalApartado([]) === 0, "sin metas, nada apartado");
 ok(totalApartado([meta(1, 200), meta(2, 100)]) === 300, "dos metas suman 300");
-// Una meta cumplida ya cumplio su funcion: su dinero se gasto en lo que era.
-ok(totalApartado([meta(1, 200), meta(2, 500, 500, true)]) === 200, "una meta cumplida ya no aparta nada");
+// Alcanzar un objetivo no demuestra que se haya gastado ese dinero.
+ok(totalApartado([meta(1, 200), meta(2, 500, 500, true)]) === 700, "una meta cumplida sigue apartada hasta retirarla");
 
 console.log("\n--- EL NUMERO QUE FALTABA: LIBRE ---");
 ok(saldoLibre(500, 200) === 300, "con 500 y 200 apartados, quedan 300 libres");
@@ -97,7 +97,7 @@ console.log("\n--- LA META CUMPLIDA: EL FINAL FELIZ ---");
   const librePrevio = saldoLibre(antesDisponible, antesApartado);
 
   const despuesDisponible = 300; // bajo por el gasto real de la moto
-  const despuesApartado = totalApartado([meta(1, 200, 200, true)]); // ya cumplida
+  const despuesApartado = totalApartado([meta(1, 0, 200, false)]); // retirada expresamente para pagar
   const libreDespues = saldoLibre(despuesDisponible, despuesApartado);
 
   ok(librePrevio === 300, "antes de comprar habia 300 libres");

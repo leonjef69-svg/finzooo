@@ -37,8 +37,12 @@ export type Transaction = {
   method: string;
   description: string;
   notes: string;
-  /** Movimiento interno: reduce Personal, pero no cuenta como consumo. */
-  internalTransfer?: "family" | "box";
+  /** Interno: Familia/Caja mueve efectivo; goal solo documenta una reserva. */
+  internalTransfer?: "family" | "box" | "goal";
+  /** Quitar del historial no borra el soporte financiero ni vuelve a mover dinero. */
+  hiddenFromHistory?: boolean;
+  /** Gasto real pagado usando metas, unido a las operaciones de su libro. */
+  goalFundingAllocations?: { goalId: number; name: string; amount: number; operationId: string }[];
   /** Identifica el movimiento equivalente dentro de Familia o Cajas. */
   internalTransferLink?: string;
   /** Espacio al que salió o desde el que volvió el dinero. */

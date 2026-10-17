@@ -96,7 +96,7 @@ export default function SavingsDetail({
             className="flex-1 py-3.5 rounded-2xl bg-rose-50 flex-row items-center justify-center gap-2"
           >
             <Minus size={16} color="#f43f5e" />
-            <Text className="font-bold text-rose-500">{t("moveMoney.withdraw")}</Text>
+            <Text className="font-bold text-rose-500">{t("savings.use")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onAdd}
@@ -119,7 +119,7 @@ export default function SavingsDetail({
       <ConfirmDialog
         visible={confirmDelete}
         title={t("savingsDetail.confirmDeleteTitle")}
-        message={t("savingsDetail.confirmDeleteMessage")}
+        message={t("savings.deleteBody", { amount: fmt(goal.saved) })}
         confirmLabel={t("common.delete")}
         cancelLabel={t("common.cancel")}
         onCancel={() => setConfirmDelete(false)}

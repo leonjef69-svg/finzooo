@@ -1,5 +1,60 @@
 # Estado actual de Fino
 
+## Ahorro — 17/10/2026 — edición conjunta, compra y recibos claros
+
+Marca `17oct-metas-edicion-y-movimientos`, base 866b969. Una sola vista de
+Ahorro: Saldo disponible de Personal y En metas, sin un tercer total. Nueva
+meta más visible; tarjetas con Ahorrado y Monto objetivo, y Editar meta para
+cambiar nombre, objetivo y ahorrado juntos. Bajar de 20 a 10 devuelve solo 10
+a disponible, sin ingreso; una meta completada no libera dinero por sí sola.
+Avisos breves, completos y sin recorte. Sin aviso de dinero apartado con cero
+reservado aunque Personal sea negativo.
+
+Usar ahorro abre el formulario actual de gasto: una compra crea UNA fila de
+gasto y reduce lo reservado en el mismo lote cifrado, sin devolución ficticia
+ni aumento del disponible. Devolver a Personal es una acción distinta del
+menú. Gastos manuales que alcanzan lo reservado permiten elegir aportes por
+meta; también se puede registrar el gasto real sin ajustar metas, con aviso
+de falta de respaldo. Cancelar conserva el borrador y su categoría; se corrigió
+el reinicio de categoría al montar AddSheet, sin impedir cambios reales de tipo.
+
+Crear/editar/aportar/devolver/usar/eliminar desde las rutas de Ahorro usa una
+sola operación local con metas, movimientos, lápidas y metadatos juntos. Se
+validan fuentes vigentes, sesión, moneda, saldo y reserva antes de confirmar.
+Editar ahorrado rechaza un formulario atrasado si llegó otro aporte; no lo
+sobrescribe. Los recibos de ahorro no cuentan como ingreso/gasto ni duplican
+la reserva o el arrastre. La compra sí cuenta como gasto normal y aparece
+también en el filtro Ahorro. No se inventan recibos de metas antiguas sin fecha.
+
+Recibos de ahorro y transferencias Familia/Caja completamente devueltas pueden
+quitarse del historial visible mediante confirmación explícita. Se conserva el
+respaldo financiero con `hiddenFromHistory`, no se borran los pares que sostienen
+otros meses. Validación por enlaces/asignaciones, nunca por nombre o importe;
+no permite quitar transferencias parciales, consumidas o incompletas. Una
+reparación compartida o copia anterior no vuelve a mostrarlas. El gasto/ingreso
+ordinario conserva su borrado real y recalcula el saldo. Filas violetas de
+Ahorro alineadas con las demás, seleccionables en Inicio y con filtro propio.
+
+Verificación final: 238 pruebas y 8 auditores sin tarjetas; TypeScript/ESLint
+generales aprobados. Dos suites nuevas fallan contra 866b969 por liberación
+automática de metas completadas y aviso sin dinero apartado, no por API ausente.
+Planificadores y callbacks originales con SQLite comprueban edición 20→10,
+compra única, fallo de disco, confirmación perdida, reinicio/restauración,
+conservación de pares entre meses y 10.000 filas. React/puente Android adaptados:
+no equivalen a guardar una operación financiera en un Android físico.
+
+En el emulador se revisaron lista, edición y previsualización 20→10 cancelada,
+formulario de gasto y presentación de recibos. Sin guardar cambios financieros:
+36 movimientos, 227 marcas de borrado, dos metas y S/49 reservado conservados.
+El disponible permanece S/13. Estos valores ya existían al iniciar esta revisión;
+no son movimientos creados por las pruebas. Capturas/diagnósticos solo en .tmp.
+
+**Sigue/falta:** guardar y restaurar el ciclo financiero completo con una cuenta
+de prueba autorizada y segundo teléfono; no se utiliza el dinero real del usuario
+para esa prueba. Revisar por separado transferencias Familia/Caja que consuman
+dinero reservado y los tres casos antiguos de hj. Sin APK/AAB/OTA, publicación
+Play, despliegues remotos ni tarjetas; no cierre de la auditoría global.
+
 ## Nube — 16/10/2026 — copia antigua comprobada e interruptor inmediato
 
 Marca `16oct-nube-copia-interruptor`, base 8f0d1ec. El aviso de Ajustes venía

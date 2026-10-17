@@ -78,8 +78,8 @@ console.log("\n--- Y NO SE PUEDE CREAR NI CAMBIAR NADA ---");
   ok(/\) : soloLectura \? null : \(/.test(panel), "y no se puede borrar del historial");
 
   const metas = leer("screens/SavingsList.tsx");
-  ok(/tab === "metas" && !soloLectura/.test(metas), "no se crea una meta nueva");
-  ok(/libre > 0 && !soloLectura/.test(metas), "ni se mueve plata a una meta");
+  ok(/!soloLectura && <TouchableOpacity[^\n]*setPanel\(\{ kind: "create"/.test(metas), "no se crea una meta nueva");
+  ok(/!soloLectura && <View className="flex-row gap-2">/.test(metas) && /if \(lock.current \|\| soloLectura\) return false/.test(metas), "ni se mueve plata a una meta");
 
   const limites = leer("screens/CategoryBudgets.tsx");
   const rutaLimites = leer("app/category-budgets.tsx");

@@ -5,6 +5,7 @@ export function movimientosParaReporte(
   movimientos: Transaction[],
   tipo: "all" | "expense" | "income",
 ): Transaction[] {
-  if (tipo === "all") return movimientos;
-  return movimientos.filter(tx => !tx.internalTransfer && tx.type === tipo);
+  const visibles = movimientos.filter(tx => tx.hiddenFromHistory !== true);
+  if (tipo === "all") return visibles;
+  return visibles.filter(tx => !tx.internalTransfer && tx.type === tipo);
 }
