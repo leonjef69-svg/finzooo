@@ -26,10 +26,12 @@ import { disponiblePersonalEnFecha } from "@/utils/finances";
 import { nextId } from "@/utils/id";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
-import { balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
+import { balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
 import { getAccountStorageSession } from "@/utils/storage";
+import { beginFamilyMutation, familyMutationPending, familyMutationVersion, observeFamilyMutation } from "@/utils/familyMutation";
 import { withImmediateRemoval } from "@/utils/immediateRemoval";
+import { spaceDeletionNotice } from "@/utils/spaceDeletionNotice";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { devolverAportePersonal } from "@/utils/personalReturn";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Check, ListChecks, LogOut, Pencil, Plus, RefreshCw, Trash2, UserPlus, UsersRound, X } from "lucide-react-native";
@@ -70,6 +72,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const [preparandoInvitacion, setPreparandoInvitacion] = useState(false);
   const [verMiembros, setVerMiembros] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [actualizandoCaja, setActualizandoCaja] = useState(false);
   const [cajasOcultas, setCajasOcultas] = useState(new Set<string>());
   const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
   const [cargandoCaja, setCargandoCaja] = useState(true);
@@ -102,18 +105,27 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     ? "settings.backupMovementConflict" : spaceErrorKey(error)));
   const moneda = caja?.currency || userCurrency;
   const fmt = (amount: number) => formatAmount(amount, currencySymbolFor(moneda), moneda);
+  useEffect(() => observeFamilyMutation(uid, accountSession, () => {
+    if (!mounted.current || getAccountStorageSession() !== accountSession) return;
+    confirmedSource.current = null;
+    setMovimientosConfirmados(false);
+    setActualizandoCaja(false);
+    setSubscriptionRevision(value => value + 1);
+  }, "box"), [uid, accountSession]);
   useEffect(() => {
     const epoch = ++movementEpoch.current;
     confirmedSource.current = null;
     setMovimientosConfirmados(false);
-    if (!cajaId) return;
+    if (!cajaId || familyMutationPending(uid, accountSession, "box")) return;
     // Actualizar la misma Caja conserva sus filas; otra Caja nunca las hereda.
     if (loadedBoxId.current !== cajaId) { setMovimientos([]); setMiembros([]); setCargandoCaja(true); }
     setErrorCargaCaja(false);
     const boxId = cajaId;
     let active = true, snapshotRevision = 0;
+    const moneyVersion = familyMutationVersion(uid, accountSession, "box");
     const task = captureAccountTask(uid, () => mounted.current && active && getAccountStorageSession() === accountSession
-      && movementEpoch.current === epoch && selectedBoxId.current === boxId);
+      && movementEpoch.current === epoch && selectedBoxId.current === boxId
+      && moneyVersion === familyMutationVersion(uid, accountSession, "box") && !familyMutationPending(uid, accountSession, "box"));
     void task.wait(() => listarMiembrosCaja(boxId)).then(items => {
       if (task.current()) setMiembros(items);
     }).catch(error => { if (task.current()) errorRef.current(error); });
@@ -133,11 +145,12 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
         if (!task.current() || revision !== snapshotRevision || moneyLock.current || !abierta) return;
         confirmedSource.current = { boxId, epoch };
         setMovimientosConfirmados(true);
-      }).catch(error => { if (task.current() && revision === snapshotRevision) errorRef.current(error); });
+        setActualizandoCaja(false);
+      }).catch(error => { if (task.current() && revision === snapshotRevision) { setActualizandoCaja(false); errorRef.current(error); } });
     }, error => {
       if (!task.current()) return;
       snapshotRevision += 1; confirmedSource.current = null;
-      setMovimientosConfirmados(false); setCargandoCaja(false); setErrorCargaCaja(loadedBoxId.current !== boxId); errorRef.current(error);
+      setMovimientosConfirmados(false); setCargandoCaja(false); setActualizandoCaja(false); setErrorCargaCaja(loadedBoxId.current !== boxId); errorRef.current(error);
     });
     return () => { active = false; stop(); };
   }, [accountSession, cajaId, subscriptionRevision, uid]);
@@ -177,6 +190,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     const source = confirmedSource.current;
     if (!caja || !uid || !movimientosConfirmados || moneyLock.current || !mounted.current
       || auth.currentUser?.uid !== uid || getAccountStorageSession() !== accountSession
+      || familyMutationPending(uid, accountSession, "box")
       || source?.boxId !== caja.id || source.epoch !== movementEpoch.current) return;
     const validMovementIds = movimientos.filter(item => item.personalOwnerUid === uid && item.personalTransactionId != null).map(item => item.id);
     const conciliables = transactions.filter(tx => !tx.internalTransferSettled && tx.internalTransferSpaceId === caja.id);
@@ -220,8 +234,10 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     if (!task.current()) return;
     lock.current = true; setBusy(true);
     let started = false;
+    let finishMutation: (() => void) | undefined;
     const wait: AccountTaskWait = work => {
       if (!started && financial) {
+        finishMutation = beginFamilyMutation(uid, accountSession, "box");
         started = true; moneyLock.current = true; movementEpoch.current += 1; confirmedSource.current = null;
         setMovimientosConfirmados(false);
       }
@@ -229,6 +245,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     };
     try { await action(wait); } catch (error) { if (task.current()) errorRef.current(error); }
     finally {
+      finishMutation?.();
       moneyLock.current = false; lock.current = false;
       if (task.current()) {
         setBusy(false);
@@ -301,10 +318,13 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     if (saldoDespues < -0.005) { showToast(t("boxes.notEnoughSpace")); return; }
     await withImmediateRemoval([item.id], setMovimientosOcultos,
       () => mounted.current && getAccountStorageSession() === accountSession, async () => {
-    if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("box", caja.id, item.id));
-    else await wait(() => borrarMovimientoCajaCompartida(caja.id, item.id));
-    if (item.personalOwnerUid === uid && item.personalTransactionId != null
-      && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
+    await wait(async () => {
+      if (item.personalTransactionId != null) await borrarAportePersonal("box", caja.id, item.id);
+      else await borrarMovimientoCajaCompartida(caja.id, item.id);
+      if (auth.currentUser?.uid !== uid || getAccountStorageSession() !== accountSession) throw new Error("account-task-obsolete");
+      if (item.personalOwnerUid === uid && item.personalTransactionId != null
+        && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
+    });
     const borrados = borradosConfirmados.current.get(caja.id) ?? new Set<string>();
     borrados.add(item.id); borradosConfirmados.current.set(caja.id, borrados);
     setMovimientos(items => items.filter(row => row.id !== item.id));
@@ -313,10 +333,43 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const devolverAPersonal = () => ejecutar(async wait => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
     if (caja.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
-    const receipt = await wait(() => devolverAportePersonal({ kind: "box", spaceId: caja.id, amount: devolvibleAPersonal,
-      currency: userCurrency, fecha: new Date().toLocaleDateString("sv-SE"), description: t("boxes.returnToPersonal") }));
-    recordPersonalReturn(receipt);
+    await wait(async () => recordPersonalReturn(await devolverAportePersonal({ kind: "box", spaceId: caja.id, amount: devolvibleAPersonal,
+      currency: userCurrency, fecha: new Date().toLocaleDateString("sv-SE"), description: t("boxes.returnToPersonal") })));
   });
+  const borrarGrupo = (ids: string[]) => ejecutar(async wait => {
+    if (!caja || !ids.length) return;
+    const selected = movimientos.filter(item => ids.includes(item.id));
+    if (selected.some(item => item.personalOwnerUid ? item.personalOwnerUid !== uid : !owner && item.creadoPor !== uid)) { showToast(t("boxes.onlyOwnDelete")); return; }
+    const plan = planSpaceMovementDeletion(movimientos, ids);
+    if (!plan.ok) { showToast(t(plan.reason === "contribution-used" ? "boxes.contributionUsed" : "boxes.notEnoughSpace")); return; }
+    await withImmediateRemoval(plan.items.map(item => item.id), setMovimientosOcultos,
+      () => mounted.current && getAccountStorageSession() === accountSession, async () => {
+        for (const item of plan.items) {
+          await wait(async () => {
+            if (item.personalTransactionId != null) await borrarAportePersonal("box", caja.id, item.id);
+            else await borrarMovimientoCajaCompartida(caja.id, item.id);
+            if (auth.currentUser?.uid !== uid || getAccountStorageSession() !== accountSession) throw new Error("account-task-obsolete");
+            if (item.personalOwnerUid === uid && item.personalTransactionId != null && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
+          });
+          const deleted = borradosConfirmados.current.get(caja.id) ?? new Set<string>();
+          deleted.add(item.id); borradosConfirmados.current.set(caja.id, deleted);
+          setMovimientos(items => items.filter(row => row.id !== item.id));
+        }
+      });
+  });
+  function confirmarBorrado(ids: string[]) {
+    if (busy) return;
+    const selected = movimientos.filter(item => ids.includes(item.id));
+    if (!selected.length) return;
+    const notice = spaceDeletionNotice(selected, t, fmt);
+    Alert.alert(notice.title, notice.message, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: notice.action, style: "destructive", onPress: () => {
+        if (selected.length === 1) void borrar(selected[0]);
+        else void borrarGrupo(ids);
+      } },
+    ]);
+  }
   const salir = () => { if (!uid || !caja || owner) return; Alert.alert(t("boxes.leave"), t("boxes.leaveWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.leave"), style: "destructive", onPress: () => void ejecutar(async wait => { await wait(() => salirDeCaja(uid, caja.id)); setCaja(null); }) }]); };
   const quitar = (member: MiembroCajaCompartida) => { if (!caja || !owner || member.rol === "owner") return; Alert.alert(t("boxes.removeMember"), member.nombre, [{ text: t("common.cancel"), style: "cancel" }, { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async wait => { await wait(() => quitarMiembroCaja(caja.id, member.uid)); setMiembros(items => items.filter(item => item.uid !== member.uid)); }) }]); };
   const guardarNombreCaja = () => {
@@ -355,7 +408,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     }) }]);
   };
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
-    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={volverACajas} /><Text className="text-base font-bold text-slate-900 dark:text-white">{t("boxes.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy }} disabled={busy} onPress={() => setSubscriptionRevision(value => value + 1)} className="h-10 w-10 items-center justify-center">{busy && !preparandoInvitacion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity></View>
+    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={volverACajas} /><Text className="text-base font-bold text-slate-900 dark:text-white">{t("boxes.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: actualizandoCaja }} disabled={busy || actualizandoCaja} onPress={() => { setActualizandoCaja(true); setSubscriptionRevision(value => value + 1); }} className="h-10 w-10 items-center justify-center">{actualizandoCaja && !preparandoInvitacion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity></View>
     <SpaceSwitcher active="boxes" />
     <ScrollView
       className="px-4"
@@ -414,7 +467,8 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
         {cajaLista && caja ? filasVisibles.slice(0, movementLimit).map((row, index) => {
           const { key, item, transferGroup } = row;
           const rowTime = linkedMovementRowTime(row);
-          const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === uid : owner || item.creadoPor === uid;
+          const idsDeFila = movementIdsForCompactRow(row, visibles);
+          const puedeBorrar = movimientos.filter(move => idsDeFila.includes(move.id)).every(move => move.personalOwnerUid ? move.personalOwnerUid === uid : owner || move.creadoPor === uid);
           const puedeEditarAporte = item.tipo === "ingreso" && item.personalOwnerUid === uid && item.personalTransactionId != null;
           const transferencia = isLinkedSpaceTransfer(item);
           const retorno = isLinkedSpaceReturn(item);
@@ -423,7 +477,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
             <View className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
               {transferencia ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("transfer.filter")} disabled={!transferGroup} onPress={() => setFilter("transferencia")} className="h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950"><ArrowRightLeft size={17} color="#2563eb" /></TouchableOpacity> : <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>}
               {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <><View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className="text-xs text-slate-500 dark:text-slate-300">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
-              {seleccionando ? <View className="flex-row items-center"><ContentReportButton key={`${caja.id}:${item.id}`} target={transferencia ? { kind: "box", spaceId: caja.id, targetType: "space", targetId: caja.id, expectedText: caja.nombre.slice(0, 120), expectedUid: caja.ownerUid } : { kind: "box", spaceId: caja.id, targetType: "movement", targetId: item.id, expectedText: item.descripcion.slice(0, 120), expectedUid: item.creadoPor }} />{!transferGroup && puedeEditarAporte ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editContribution")} onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); setCategory(item.category || "otros"); setNotes(item.notes || ""); setMovementDate(item.fecha); setMethod(item.method || "cash"); setOrigenDinero("personal"); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{!transferGroup && puedeBorrar ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : null}</View> : null}
+              {seleccionando ? <View className="flex-row items-center"><ContentReportButton key={`${caja.id}:${item.id}`} target={transferencia ? { kind: "box", spaceId: caja.id, targetType: "space", targetId: caja.id, expectedText: caja.nombre.slice(0, 120), expectedUid: caja.ownerUid } : { kind: "box", spaceId: caja.id, targetType: "movement", targetId: item.id, expectedText: item.descripcion.slice(0, 120), expectedUid: item.creadoPor }} />{!transferGroup && puedeEditarAporte ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editContribution")} onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); setCategory(item.category || "otros"); setNotes(item.notes || ""); setMovementDate(item.fecha); setMethod(item.method || "cash"); setOrigenDinero("personal"); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{puedeBorrar ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t(transferencia ? "spaces.cancelTransfer" : "common.delete")} onPress={() => confirmarBorrado(idsDeFila)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : null}</View> : null}
             </View>
           </View>;
         }) : null}

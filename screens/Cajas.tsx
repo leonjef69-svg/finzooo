@@ -15,6 +15,7 @@ import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 import { withImmediateRemoval } from "@/utils/immediateRemoval";
+import { spaceDeletionNotice } from "@/utils/spaceDeletionNotice";
 import { loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
 import { bajarCajas, CloudCajasConflictError, resolverNombreCaja, subirCajas } from "@/utils/cloudCajas";
 import { compartirCajaExistente, crearInvitacionCaja, escucharMovimientosCaja, listarCajasCompartidas, unirseACaja, type CajaCompartida } from "@/utils/cloudCajasCompartidas";
@@ -861,10 +862,18 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   function confirmarBorrarTodo() {
     if (caja && cajaNecesitaRevision(caja.id, true)) { avisarRevisionNecesaria(); return; }
     if (!visibles.length) return;
-    const messageKey = visibles.some(isLinkedSpaceTransfer) ? "spaces.deleteLinkedMovementsMessage" : "spaces.deleteMovementsMessage";
-    Alert.alert(t("spaces.deleteMovementsTitle"), t(messageKey, { count: visibles.length }), [
+    const notice = spaceDeletionNotice(visibles, t, fmt);
+    Alert.alert(notice.title, notice.message, [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.deleteAll"), style: "destructive", onPress: () => void borrarSeleccionados(visibles.map(item => item.id)) },
+      { text: notice.action, style: "destructive", onPress: () => void borrarSeleccionados(visibles.map(item => item.id)) },
+    ]);
+  }
+  function confirmarBorrarSeleccionados() {
+    if (!seleccionados.length || guardando) return;
+    const notice = spaceDeletionNotice(movimientos.filter(item => seleccionados.includes(item.id)), t, fmt);
+    Alert.alert(notice.title, notice.message, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: notice.action, style: "destructive", onPress: () => void borrarSeleccionados() },
     ]);
   }
   async function borrarCajas(ids = cajasSeleccionadas) {
@@ -1310,7 +1319,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               {seleccionando ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>
                 <View className="flex-row items-center gap-3">
-                  <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!seleccionados.length} onPress={() => borrarSeleccionados()} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
+                  <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!seleccionados.length} onPress={confirmarBorrarSeleccionados} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
                   <TouchableOpacity onPress={confirmarBorrarTodo} hitSlop={6}><Text className="text-sm font-bold text-rose-500">{t("home.deleteAll")}</Text></TouchableOpacity>
                   <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
                 </View>

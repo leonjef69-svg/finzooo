@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { buildSync } from "esbuild";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
 import { withImmediateRemoval } from "./helpers/immediate-removal-original.mjs";
+import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
 
 const baseline = process.env.FINO_TEST_FAMILY_WAIT_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Hash inválido");
@@ -32,7 +33,7 @@ function harness() {
   const ma = [{ id: "mov-a", tipo: "ingreso", monto: 40 }], mb = [{ id: "mov-b", tipo: "ingreso", monto: 80 }];
   const memory = new Map([["A", { familia: a, familias: [a, b], miembros: [{ uid: "old-member" }], movimientos: ma,
     movimientosFamilias: { a: ma, b: mb }, saldosFamilias: { a: 40, b: 80 }, actualizadaEn: 0 }]]);
-  const s = { accountUid: "A", accountSession: 1, auth: { currentUser: { uid: "A" } }, getAccountStorageSession: () => 1,
+  const s = { ...familyMutationOriginal(memory), accountUid: "A", accountSession: 1, auth: { currentUser: { uid: "A" } }, getAccountStorageSession: () => 1,
     withImmediateRemoval, setMovimientosOcultos() {},
     useCallback: callback => callback,
     mounted: { current: true }, reloadId: { current: 0 }, familiaElegida: { current: "a" }, confirmedReload: { current: 0 },
@@ -130,7 +131,7 @@ function harness() {
 {
   const remote = deferred(), boxFile = "screens/SharedBoxes.tsx";
   const item = { id: "remove", tipo: "ingreso", monto: 10, creadoPor: "A" };
-  const s = { caja: { id: "box" }, uid: "A", owner: true, movimientos: [item], borradosConfirmados: { current: new Map() },
+  const s = { caja: { id: "box" }, uid: "A", auth: { currentUser: { uid: "A" } }, owner: true, movimientos: [item], borradosConfirmados: { current: new Map() },
     withImmediateRemoval, mounted: { current: true }, getAccountStorageSession: () => 1, accountSession: 1, setMovimientosOcultos() {},
     balanceOfSpace: () => 100, ejecutar: action => action(fn => fn()), borrarMovimientoCajaCompartida: () => remote.promise,
     setMovimientos: update => { s.movimientos = update(s.movimientos); },

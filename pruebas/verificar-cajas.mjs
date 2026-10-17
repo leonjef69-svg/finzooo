@@ -88,7 +88,8 @@ assert.ok(screen.indexOf("boxes.returnAmount") < screen.indexOf("width: \"48%\",
 assert.match(screen, /planSpaceMovementDeletion\(movimientos, ids\)/, "Caja usa el plan compartido que valida y ordena el borrado de aportes y devoluciones");
 assert.match(screen, /movementIdsForCompactRow\(row, visibles\)/, "la tarjeta conserva el grupo de su día al seleccionar movimientos enlazados");
 assert.match(screen, /countSelectedCompactRows\(filasVisibles, visibles, seleccionados\)/, "el contador de selección coincide con las tarjetas visibles");
-assert.match(screen, /spaces\.deleteLinkedMovementsMessage/, "la confirmación explica que un aporte y una devolución se guardan por separado");
+assert.match(screen, /spaceDeletionNotice\(visibles, t, fmt\)/, "la confirmación usa el aviso común que diferencia anular dinero de quitar un recibo");
+assert.match(fs.readFileSync("utils/spaceDeletionNotice.ts", "utf8"), /spaces\.cancelLinkedBody/, "el aviso común explica la anulación de los registros enlazados");
 assert.match(screen, /Movimientos de caja|boxes\.history/, "el control usa la etiqueta breve de movimientos de caja");
 assert.doesNotMatch(screen, /SpaceActionBar|MoreVertical|boxes\.options/, "Caja no muestra el + flotante ni el menú que ya fueron retirados");
 assert.match(screen, /minimumContributionAmount/, "editar un aporte respeta la parte ya utilizada");

@@ -1,5 +1,13 @@
 # Lo que hay que rellenar en Play Console
 
+17/10/2026 — Familia/Cajas/Personal: correcciones de confirmación al abandonar
+una pantalla y coordinación temporal de lecturas, sin campo, permiso,
+destinatario o retención nuevos. Los avisos distinguen retirar recibos del
+historial de Personal (respaldo interno y registros compartidos conservados)
+de anular movimientos en Familia/Cajas (contrapartes y saldos recalculados).
+No supone purgar toda la cuenta ni reconstruir registros borrados. Sin
+publicación o despliegue de Firebase en esta tanda.
+
 17/10/2026 — Devoluciones antiguas de espacios cerrados: si el aporte ya
 consta eliminado, se admite borrar realmente su devolución con confirmación
 del cambio de saldo. Se retira de los movimientos de Personal y conserva la

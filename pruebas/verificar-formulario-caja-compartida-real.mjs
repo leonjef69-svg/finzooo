@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
+import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
 
 const baseline = process.env.FINO_TEST_SHARED_FORM_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Hash inválido");
@@ -68,7 +69,7 @@ for (const change of [{ movementDate: "2026-02-30" }, { modo: "ingreso", origenD
 // Invitar Familia no es una operación de dinero: conserva la consulta y las filas.
 {
   let finish; const pending = new Promise(resolve => { finish = resolve; });
-  const s = { accountUid: "A", accountSession: 1, mounted: { current: true }, actionLock: { current: false },
+  const s = { ...familyMutationOriginal(), accountUid: "A", accountSession: 1, mounted: { current: true }, actionLock: { current: false },
     getAccountStorageSession: () => 1, auth: { currentUser: { uid: "A" } }, familia: { id: "family" }, owner: true, isPremium: true,
     reloadId: { current: 8 }, cierresPendientes: { current: new Set() }, synchronized: true, reloads: 0, calls: 0,
     captureAccountTask: (_uid, current) => ({ current, wait: async work => { assert.ok(current()); const result = await work(); assert.ok(current()); return result; } }),

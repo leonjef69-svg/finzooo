@@ -1,5 +1,29 @@
 # Entregas de Fino
 
+## 17/10/2026 — Devoluciones y anulación al cambiar de sección (desarrollo)
+
+Marca `17oct-devolucion-cambio-seguro`; base 2d97a63. La confirmación remota
+de una devolución se aplica a Personal aunque se haya abandonado su pantalla;
+cuenta/sesión/moneda y marcas de borrado siguen protegidas. Se invalidan copias
+financieras anteriores y se evita conciliar durante una modificación en curso.
+Mismo cuidado para la contraparte de borrados confirmados. No es un lote remoto
+atómico y no reconstruye movimientos antiguos.
+
+Retirado Enviado S/0 de devoluciones solas. Avisos diferenciados entre quitar
+historial de Personal y anular registros/saldos en Familia/Cajas. Selección
+confirma antes de borrar y Caja compartida permite anular un grupo propio con
+orden seguro. Indicadores de actualización separados del trabajo monetario.
+
+242 pruebas/8 auditores sin tarjetas y TypeScript/ESLint generales aprobados;
+dos regresiones rojas contra 2d97a63. Emulador recargado, navegación/aviso
+cancelado/actualización comprobados sin mover dinero. Comparación financiera
+local/remota idéntica: 48 movimientos, 234 marcas y metas intactas.
+
+**Sigue/falta:** reserva de metas al aportar a Familia/Cajas, ciclo financiero
+real con cuenta de prueba autorizada y segundo teléfono, y origen del importe
+inicial antiguo. Sin APK/AAB/OTA/Play ni despliegue remoto; no auditoría global
+cerrada. Evidencias privadas permanecen fuera de Git.
+
 ## 17/10/2026 — Selección individual, Editar único y borrado antiguo explícito (desarrollo)
 
 Marca `17oct-ahorro-seleccion-individual`; base 781887d. Retirado Editar meta

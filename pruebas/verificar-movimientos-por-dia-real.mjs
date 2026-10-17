@@ -97,7 +97,7 @@ for (const file of ["screens/Family.tsx", "screens/Cajas.tsx", "screens/SharedBo
   let map; function visit(node) { if (ts.isCallExpression(node) && node.expression.getText(source) === "filasVisibles.slice(0, movementLimit).map") map ??= node; ts.forEachChild(node, visit); }
   visit(source); assert.ok(map);
   let selected = [];
-  const env = { ...ui, filasVisibles: grouped, movementLimit: 60, visibles: space,
+  const env = { ...ui, filasVisibles: grouped, movementLimit: 60, visibles: space, movimientos: space,
     seleccionando: true, seleccionados: selected, familia: { id: "family", nombre: "Familia" }, caja: { id: "box", nombre: "Caja" },
     transferLedger: { allocationsByContributionId: new Map() }, uid: "user", owner: false, busy: false, puedeEditarAporte: false, puedeBorrar: false,
     setSeleccionados: fn => { selected = fn(selected); }, methodLabel: () => "Efectivo" };

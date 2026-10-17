@@ -33,7 +33,7 @@ const movements = [
   { id: "aporte", tipo: "ingreso", monto: 100, personalTransactionId: 1, personalOwnerUid: "A", creadoPor: "A", descripcion: "Aporte", fecha: "2026-10-15" },
   { id: "gasto", tipo: "gasto", monto: 25, creadoPor: "A", descripcion: "Comida", fecha: "2026-10-15" },
 ];
-const s = { ...ui, React, insets: { top: 0, bottom: 0 }, busy: false, t: key => key, caja: original, uid: "A", owner: true,
+const s = { ...ui, React, insets: { top: 0, bottom: 0 }, busy: false, actualizandoCaja: false, setActualizandoCaja() {}, t: key => key, caja: original, uid: "A", owner: true,
   cajas: [original], cajasOcultas: new Set(), onAllBoxes() {}, cargandoCaja: false, errorCargaCaja: false, nombreCajaEditado: original.nombre,
   editandoNombreCaja: false, saldo: ledger.exports.balanceOfSpace(movements), devolvibleAPersonal: ledger.exports.returnableToPersonal(movements, "A"), ingresos: 0, gastos: 25, filter: null,
   recentMovementTypes: { income: false, expense: true }, seleccionando: false, modo: null,
@@ -43,7 +43,8 @@ const s = { ...ui, React, insets: { top: 0, bottom: 0 }, busy: false, t: key => 
   currencySymbolFor: () => "S/", formatAmount: amount => `S/ ${amount}`,
   setNombre() {}, setMonto() {}, setMethod() {}, setCategory: value => { s.category = value; }, setMovementDate() {}, setNotes() {}, setOrigenDinero() {}, guardar() {},
   setInvitacionVisible: value => { s.invitacionVisible = value; }, setPreparandoInvitacion: value => { s.preparandoInvitacion = value; },
-  filasVisibles: ledger.exports.compactLinkedTransferRows(movements),
+  filasVisibles: ledger.exports.compactLinkedTransferRows(movements), movimientos: movements, visibles: movements,
+  movementIdsForCompactRow: ledger.exports.movementIdsForCompactRow, confirmarBorrado: ids => changes.push(["confirm-delete", ids]),
   isLinkedSpaceTransfer: ledger.exports.isLinkedSpaceTransfer, isLinkedSpaceReturn: ledger.exports.isLinkedSpaceReturn,
   startsMovementDay: () => true, monthNames: [], linkedMovementRowTime: () => "10:03 p.m.", methodLabel: () => "Efectivo",
   borrar: item => changes.push(["delete", item.id]),

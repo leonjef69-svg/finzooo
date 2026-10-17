@@ -1,5 +1,22 @@
 # Pruebas y auditores
 
+17/10 Confirmación al cambiar de pantalla: 242 pruebas y 8 auditores sin
+tarjetas; TypeScript/ESLint generales. verificar-devolucion-cambio-pantalla-real
+ejecuta los manejadores originales de Familia/Caja y recordPersonalReturn:
+salida durante RPC, duplicado, red, moneda, cuenta A→B→A/sesión, marcas de
+borrado y copia familiar. Coordinación original aislada por cuenta/sesión/tipo.
+verificar-transferencias-anulacion-real dibuja el componente original sin
+Enviado S/0, ejecuta avisos ES/EN/PT, confirmación previa, grupo compartido
+ordenado/permisos y borrado confirmado al salir sin escribir en otra sesión.
+Ambas fallan contra 2d97a63 por los comportamientos reales anteriores, no por
+una API ausente. React/IO/RPC adaptados: no acreditan ciclo financiero Android.
+Pruebas de consultas/selección/formulario/lista/invitación/filas diarias
+adaptadas a dependencias originales nuevas sin relajar sus aserciones.
+Emulador recargado y avisos cancelados sin operar dinero; 48 movimientos,
+234 marcas, metas y datos financieros locales/remotos idénticos antes/después.
+Faltan reserva de metas para transferir, cuenta de prueba con ciclo completo
+y restauración en segundo dispositivo; tarjetas excluidas.
+
 17/10 Selección/devoluciones antiguas: 240 pruebas y 8 auditores sin tarjetas;
 TypeScript/ESLint completos. verificar-seleccion-ahorro-real ejecuta selector
 original y JSX del menú: una fila individual, resumen por espacio/tipo/día,

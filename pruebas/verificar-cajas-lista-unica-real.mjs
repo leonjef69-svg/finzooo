@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
+import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
 
 const baseline = process.env.FINO_TEST_UNIFIED_BOXES_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Hash inválido");
@@ -48,7 +49,7 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
 // Invitar usa el bloqueo original, pero no invalida la foto financiera.
 {
   const network = gate(), errors = [], origin = { boxId: box.id, epoch: 4 };
-  const s = { uid: "A", caja: box, owner: true, isPremium: true, lock: { current: false }, moneyLock: { current: false }, mounted: { current: true },
+  const s = { ...familyMutationOriginal(), uid: "A", caja: box, owner: true, isPremium: true, lock: { current: false }, moneyLock: { current: false }, mounted: { current: true },
     getAccountStorageSession: () => 1, accountSession: 1, movementEpoch: { current: 4 }, confirmedSource: { current: origin },
     cierresPendientes: { current: new Set() }, errorRef: { current: error => errors.push(error) }, rows,
     subscription: 0, busy: false, confirmed: true, code: "", calls: 0, modo: null, modoSuspendido: { current: null }, editandoNombreCaja: false, seleccionando: false,

@@ -1,5 +1,51 @@
 # Estado actual de Fino
 
+## Familia/Cajas/Personal — 17/10/2026 — confirmaciones al cambiar de pantalla
+
+Marca `17oct-devolucion-cambio-seguro`, base 2d97a63. Primera tanda de
+correcciones de la auditoría; no cierre global. La devolución remota podía
+confirmarse después de salir de su pantalla y saltarse su aplicación inmediata
+en Personal. Ahora se aplica antes de descartar la continuación visual, con las
+validaciones existentes de cuenta, sesión, moneda, duplicados y borrados. El
+diario de devolución y la recuperación existentes se conservan.
+
+Coordinación en memoria por cuenta/sesión y Familia/Caja: mientras se modifica
+dinero no se concilia contra lecturas anteriores. La copia familiar se invalida
+antes y después, conservando nombres/lista; un montaje nuevo vuelve a consultar
+al terminar. La tarjeta usa «…», no un cero provisional, mientras no tiene
+movimientos confirmados para esa Familia. Se conserva la apertura prioritaria de la familia elegida y la
+espera de todas las familias antes de conciliar Personal. Los borrados enlazados
+también aplican su contraparte tras confirmar, aunque se haya salido, pero nunca
+en otra cuenta o nueva sesión. No se convierte el lote remoto en una transacción
+atómica: un fallo entre registros todavía exige revisión/reintento.
+
+Una devolución sola ya no muestra Enviado S/0. Confirmaciones explícitas para
+selección en Familia/Caja privada y para filas/grupos en Caja compartida, con
+orden devolución antes de aporte y permisos conservados. Anular desde un espacio
+advierte del cambio de saldos; quitar recibos/pares devueltos de Personal sigue
+siendo solo historial y ahora aclara que el espacio conserva sus registros.
+El indicador de actualización se separa de operaciones de dinero; Familia espera
+la consulta completa y Caja compartida indica la actualización manual real.
+
+242 pruebas y 8 auditores sin tarjetas aprobados; TypeScript/ESLint generales
+aprobados. Dos regresiones nuevas fallan contra 2d97a63 por recepción omitida
+al salir y envío ficticio cero, no por API ausente. React/IO/RPC adaptados en
+Node: no equivalen a un ciclo financiero Android real. Pruebas anteriores
+adaptadas a las dependencias originales nuevas, sin quitar sus comprobaciones.
+Emulador recargado: devolución sin envío cero, Familia S/0, aviso de anulación
+abierto/cancelado, ambas Cajas presentes y actualización manual concluida.
+Comparación exacta antes/después: 48 movimientos y 234 marcas, metas, presupuestos,
+Familia remota y campos financieros de Personal en nube idénticos. Sin movimientos,
+borrados ni cambios de saldo reales. Diagnósticos privados en .tmp, fuera de Git.
+
+**Sigue/falta:** integrar los aportes a Familia/Cajas con el dinero reservado en
+metas; ciclo completo autorizado con dinero de prueba, reinicio y segundo
+dispositivo; aclarar el respaldo del dinero inicial antiguo. La marca de un
+movimiento ordinario borrado no conserva importe/tipo suficientes para afirmar
+que era el ingreso inicial: no se reconstruye ni se repite la devolución. Sin
+APK/AAB/OTA/Play, despliegue Firebase, tarjetas o eliminación de sistemas por
+su antigüedad. Las cargas de red necesarias no se eliminan ni se simulan.
+
 ## Personal/Ahorro — 17/10/2026 — selección individual y devoluciones antiguas
 
 Marca `17oct-ahorro-seleccion-individual`, base 781887d. Retirado el acceso

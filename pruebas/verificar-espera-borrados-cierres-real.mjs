@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
+import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
 import { withImmediateRemoval } from "./helpers/immediate-removal-original.mjs";
 
 const baseline = process.env.FINO_TEST_BASELINE;
@@ -41,7 +42,7 @@ function closeHarness(kind, outcome) {
   const auth = { get currentUser() { return { uid: h.uid }; } };
   const storage = { getAccountStorageSession: () => h.session };
   const account = moduleOriginal("utils/accountTask.ts", { "@/utils/firebase": { auth }, "@/utils/storage": storage });
-  const scope = { ...account, ...transfers, auth, uid: "a", accountUid: "a", accountSession: 1, getAccountStorageSession: storage.getAccountStorageSession,
+  const scope = { ...familyMutationOriginal(), ...account, ...transfers, auth, uid: "a", accountUid: "a", accountSession: 1, getAccountStorageSession: storage.getAccountStorageSession,
     withImmediateRemoval, setFamiliasOcultas() {}, setCajasOcultas() {},
     useCallback: callback => callback,
     mounted: { current: true }, actionLock: { current: false }, lock: { current: false }, moneyLock: { current: false }, reloadId: { current: 0 },
@@ -53,7 +54,7 @@ function closeHarness(kind, outcome) {
     owner: true, ocupado: false, transactions: [transfer], movimientos: [],
     t: key => key, tRef: { current: key => key }, showToast: value => h.toasts.push(value), toastRef: { current: value => h.toasts.push(value) },
     spaceErrorKey: () => "family.connectionError", errorRef: { current: error => h.toasts.push(error?.message || "error") },
-    setOcupado() {}, setBusy() {}, setFamiliasSincronizadas() {}, setMovimientosConfirmados() {}, setSubscriptionRevision: () => { h.subscriptions++; },
+    setOcupado() {}, setBusy() {}, setActualizandoCaja() {}, setFamiliasSincronizadas() {}, setMovimientosConfirmados() {}, setSubscriptionRevision: () => { h.subscriptions++; },
     setFamilia: value => { scope.familia = value; }, setCaja: value => { scope.caja = value; },
     setFamilias: update => { scope.familias = typeof update === "function" ? update(scope.familias) : update; },
     setCajas() {}, setMiembros() {}, setMovimientos() {}, setTipo() {}, setInvitacion() {}, setFilter() {}, setVerTodas() {},

@@ -27,7 +27,9 @@ import { devolverAportePersonal } from "@/utils/personalReturn";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
 import { getAccountStorageSession } from "@/utils/storage";
+import { beginFamilyMutation, familyMutationPending, familyMutationVersion, observeFamilyMutation } from "@/utils/familyMutation";
 import { withImmediateRemoval } from "@/utils/immediateRemoval";
+import { spaceDeletionNotice } from "@/utils/spaceDeletionNotice";
 import {
   borrarMovimientoFamilia, cerrarFamilia, crearFamilia, crearInvitacionFamilia, listarFamilias,
   guardarMovimientoFamilia, listarMiembrosFamilia, listarMovimientosFamilia, quitarMiembroFamilia, renombrarFamilia, vincularMovimientoPersonalFamilia,
@@ -61,6 +63,11 @@ type FamilyActionWait = AccountTaskWait & { reload: (preferred?: string) => Prom
 // al entrar se enseña al instante y después se valida silenciosamente en nube.
 const familiaEnMemoria = new Map<string, FamiliaEnMemoria>();
 
+function invalidarCopiaFamilia(uid: string) {
+  const copy = familiaEnMemoria.get(uid);
+  if (copy) familiaEnMemoria.set(uid, { ...copy, actualizadaEn: 0, saldosFamilias: {}, movimientosFamilias: {}, movimientos: [] });
+}
+
 export default function Family() {
   // La pantalla no conserva listas/formularios de la cuenta que acaba de salir.
   useAppData();
@@ -72,7 +79,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const { t, fmt, monthNames, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
-  const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
+  const copiaConocida = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
+  const copiaInicial = copiaConocida && familyMutationPending(accountUid, getAccountStorageSession())
+    ? { ...copiaConocida, saldosFamilias: {}, movimientosFamilias: {}, movimientos: [] } : copiaConocida;
   const [familia, setFamilia] = useState<EspacioFamilia | null>(copiaInicial?.familia ?? null);
   const [familias, setFamilias] = useState<EspacioFamilia[]>(copiaInicial?.familias ?? (copiaInicial?.familia ? [copiaInicial.familia] : []));
   const [saldosFamilias, setSaldosFamilias] = useState<Record<string, number>>(copiaInicial?.saldosFamilias ?? {});
@@ -145,6 +154,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [actualizando, setActualizando] = useState(false);
   const [errorCarga, setErrorCarga] = useState(false);
   const accountSession = useRef(getAccountStorageSession()).current;
+  const [moneyRevision, setMoneyRevision] = useState(() => familyMutationVersion(accountUid, accountSession));
   const confirmedReload = useRef(0);
   const mounted = useRef(true);
   useEffect(() => {
@@ -159,9 +169,12 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
 
   const recargar = useCallback(async (preferida?: string, forzar = false) => {
     if (cierresPendientes.current.size) return;
+    if (familyMutationPending(accountUid, accountSession)) return;
     const pedido = ++reloadId.current;
     const uid = accountUid;
-    const task = captureAccountTask(uid, () => mounted.current && pedido === reloadId.current && getAccountStorageSession() === accountSession);
+    const moneyVersion = familyMutationVersion(uid, accountSession);
+    const task = captureAccountTask(uid, () => mounted.current && pedido === reloadId.current && getAccountStorageSession() === accountSession
+      && moneyVersion === familyMutationVersion(uid, accountSession) && !familyMutationPending(uid, accountSession));
     if (!task.current()) { if (!uid && mounted.current) setCargando(false); return; }
     const copiaReciente = familiaEnMemoria.get(uid);
     const edadDeCopia = copiaReciente ? Date.now() - copiaReciente.actualizadaEn : Infinity;
@@ -178,6 +191,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     // Capturar la selección ANTES de esperar. La caché de otra consulta no
     // decide qué familia abrir cuando llegan respuestas en distinto orden.
     const elegida = preferida ?? familiaElegida.current;
+    let completing = false;
     try {
       // listarFamilias ya incorpora el índice antiguo: no consultarlo otra vez.
       const lista = await task.wait(() => listarFamilias(uid));
@@ -215,12 +229,25 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
           movimientosFamilias: completas, miembros: people, movimientos: movements, actualizadaEn: Date.now() });
         setFamiliasSincronizadas(true);
       };
-      void completar().catch(() => { if (task.current()) toastRef.current(tRef.current("family.connectionError")); });
+      completing = true;
+      void completar().catch(() => { if (task.current()) toastRef.current(tRef.current("family.connectionError")); })
+        .finally(() => { if (task.current()) setActualizando(false); });
     } catch { if (task.current()) { setErrorCarga(true); toastRef.current(tRef.current("family.connectionError")); } }
     finally {
-      if (task.current()) { setCargando(false); setActualizando(false); }
+      if (task.current()) { setCargando(false); if (!completing) setActualizando(false); }
     }
   }, [accountSession, accountUid]);
+
+  useEffect(() => observeFamilyMutation(accountUid, accountSession, () => {
+    if (!mounted.current || getAccountStorageSession() !== accountSession) return;
+    invalidarCopiaFamilia(accountUid);
+    reloadId.current += 1;
+    setFamiliasSincronizadas(false);
+    setActualizando(false);
+    setSaldosFamilias({});
+    setMoneyRevision(familyMutationVersion(accountUid, accountSession));
+    if (!familyMutationPending(accountUid, accountSession) && !actionLock.current) void recargar(undefined, true);
+  }), [accountUid, accountSession, recargar]);
 
   function abrirFamilia(item: EspacioFamilia) {
     if (actionLock.current) return;
@@ -320,7 +347,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     const uid = accountUid;
     const revision = reloadId.current;
     const task = captureAccountTask(uid, () => mounted.current && revision === reloadId.current && !actionLock.current && getAccountStorageSession() === accountSession);
-    if (!task.current() || cargando || !familiasSincronizadas || confirmedReload.current !== revision) return;
+    if (!task.current() || cargando || !familiasSincronizadas || confirmedReload.current !== revision || familyMutationPending(uid, accountSession)) return;
     const todosLosMovimientos = Object.values(movimientosFamilias).flat();
     const validMovementIds = todosLosMovimientos
       .filter(item => item.personalOwnerUid === uid && item.personalTransactionId != null)
@@ -393,7 +420,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
           if (task.current()) toastRef.current(tRef.current("family.connectionError"));
         });
     }
-  }, [accountSession, accountUid, cargando, familia, familias, familiasSincronizadas, movimientos, movimientosFamilias, ocupado, owner, recargar, repairLinkedTransferTransactions, t, transactions]);
+  }, [accountSession, accountUid, cargando, familia, familias, familiasSincronizadas, movimientos, movimientosFamilias, moneyRevision, ocupado, owner, recargar, repairLinkedTransferTransactions, t, transactions]);
 
   async function ejecutar(action: (wait: FamilyActionWait) => Promise<void>, onError?: (error: unknown) => void, financial = true) {
     if (actionLock.current) return;
@@ -402,8 +429,18 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     actionLock.current = true;
     setOcupado(true);
     let mutationRevision: number | undefined;
+    let finishMutation: (() => void) | undefined;
+    function finishFinancial() {
+      if (!finishMutation) return;
+      if (auth.currentUser?.uid === accountUid && getAccountStorageSession() === accountSession) invalidarCopiaFamilia(accountUid);
+      finishMutation(); finishMutation = undefined;
+    }
     async function guarded<T>(work: () => Promise<T>): Promise<T> {
       if (!financial) return task.wait(work);
+      if (!finishMutation) {
+        invalidarCopiaFamilia(accountUid);
+        finishMutation = beginFamilyMutation(accountUid, accountSession);
+      }
       // Invalidar antes de enviar, no después de recibir: una lectura iniciada
       // antes del borrado no puede restaurarlo durante la espera del servidor.
       mutationRevision = ++reloadId.current;
@@ -418,7 +455,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         }
       }
     }
-    const wait = Object.assign(guarded, { reload: (preferred?: string) => task.wait(() => recargar(preferred, true)) });
+    const wait = Object.assign(guarded, { reload: (preferred?: string) => {
+      finishFinancial();
+      return task.wait(() => recargar(preferred, true));
+    } });
     try { await action(wait); }
     catch (error) {
       if (!task.current()) return;
@@ -426,10 +466,12 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       else showToast(t(error instanceof Error && error.message === "personal-save-failed" ? "settings.backupMovementConflict" : spaceErrorKey(error)));
     }
     finally {
+      const needsReload = finishMutation !== undefined;
+      finishFinancial();
       actionLock.current = false;
       if (task.current()) {
         setOcupado(false);
-        if (!cierresPendientes.current.size && mutationRevision !== undefined && mutationRevision === reloadId.current) void recargar(undefined, true);
+        if (!cierresPendientes.current.size && mutationRevision !== undefined && (needsReload || mutationRevision === reloadId.current)) void recargar(undefined, true);
       }
     }
   }
@@ -565,9 +607,11 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     const uid = auth.currentUser?.uid;
     if (!uid || !familia || devolvibleAPersonal <= 0) return;
     if (familia.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
-    const receipt = await wait(() => devolverAportePersonal({ kind: "family", spaceId: familia.id, amount: devolvibleAPersonal,
-      currency: userCurrency, fecha: fechaHoy(), description: t("family.returnToPersonal") }));
-    if (!recordPersonalReturn(receipt)) return;
+    // Aplicar a la cuenta antes de comprobar si la pantalla sigue abierta.
+    // El propio registro valida cuenta, sesión, moneda y devoluciones anuladas.
+    const saved = await wait(async () => recordPersonalReturn(await devolverAportePersonal({ kind: "family", spaceId: familia.id, amount: devolvibleAPersonal,
+      currency: userCurrency, fecha: fechaHoy(), description: t("family.returnToPersonal") })));
+    if (!saved) return;
     await wait.reload();
   });
   const salir = () => {
@@ -681,10 +725,13 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     await withImmediateRemoval(plan.items.map(item => item.id), setMovimientosOcultos,
       () => mounted.current && getAccountStorageSession() === accountSession, async () => {
     for (const item of plan.items) {
-      if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("family", familia.id, item.id));
-      else await wait(() => borrarMovimientoFamilia(familia.id, item.id));
-      if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null
-        && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
+      await wait(async () => {
+        if (item.personalTransactionId != null) await borrarAportePersonal("family", familia.id, item.id);
+        else await borrarMovimientoFamilia(familia.id, item.id);
+        if (auth.currentUser?.uid !== accountUid || getAccountStorageSession() !== accountSession) throw new Error("account-task-obsolete");
+        if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null
+          && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
+      });
       retirarMovimientoConfirmado(item.id);
     }
     setSeleccionados([]); setSeleccionando(false); await wait.reload();
@@ -694,15 +741,23 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     const currentUid = auth.currentUser?.uid;
     const borrables = owner ? visibles : visibles.filter(item => item.creadoPor === currentUid);
     if (!borrables.length) { showToast(t("family.onlyOwnDelete")); return; }
-    const messageKey = borrables.some(isLinkedSpaceTransfer) ? "spaces.deleteLinkedMovementsMessage" : "spaces.deleteMovementsMessage";
-    Alert.alert(t("spaces.deleteMovementsTitle"), t(messageKey, { count: borrables.length }), [
+    const notice = spaceDeletionNotice(borrables, t, fmtFamilia);
+    Alert.alert(notice.title, notice.message, [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.deleteAll"), style: "destructive", onPress: () => void borrarSeleccionados(borrables.map(item => item.id)) },
+      { text: notice.action, style: "destructive", onPress: () => void borrarSeleccionados(borrables.map(item => item.id)) },
     ]);
   };
+  function confirmarBorrarSeleccionados() {
+    if (!seleccionados.length || ocupado) return;
+    const notice = spaceDeletionNotice(movimientos.filter(item => seleccionados.includes(item.id)), t, fmtFamilia);
+    Alert.alert(notice.title, notice.message, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: notice.action, style: "destructive", onPress: () => void borrarSeleccionados() },
+    ]);
+  }
 
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
-    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: ocupado || actualizando }} disabled={ocupado || actualizando} onPress={() => void recargar(undefined, true)} className="h-10 w-10 items-center justify-center">{(ocupado || actualizando) && !preparandoInvitacion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity></View>
+    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: actualizando }} disabled={ocupado || actualizando} onPress={() => void recargar(undefined, true)} className="h-10 w-10 items-center justify-center">{actualizando && !preparandoInvitacion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity></View>
     <SpaceSwitcher active="family" />
     <ScrollView
       className="flex-1 px-5"
@@ -781,7 +836,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
               </TouchableOpacity> : null}
             </>}
           </View>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58} className="text-[26px] font-extrabold leading-8 text-white">{fmtFamilia(saldo)}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58} className="text-[26px] font-extrabold leading-8 text-white">{copiaConocida?.movimientosFamilias[familia.id] !== undefined ? fmtFamilia(saldo) : "…"}</Text>
           <Text className="text-xs leading-4 text-emerald-100">{t("family.sharedBalance")}</Text>
         </View>
         {devolvibleAPersonal > 0 ? <TouchableOpacity disabled={ocupado} onPress={() => void devolverAPersonal()} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.returnAmount", { amount: fmtFamilia(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
@@ -799,7 +854,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
           {seleccionando ? <>
             <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>
             <View className="flex-row items-center gap-3">
-              <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!seleccionados.length || ocupado} onPress={() => void borrarSeleccionados()} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length || ocupado ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
+              <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!seleccionados.length || ocupado} onPress={confirmarBorrarSeleccionados} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length || ocupado ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
               <TouchableOpacity onPress={confirmarBorrarTodo} hitSlop={6}><Text className="text-sm font-bold text-rose-500">{t("home.deleteAll")}</Text></TouchableOpacity>
               <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
             </View>
