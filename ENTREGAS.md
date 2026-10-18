@@ -1,5 +1,25 @@
 # Entregas de Fino
 
+## 18/10/2026 — Cambio de espacios con menos redibujados (desarrollo)
+
+Marca `18oct-espacios-menos-redibujado`, base dafc53f. Cajas mantiene la
+misma lista/saldos ante respuestas iguales para no reiniciar sus oyentes;
+primera lista vacía confirmada conservada. Familia/Cajas reutilizan agrupados
+cuando no cambian sus fuentes. Filas de Personal sin entrada escalonada al
+regresar. Sin deslizamiento, nuevas dependencias, pantallas retenidas ni cambios
+en saldos, guardado o confirmaciones financieras; Metas y tarjetas fuera.
+Nueva regresión con originales/React/IO adaptados roja en dafc53f por trabajo
+repetido. Conteos de cálculo/suscripción no equivalen a FPS de un APK final.
+244 pruebas/8 auditores sin tarjetas, TypeScript y ESLint completos aprobados.
+Emulador con código actual: regreso entre secciones y listas conocidas revisados;
+50 movimientos/252 marcas y datos financieros locales/remotos idénticos antes
+y después, Metas intactas, ningún formulario guardado. La sesión no tenía espacios
+activos: detalle poblado cubierto con adaptadores, no un ciclo financiero Android.
+
+**Sigue/falta:** medición comparativa final en Android físico con datos
+representativos; pendientes financieros anteriores conservados. No se publica
+APK/AAB/OTA/Play ni Firebase en esta tanda.
+
 ## 18/10/2026 — Aportes confirmados al salir y reintento único (desarrollo)
 
 Marca `18oct-aportes-cambio-seguro`, base 655f076. Crear Familia con dinero

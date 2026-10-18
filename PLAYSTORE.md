@@ -1,5 +1,10 @@
 # Lo que hay que rellenar en Play Console
 
+18/10/2026 — Fluidez de Personal/Familia/Cajas: reutilización visual de listas
+y cálculos, sin nuevas claves, campos persistentes, permisos, diagnósticos
+enviados, servicios, destinatarios o retención. No cambia sincronización monetaria
+ni datos de Metas; no publica esta ficha, las políticas o una nueva versión.
+
 18/10/2026 — Aportes Personal/Familia/Cajas: confirmación independiente de la
 pantalla y reintento conservando la misma orden mientras vive el formulario.
 Reutiliza referencias existentes; no añade campo persistente, colección,

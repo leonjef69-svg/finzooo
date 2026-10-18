@@ -1,5 +1,54 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 18/10/2026 — menos trabajo al volver
+
+Marca `18oct-espacios-menos-redibujado`, base dafc53f. Primera optimización
+del cambio actual, sin paginador/deslizamiento, dependencias nuevas ni mantener
+tres pantallas pesadas montadas. No cambia rutas, transición nativa, saldos,
+persistencia, reglas financieras ni Metas (en pausa). Tarjetas fuera de alcance.
+
+La consulta de Cajas compartidas devolvía objetos nuevos aun sin novedades:
+eso reconstruía las tarjetas y cerraba/abría todos sus oyentes de movimientos.
+Ahora conserva la lista si sus IDs/orden/nombres/dueños/monedas/fechas coinciden,
+y evita redibujar saldos idénticos (cero y ausente siguen siendo distintos).
+También recuerda la primera lista vacía confirmada; no convierte una consulta
+incompleta en copia válida. Conserva las consultas reales al entrar, actualización
+manual, cierre de oyentes al salir y aislamiento de cuenta/sesión. No amplía
+la ventana de caché ni usa la copia visual para confirmar dinero.
+
+Familia/Cajas/Cajas compartidas reutilizan el filtro y agrupado de movimientos
+mientras sus fuentes no cambien. Filtro, ocultación pendiente o llegada real
+sí recalculan. Personal ya no inicia ocho animaciones escalonadas de filas al
+regresar: conserva la transición de la pantalla y los botones existentes.
+
+`verificar-cambio-espacios-ligero-real` ejecuta callbacks, agrupadores, suscripción
+y fila JSX originales con React/IO adaptados. Diez mil filas en 21 dibujos
+sin cambios agrupan una vez (dos en Cajas por vista archivada), no 21; veinte
+respuestas de lista iguales conservan una sola suscripción. Comprueba cambios
+reales, filtros/ocultación, lista vacía, cuenta/sesión y ausencia de animación
+de fila. Roja contra dafc53f por 21 agrupados frente a uno, no por API ausente.
+Son conteos controlados sin React Compiler/Android: NO una mejora de FPS medida
+en el APK.
+
+244 pruebas y 8 auditores sin tarjetas, TypeScript y ESLint completos aprobados.
+La primera pasada señaló dos contratos textuales de cálculos existentes; se
+conservó su forma original, sin retirar ni debilitar las pruebas anteriores.
+Emulador conectado al servidor actual y regreso Personal/Familia/Cajas
+comprobado; listas conocidas no se vacían al volver. La sesión actual tenía
+50 movimientos/252 marcas y ningún espacio activo, antes de esta revisión:
+los campos financieros locales y de Personal en nube y las Familias coinciden
+exactamente antes/después; Metas intactas. No se guardó ningún movimiento ni
+formulario. Las listas/detalles poblados se cubren con adaptadores, no con dinero
+real en Android. Evidencias privadas en .tmp, fuera de Git. Los datos gráficos
+de una sesión de desarrollo con recargas no permiten afirmar una mejora de FPS.
+
+**Sigue/falta:** medir comparación de FPS/latencia en versión final y teléfono
+físico con datos representativos, y decidir después si aporta el deslizamiento.
+La primera carga de red sigue existiendo; no se oculta ni se garantiza 60/90/120
+FPS. Pendientes financieros de la tanda anterior intactos: ciclo real autorizado,
+segundo dispositivo, recuperación durable y anulación remota parcial. Sin
+APK/AAB/OTA/Play ni despliegues de Firebase.
+
 ## Personal/Familia/Cajas — 18/10/2026 — aportes y reintentos
 
 Marca `18oct-aportes-cambio-seguro`, base 655f076. El usuario deja Metas

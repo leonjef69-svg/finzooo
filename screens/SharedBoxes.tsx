@@ -174,18 +174,18 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     }, error => { if (task.current()) errorRef.current(error); });
     return () => { active = false; stop(); };
   }, [accountSession, cajaId, uid]);
-  const ingresos = movimientos.filter(item => !isLinkedSpaceTransfer(item) && item.tipo === "ingreso").reduce((sum, item) => sum + item.monto, 0);
-  const gastos = movimientos.filter(item => !isLinkedSpaceTransfer(item) && item.tipo === "gasto").reduce((sum, item) => sum + item.monto, 0);
+  const ingresos = useMemo(() => movimientos.filter(item => !isLinkedSpaceTransfer(item) && item.tipo === "ingreso").reduce((sum, item) => sum + item.monto, 0), [movimientos]);
+  const gastos = useMemo(() => movimientos.filter(item => !isLinkedSpaceTransfer(item) && item.tipo === "gasto").reduce((sum, item) => sum + item.monto, 0), [movimientos]);
   const transferLedger = useMemo(() => linkedTransferLedger(movimientos), [movimientos]);
-  const visibles = movimientos.filter(item => !filter
-    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
-  const recentMovementTypes = availableRecentMovementTypes(movimientos);
-  const filasVisibles = movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
+  const visibles = useMemo(() => movimientos.filter(item => !filter
+    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter)), [movimientos, filter]);
+  const recentMovementTypes = useMemo(() => availableRecentMovementTypes(movimientos), [movimientos]);
+  const filasVisibles = useMemo(() => movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
     ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
-    : compactLinkedTransferRows(dayItems));
+    : compactLinkedTransferRows(dayItems)), [visibles, movimientosOcultos, filter]);
   const owner = caja?.ownerUid === uid;
   const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
-  const devolvibleAPersonal = returnableToPersonal(movimientos, uid);
+  const devolvibleAPersonal = useMemo(() => returnableToPersonal(movimientos, uid), [movimientos, uid]);
   useEffect(() => {
     const source = confirmedSource.current;
     if (!caja || !uid || !movimientosConfirmados || moneyLock.current || !mounted.current

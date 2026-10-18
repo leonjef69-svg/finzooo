@@ -1,5 +1,23 @@
 # Pruebas y auditores
 
+18/10 Fluidez: verificar-cambio-espacios-ligero-real ejecuta agrupadores,
+setters/suscripción y fila JSX originales. React y plataforma adaptados;
+no representa una medición Android ni del React Compiler. Diez mil movimientos,
+21 renders con fuentes iguales (un agrupado, dos en Cajas por archivo), filtros,
+ocultación y llegadas reales; veinte respuestas iguales sin reiniciar oyentes;
+cero/ausente, primera lista vacía confirmada y cuenta/sesión. Personal sin ocho
+entradas de fila al volver. Roja en dafc53f por 21 agrupados frente a uno;
+no API ausente. No escribe dinero real. Pendiente comparar FPS/latencia de
+versión final en teléfono físico con datos representativos. Metas en pausa y
+tarjetas fuera de auditoría activa.
+
+Corrida final de esta tanda: 244 pruebas/8 auditores sin tarjetas, TypeScript
+y ESLint generales aprobados. No se retiran pruebas anteriores. Emulador con
+servidor actual y listas conocidas sin vaciado al regresar; comparación financiera
+local/remota idéntica (50 movimientos, 252 marcas y Metas intactas), sin guardar
+formularios. Sin espacios activos en esa sesión: no acredita detalle financiero
+poblado Android ni FPS de una versión final.
+
 18/10 Personal/Familia/Cajas: verificar-aportes-cambio-pantalla-real ejecuta
 crear/guardar/editar originales con espera de cuenta real, envío compartido,
 registro de devolución, planes de anulación y cálculos originales. React,

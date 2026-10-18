@@ -332,16 +332,16 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }),
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
-  const visibles = movimientos.filter(item => !filter
-    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
+  const visibles = useMemo(() => movimientos.filter(item => !filter
+    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter)), [movimientos, filter]);
   const recentMovementTypes = useMemo(() => availableRecentMovementTypes(movimientos), [movimientos]);
   useEffect(() => {
     if (cargando || !familiasSincronizadas) return;
     if ((filter === "ingreso" && !recentMovementTypes.income) || (filter === "gasto" && !recentMovementTypes.expense)) setFilter(null);
   }, [cargando, familiasSincronizadas, filter, recentMovementTypes]);
-  const filasVisibles = movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
+  const filasVisibles = useMemo(() => movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
     ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
-    : compactLinkedTransferRows(dayItems));
+    : compactLinkedTransferRows(dayItems)), [visibles, movimientosOcultos, filter]);
   const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
   const owner = familia?.ownerUid === auth.currentUser?.uid;
   const devolvibleAPersonal = returnableToPersonal(movimientos, auth.currentUser?.uid);

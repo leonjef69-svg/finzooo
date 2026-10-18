@@ -113,7 +113,6 @@ const MOSTRAR_TARJETA_CREDITO = false;
    cada fila recibe ya masticado si está marcada, y React solo redibuja la que cambió. */
 const FilaMovimiento = memo(function FilaMovimiento({
   tx,
-  index,
   marcada,
   selectMode,
   oscuro,
@@ -124,7 +123,6 @@ const FilaMovimiento = memo(function FilaMovimiento({
   timeLabel,
 }: {
   tx: Transaction;
-  index: number;
   marcada: boolean;
   selectMode: boolean;
   oscuro: boolean;
@@ -144,19 +142,10 @@ const FilaMovimiento = memo(function FilaMovimiento({
   // Si la persona dejó como descripción el mismo nombre de la categoría,
   // mostrar ambos renglones es una repetición, no información adicional.
   const repeatsCategory = title.trim().localeCompare(t(c.label).trim(), undefined, { sensitivity: "accent" }) === 0;
-  // La animación de entrada se aplica SOLO a las filas visibles al
-  // abrir (las 8 primeras). Antes se aplicaba a todas, y como las
-  // posteriores llevaban el retardo máximo (400 ms), al desplazarse
-  // cada fila nueva aparecía en blanco durante ese tiempo antes de
-  // dibujarse — se veía como tirones y la lista se sentía pesada.
-  // Las filas de más abajo ya no "entran" animadas: simplemente
-  // están ahí cuando llegas a ellas, que es lo esperable al
-  // desplazar.
-  const Row = index < 8 ? Animated.View : View;
-  const rowProps = index < 8 ? { entering: FadeInDown.delay(index * 50).duration(280) } : {};
+  // La transición entre espacios ya anima la pantalla completa. No iniciar
+  // además ocho entradas escalonadas cada vez que se regresa a Personal.
   return (
     <View className="px-5">
-      <Row {...rowProps}>
         <PressableScale
           onPress={() => onPress(tx.id, Boolean(transferGroup))}
           // El contorno se ve poco, sobre todo de noche: la tarjeta
@@ -220,7 +209,6 @@ const FilaMovimiento = memo(function FilaMovimiento({
             <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View>
           </View></>}
         </PressableScale>
-      </Row>
     </View>
   );
 });
@@ -629,7 +617,6 @@ export default function Home({
       {startsMovementDay(visibleRecentRows, index, item => item.item.date) ? <MovementDateHeader date={row.item.date} monthNames={monthNames} inset /> : null}
       <FilaMovimiento
         tx={row.item}
-        index={index}
         marcada={marcadas.has(row.item.id)}
         selectMode={selectMode}
         oscuro={colorScheme === "dark"}

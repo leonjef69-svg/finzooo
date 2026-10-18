@@ -187,6 +187,18 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const setCompartidas = useCallback((update: SetStateAction<CajaCompartida[]>) => {
     if (!cuentaActual()) return;
     const next = typeof update === "function" ? update(compartidasActuales.current) : update;
+    const previous = compartidasActuales.current;
+    // Firebase devuelve objetos nuevos también cuando no cambió nada. Conservar
+    // la referencia evita cerrar y abrir todos los oyentes de movimientos.
+    if (next === previous || (next.length === previous.length && next.every((item, index) => {
+      const old = previous[index];
+      return item.id === old.id && item.nombre === old.nombre && item.ownerUid === old.ownerUid
+        && item.currency === old.currency && item.creadaEn === old.creadaEn;
+    }))) {
+      // También una lista vacía confirmada es una copia conocida al volver.
+      if (listaCompartidaCompleta.current && !leerCajasCompartidasEnMemoria()) guardarCajasCompartidasEnMemoria(previous, saldosCompartidasActuales.current, accountUid, accountSession);
+      return;
+    }
     compartidasActuales.current = next;
     if (listaCompartidaCompleta.current) guardarCajasCompartidasEnMemoria(next, saldosCompartidasActuales.current, accountUid, accountSession);
     setRenderedCompartidas(next);
@@ -194,6 +206,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const setSaldosCompartidas = useCallback((update: SetStateAction<Record<string, number>>) => {
     if (!cuentaActual()) return;
     const next = typeof update === "function" ? update(saldosCompartidasActuales.current) : update;
+    const previous = saldosCompartidasActuales.current;
+    const ids = Object.keys(next);
+    if (next === previous || (ids.length === Object.keys(previous).length
+      && ids.every(id => Object.hasOwn(previous, id) && Object.is(previous[id], next[id])))) return;
     saldosCompartidasActuales.current = next;
     if (listaCompartidaCompleta.current) guardarCajasCompartidasEnMemoria(compartidasActuales.current, next, accountUid, accountSession);
     setRenderedSaldosCompartidas(next);
@@ -463,7 +479,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
   const saldoActual = caja ? saldoCaja(caja.id, datos.movimientos) : 0;
-  const devolvibleAPersonal = returnableToPersonal(movimientos);
+  const devolvibleAPersonal = useMemo(() => returnableToPersonal(movimientos), [movimientos]);
 
   // Recuperación comprobada: Personal, Caja y marcas se guardan juntos.
   useEffect(() => {
@@ -688,13 +704,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     if (!ready) return;
     if ((filter === "ingreso" && !recentMovementTypes.income) || (filter === "gasto" && !recentMovementTypes.expense)) setFilter(null);
   }, [ready, filter, recentMovementTypes]);
-  const visibles = movimientos.filter(item => !filter
-    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
-  const filasVisibles = movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
+  const visibles = useMemo(() => movimientos.filter(item => !filter
+    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter)), [movimientos, filter]);
+  const filasVisibles = useMemo(() => movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
     ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
-    : compactLinkedTransferRows(dayItems));
-  const filasArchivadas = movementRowsByDay(movimientos, item => item.fecha,
-    dayItems => dayItems.map(item => ({ key: `movement:${item.id}`, item })));
+    : compactLinkedTransferRows(dayItems)), [visibles, movimientosOcultos, filter]);
+  const filasArchivadas = useMemo(() => movementRowsByDay(movimientos, item => item.fecha,
+    dayItems => dayItems.map(item => ({ key: `movement:${item.id}`, item }))), [movimientos]);
   const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
   function sacarDePersonal(valor: number, destino: string, spaceId: string, link: string, date = fechaLocal()): Transaction {
     const id = nextId();
