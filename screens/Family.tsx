@@ -28,6 +28,7 @@ import { spaceErrorKey } from "@/utils/spaceErrors";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
 import { getAccountStorageSession } from "@/utils/storage";
 import { beginFamilyMutation, familyMutationPending, familyMutationVersion, observeFamilyMutation } from "@/utils/familyMutation";
+import { shareSpaceRead } from "@/utils/spaceRead";
 import { withImmediateRemoval } from "@/utils/immediateRemoval";
 import { spaceDeletionNotice } from "@/utils/spaceDeletionNotice";
 import {
@@ -89,6 +90,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   // automáticamente la última familia activa. La persona elige el espacio
   // que quiere consultar en cada entrada.
   const [verTodas, setVerTodas] = useState(true);
+  const listaFamiliasVisible = useRef(verTodas);
+  listaFamiliasVisible.current = verTodas;
   const [seleccionandoFamilias, setSeleccionandoFamilias] = useState(false);
   const [familiasSeleccionadas, setFamiliasSeleccionadas] = useState<string[]>([]);
   const [miembros, setMiembros] = useState<MiembroFamilia[]>(copiaInicial?.miembros ?? []);
@@ -191,13 +194,25 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     // Capturar la selección ANTES de esperar. La caché de otra consulta no
     // decide qué familia abrir cuando llegan respuestas en distinto orden.
     const elegida = preferida ?? familiaElegida.current;
+    const consultarMiembros = Boolean(preferida) || !listaFamiliasVisible.current;
+    const leer = <T,>(key: string, work: () => Promise<T>) =>
+      shareSpaceRead({ uid, session: accountSession, revision: moneyVersion, key }, work, forzar);
     let completing = false;
     try {
       // listarFamilias ya incorpora el índice antiguo: no consultarlo otra vez.
-      const lista = await task.wait(() => listarFamilias(uid));
+      const lista = await task.wait(() => leer("family:list", () => listarFamilias(uid)));
       const activa = elegida ? lista.find(item => item.id === elegida) ?? null : lista[0] ?? null;
+      // Empezar los demás saldos ahora, no después de esperar el detalle activo.
+      // Capturar también el rechazo evita una promesa sin atender si se sale
+      // de la pantalla mientras termina otra lectura.
+      const otrasPendientes = Promise.all(lista.filter(item => item.id !== activa?.id).map(async item =>
+        [item.id, await task.wait(() => leer(`family:movements:${item.id}`, () => listarMovimientosFamilia(item.id, true)))] as const))
+        .then(value => ({ ok: true as const, value }), error => ({ ok: false as const, error }));
+      const previa = familiaEnMemoria.get(uid);
       const [movements, people] = activa ? await task.wait(() => Promise.all([
-        listarMovimientosFamilia(activa.id, true), listarMiembrosFamilia(activa.id),
+        leer(`family:movements:${activa.id}`, () => listarMovimientosFamilia(activa.id, true)),
+        consultarMiembros ? leer(`family:members:${activa.id}`, () => listarMiembrosFamilia(activa.id))
+          : Promise.resolve(previa?.familia?.id === activa.id ? previa.miembros : []),
       ])) : [[], []];
       if (!task.current()) return;
       const previous = familiaEnMemoria.get(uid);
@@ -217,8 +232,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: nextBalances,
         movimientosFamilias: nextMovements, miembros: people, movimientos: movements, actualizadaEn: 0 });
       const completar = async () => {
-        const otras = await task.wait(() => Promise.all(lista.filter(item => item.id !== activa?.id).map(async item =>
-          [item.id, await task.wait(() => listarMovimientosFamilia(item.id, true))] as const)));
+        const resultado = await task.wait(() => otrasPendientes);
+        if (!resultado.ok) throw resultado.error;
+        const otras = resultado.value;
         if (!task.current()) return;
         const completas = { ...nextMovements, ...Object.fromEntries(otras) };
         const saldos = Object.fromEntries(Object.entries(completas).map(([id, items]) =>
@@ -877,7 +893,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
           </TouchableOpacity> : null}
         </View>
         <SpaceOverviewTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmtFamilia} />
-        <SpaceMovementSheet visible={Boolean(tipo)} type={tipo} onType={next => { setTipo(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => setTipo(null)} onSave={() => void guardar()} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, familia?.currency || userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={familia?.currency || userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={owner ? origenDinero : undefined} onOrigin={owner ? setOrigenDinero : undefined} availableText={owner ? t("family.personalAvailable", { amount: fmt(disponible) }) : undefined} disabled={ocupado} />
+        <SpaceMovementSheet visible={Boolean(tipo)} type={tipo} onType={next => { setTipo(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => setTipo(null)} onSave={() => void guardar()} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, familia?.currency || userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={familia?.currency || userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={owner ? origenDinero : undefined} onOrigin={owner ? setOrigenDinero : undefined} availableText={owner ? t("family.personalAvailable", { amount: fmt(disponible) }) : undefined} disabled={ocupado} saving={ocupado} />
         <View className={`mb-2 mt-5 ${seleccionando ? "flex-row items-center justify-between" : "flex-row items-center gap-1"}`}>
           {seleccionando ? <>
             <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>

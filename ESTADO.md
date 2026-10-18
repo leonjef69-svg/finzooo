@@ -1,5 +1,59 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 18/10/2026 — consultas en curso compartidas
+
+Marca `18oct-espacios-consultas-unicas`, base f305bf0f. Volver antes de que
+termine una consulta ya iniciada reutiliza esa misma petición, únicamente en
+la misma cuenta/sesión/revisión financiera. No conserva resultados ni amplía
+la caché visual. Actualizar manualmente inicia una petición nueva y sustituye
+la ficha anterior; rechazos, lecturas de más de ocho segundos y exceso de 64
+fichas se retiran sin cancelar ni modificar datos. Cada pantalla conserva sus
+propias comprobaciones para rechazar respuestas antiguas. Sin nueva dependencia.
+
+Familia ya no descarga miembros al mostrar solo la lista; abrir un detalle
+sí los confirma. Los historiales de las demás familias empiezan en paralelo
+al activo, en vez de esperar a sus miembros/movimientos. Personal continúa
+esperando la confirmación de TODAS las familias; no se concilia una foto parcial.
+Cajas compartidas utiliza la misma coordinación para su consulta de lista.
+No se altera guardado, cálculos, revisiones monetarias ni recuperaciones de nube.
+
+La hoja de movimientos muestra trabajo en Guardar y bloquea categoría/fecha/
+notas, cierre y doble toque mientras confirma. Cajas no representa ese guardado
+como Actualizar general cuando la hoja está abierta; otras operaciones conservan
+su indicador. No se han eliminado las esperas necesarias de servidor ni afirmado
+que todas las acciones puedan funcionar instantáneamente. Invitaciones de
+Familia/Cajas compartidas ya eran no financieras; no se les atribuye otra recarga.
+
+Dos regresiones ejecutan los manejadores/JSX originales con React/IO adaptados:
+salir/volver en vuelo, cuentas/sesiones/revisiones, actualización manual y lectura
+sustituida, error, consulta colgada, saldos paralelos y confirmación completa;
+indicador y bloqueo local de la hoja. Rojas en f305bf0f por dos consultas frente
+a una y ausencia del indicador en Guardar, no por una API ausente. Adaptadores
+anteriores reciben las dependencias reales nuevas; conservan sus aserciones.
+246 pruebas/8 auditores sin tarjetas, TypeScript y ESLint generales aprobados.
+
+Emulador con marca nueva comprobada en Información. Navegación sin guardar
+dinero y comparación financiera local/remota idéntica: 50 movimientos,
+252 marcas, Familias y Metas intactas. No hay espacios activos en esta sesión;
+no acredita guardar/devolver/invitar en detalles poblados reales de Android.
+Dos pasadas de ocho cambios en desarrollo, SurfaceFlinger tras confirmar ruta:
+46,0 y 36,4 FPS agregados frente a 42,7 en la pasada anterior. La segunda incluye
+la muestra de cuatro cuadros/7,2 presentaciones por segundo que el filtro inicial
+excluía: no se omite por tener pocos cuadros. La presentación sola no distingue
+una pausa sin cambios de un cuadro perdido. Ventana de hasta 500 ms desde primer cuadro presentado tras
+confirmar ruta, no latencia desde toque ni FPS sostenidos. Alineación de reloj
+con incertidumbre ~10 ms; listas vacías y carga variable del PC. NO demuestra
+mejora estable de FPS ni 60 constantes. Evidencias privadas en .tmp, fuera de Git.
+El emulador funciona a 60 Hz; no puede mostrar más de 60 cuadros por segundo.
+
+**Sigue/falta:** perfilar los tirones que persisten (especialmente al volver a
+Personal), repetir comparaciones controladas en el emulador y luego en versión
+final con datos representativos; deslizamiento aún no añadido. La primera
+consulta de red sigue siendo necesaria. Pendientes financieros previos:
+ciclo real autorizado/segundo dispositivo, recuperación durable de altas
+inciertas y anulación remota parcial. Metas en pausa y tarjetas fuera; sin
+APK/AAB/OTA/Play ni despliegue Firebase.
+
 ## Personal/Familia/Cajas — 18/10/2026 — menos trabajo al volver
 
 Marca `18oct-espacios-menos-redibujado`, base dafc53f. Primera optimización

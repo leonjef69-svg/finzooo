@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
+import { spaceReadOriginal } from "./helpers/space-read-original.mjs";
+import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
 
 const read = createSourceReader({ revision: process.env.FINO_TEST_BOX_LIST_WARM_BASELINE });
 const file = "screens/Cajas.tsx", text = read(file);
@@ -30,7 +32,7 @@ const focus = find(node => ts.isCallExpression(node) && node.expression.getText(
   && node.arguments[0]?.getText(tree).includes("listarCajasCompartidas"));
 const focusCode = `(${focus.arguments[0].arguments[0].getText(tree)})()`;
 function screen() {
-  const s = { accountUid: uid, accountSession: session, personalReady: true, hasOnboarded: true, compartidaAbierta: null,
+  const s = { ...spaceReadOriginal(), ...familyMutationOriginal(), accountUid: uid, accountSession: session, personalReady: true, hasOnboarded: true, compartidaAbierta: null,
     lista: true, verArchivadas: false, refreshVersion: 0, requestedRefresh: { current: 0 }, known: false, listaCompartidaCompleta: { current: false }, conversionEnCurso: { current: false },
     compartidasActuales: { current: [] }, saldosCompartidasActuales: { current: {} }, useCallback: fn => fn,
     cuentaActual: () => s.accountUid === uid && s.accountSession === session,

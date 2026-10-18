@@ -7,6 +7,7 @@ import { buildSync } from "esbuild";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
 import { withImmediateRemoval } from "./helpers/immediate-removal-original.mjs";
 import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
+import { spaceReadOriginal } from "./helpers/space-read-original.mjs";
 
 const baseline = process.env.FINO_TEST_FAMILY_WAIT_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Hash inválido");
@@ -33,7 +34,8 @@ function harness() {
   const ma = [{ id: "mov-a", tipo: "ingreso", monto: 40 }], mb = [{ id: "mov-b", tipo: "ingreso", monto: 80 }];
   const memory = new Map([["A", { familia: a, familias: [a, b], miembros: [{ uid: "old-member" }], movimientos: ma,
     movimientosFamilias: { a: ma, b: mb }, saldosFamilias: { a: 40, b: 80 }, actualizadaEn: 0 }]]);
-  const s = { ...familyMutationOriginal(memory), accountUid: "A", accountSession: 1, auth: { currentUser: { uid: "A" } }, getAccountStorageSession: () => 1,
+  const s = { ...spaceReadOriginal(), ...familyMutationOriginal(memory), accountUid: "A", accountSession: 1, auth: { currentUser: { uid: "A" } }, getAccountStorageSession: () => 1,
+    listaFamiliasVisible: { current: true },
     withImmediateRemoval, setMovimientosOcultos() {},
     useCallback: callback => callback,
     mounted: { current: true }, reloadId: { current: 0 }, familiaElegida: { current: "a" }, confirmedReload: { current: 0 },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Check, X } from "lucide-react-native";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import Modal from "@/components/PrivateModal";
 import { useAppData } from "@/contexts/AppDataContext";
 import { COUNTRIES } from "@/constants/countries";
@@ -36,12 +36,13 @@ type Props = {
   onOrigin?: (value: SpaceMoneyOrigin) => void;
   availableText?: string;
   disabled?: boolean;
+  saving?: boolean;
 };
 
 export default function SpaceMovementSheet({
   visible, type, onType, onClose, onSave, amount, onAmount, description, onDescription,
   method, onMethod, currency, category, onCategory, date, onDate, notes, onNotes,
-  origin, onOrigin, availableText, disabled = false,
+  origin, onOrigin, availableText, disabled = false, saving = false,
 }: Props) {
   const { t, userCountry } = useAppData();
   const [showCategories, setShowCategories] = useState(false);
@@ -53,6 +54,7 @@ export default function SpaceMovementSheet({
     || "🌐";
 
   return <Modal transparent visible={visible} animationType="slide" statusBarTranslucent onRequestClose={() => {
+    if (disabled) return;
     if (showCategories) {
       setShowCategories(false);
       return;
@@ -60,7 +62,7 @@ export default function SpaceMovementSheet({
     onClose();
   }}>
     <View className="flex-1 justify-end bg-black/45">
-      <Pressable accessibilityRole="button" accessibilityLabel={t("common.cancel")} onPress={onClose} className="absolute inset-0" />
+      <Pressable accessibilityRole="button" accessibilityLabel={t("common.cancel")} disabled={disabled} onPress={onClose} className="absolute inset-0" />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="justify-end">
         <ScrollView
           className="rounded-t-[28px] bg-white px-5 dark:bg-noche"
@@ -86,8 +88,8 @@ export default function SpaceMovementSheet({
               <ArrowDown size={19} color={type === "gasto" ? "#fff" : "#be123c"} />
               <Text className={`text-xs font-extrabold ${type === "gasto" ? "text-white" : "text-rose-800 dark:text-rose-200"}`}>{t("boxes.expense")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} disabled={disabled || !type} onPress={onSave} className={`h-11 w-11 items-center justify-center rounded-xl ${disabled || !type ? "bg-slate-200 dark:bg-slate-700" : "bg-emerald-600"}`}>
-              <Check size={22} color={disabled || !type ? "#94a3b8" : "#fff"} strokeWidth={3} />
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t(saving ? "common.saving" : "common.save")} accessibilityState={{ busy: saving, disabled: disabled || !type }} disabled={disabled || !type} onPress={onSave} className={`h-11 w-11 items-center justify-center rounded-xl ${disabled || !type ? "bg-slate-200 dark:bg-slate-700" : "bg-emerald-600"}`}>
+              {saving ? <ActivityIndicator color="#059669" size="small" /> : <Check size={22} color={disabled || !type ? "#94a3b8" : "#fff"} strokeWidth={3} />}
             </TouchableOpacity>
           </View>
 
@@ -124,7 +126,7 @@ export default function SpaceMovementSheet({
             {origin === "personal" && availableText ? <Text className="mt-1 text-[11px] text-slate-500">{availableText}</Text> : null}
           </View> : null}
 
-          <SpaceMovementFields type={type} category={category} onOpenCategory={() => setShowCategories(true)} date={date} onDate={onDate} notes={notes} onNotes={onNotes} />
+          <SpaceMovementFields type={type} category={category} onOpenCategory={() => setShowCategories(true)} date={date} onDate={onDate} notes={notes} onNotes={onNotes} disabled={disabled} />
         </ScrollView>
       </KeyboardAvoidingView>
       {showCategories && type ? <TransactionCategorySheet

@@ -4,6 +4,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
+import { spaceReadOriginal } from "./helpers/space-read-original.mjs";
 
 // Ejecuta las funciones/callbacks del código real, no una copia de su lógica.
 // La plataforma/SDK se sustituyen para ordenar deliberadamente las respuestas.
@@ -42,9 +43,9 @@ const reload = find(family, node => ts.isVariableDeclaration(node) && node.name.
 function familyHarness() {
   uid = "A"; session = 1;
   const state = {}, calls = [], cache = new Map(); let networkReads = 0;
-  const scope = { ...familyMutationOriginal(cache), auth, accountUid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
+  const scope = { ...spaceReadOriginal(), ...familyMutationOriginal(cache), auth, accountUid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, actionLock: { current: false },
-    familiaElegida: { current: null },
+    familiaElegida: { current: null }, listaFamiliasVisible: { current: false },
     cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },
     tRef: { current: key => key }, toastRef: { current: key => calls.push(key) }, showToast: key => calls.push(key),
     t: key => key, spaceErrorKey: () => "error", familiaEnMemoria: cache, VENTANA_CAMBIO_RAPIDO_MS: 2_000,
@@ -121,7 +122,7 @@ for (const nextUid of ["B", "A"]) {
   scope.listarFamilias = () => old.promise;
   const a = scope.recargar(); await flush();
   scope.listarFamilias = () => recent.promise;
-  const b = scope.recargar(); await flush();
+  const b = scope.recargar(undefined, true); await flush();
   old.reject(new Error("offline")); await a;
   assert.equal(calls.length, 0); assert.equal(state.Cargando, undefined);
   recent.resolve([]); await b; assert.equal(state.Cargando, false);

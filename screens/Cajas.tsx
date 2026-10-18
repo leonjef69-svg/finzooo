@@ -62,6 +62,8 @@ import { ActivityIndicator, Alert, Platform, ScrollView, Text, TextInput, Toucha
 import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
+import { shareSpaceRead } from "@/utils/spaceRead";
+import { familyMutationVersion } from "@/utils/familyMutation";
 
 // Cambiar de Personal a Familia y volver a Cajas desmonta estas pantallas.
 // Conservamos la última copia ya pintada para no reconstruir una pantalla
@@ -225,11 +227,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const requested = refreshVersion;
     const task = captureAccountTask(accountUid, () => active && cuentaActual() && !conversionEnCurso.current && requestedRefresh.current === requested);
     setCargandoCompartidas(leerCajasCompartidasEnMemoria() === null); setErrorCompartidas(false);
-    void task.wait(() => listarCajasCompartidas(accountUid)).then(items => {
+    void task.wait(() => shareSpaceRead({ uid: accountUid, session: accountSession,
+      revision: familyMutationVersion(accountUid, accountSession, "box"), key: "box:list" },
+    () => listarCajasCompartidas(accountUid), refreshVersion > 0)).then(items => {
       if (task.current()) { listaCompartidaCompleta.current = true; setCompartidas(items); setCompartidasConocidas(true); setCargandoCompartidas(false); setActualizandoListaCompartida(false); }
     }).catch(() => { if (task.current()) { setCargandoCompartidas(false); setActualizandoListaCompartida(false); setErrorCompartidas(true); } });
     return () => { active = false; };
-  }, [accountUid, cuentaActual, personalReady, hasOnboarded, compartidaAbierta, refreshVersion, setCompartidas]));
+  }, [accountUid, accountSession, cuentaActual, personalReady, hasOnboarded, compartidaAbierta, refreshVersion, setCompartidas]));
   useEffect(() => {
     if (!lista || compartidaAbierta || verArchivadas) return;
     let active = true;
@@ -1078,7 +1082,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       <View className="flex-row items-center justify-between px-5 pb-3">
         <BackButton onPress={safeBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.title")}</Text>
-        <TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: compartiendo || cargandoUnion || guardando || actualizandoListaCompartida }} disabled={compartiendo || cargandoUnion || guardando || actualizandoListaCompartida} onPress={actualizarListaCajas} className="h-10 w-10 items-center justify-center">{(guardando || compartiendo || cargandoUnion || actualizandoListaCompartida) && !invitacionPrivadaVisible ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity>
+        <TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: compartiendo || cargandoUnion || guardando || actualizandoListaCompartida }} disabled={compartiendo || cargandoUnion || guardando || actualizandoListaCompartida} onPress={actualizarListaCajas} className="h-10 w-10 items-center justify-center">{((guardando && !anotando) || compartiendo || cargandoUnion || actualizandoListaCompartida) && !invitacionPrivadaVisible ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
       <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
@@ -1330,7 +1334,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </TouchableOpacity>
             </View>
             <SpaceOverviewTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
-            <SpaceMovementSheet visible={Boolean(anotando)} type={anotando} onType={next => { setAnotando(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => { if (!guardandoRef.current) { setAnotando(null); setEditandoAporteId(null); } }} onSave={guardarMovimiento} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={origenDinero} onOrigin={setOrigenDinero} availableText={t("boxes.personalAvailable", { amount: fmt(disponible) })} disabled={!ready || guardando} />
+            <SpaceMovementSheet visible={Boolean(anotando)} type={anotando} onType={next => { setAnotando(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => { if (!guardandoRef.current) { setAnotando(null); setEditandoAporteId(null); } }} onSave={guardarMovimiento} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={origenDinero} onOrigin={setOrigenDinero} availableText={t("boxes.personalAvailable", { amount: fmt(disponible) })} disabled={!ready || guardando} saving={guardando} />
             <View className={`mb-2 mt-5 ${seleccionando ? "flex-row items-center justify-between" : "flex-row items-center gap-1"}`}>
               {seleccionando ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>

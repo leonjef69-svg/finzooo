@@ -4,6 +4,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
+import { spaceReadOriginal } from "./helpers/space-read-original.mjs";
 
 const baseline = process.env.FINO_TEST_UNIFIED_BOXES_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Hash inválido");
@@ -123,7 +124,7 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   const { node, tree } = find(main, node => ts.isCallExpression(node) && node.expression.getText() === "useFocusEffect"
     && node.arguments[0]?.getText().includes("listarCajasCompartidas"));
   const network = gate(); let cleanup, sets = 0;
-  const s = { personalReady: true, hasOnboarded: true, accountUid: "A", compartidaAbierta: null, cuentaActual: () => true, refreshVersion: 1, requestedRefresh: { current: 1 }, conversionEnCurso: { current: false },
+  const s = { ...spaceReadOriginal(), ...familyMutationOriginal(), personalReady: true, hasOnboarded: true, accountUid: "A", accountSession: 1, compartidaAbierta: null, cuentaActual: () => true, refreshVersion: 1, requestedRefresh: { current: 1 }, conversionEnCurso: { current: false },
     useCallback: callback => callback, captureAccountTask: (_uid, valid) => ({ current: valid, wait: work => work() }),
     setCargandoCompartidas() {}, setErrorCompartidas() {}, listarCajasCompartidas: () => network.promise,
     leerCajasCompartidasEnMemoria: () => null, setActualizandoListaCompartida() {},

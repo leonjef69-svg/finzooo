@@ -1,5 +1,29 @@
 # Entregas de Fino
 
+## 18/10/2026 — Consultas únicas en curso y guardado identificado (desarrollo)
+
+Marca `18oct-espacios-consultas-unicas`, base f305bf0f. Familia/Cajas comparten
+lecturas todavía pendientes solo en la misma cuenta/sesión/revisión; Actualizar
+inicia una nueva y ninguna respuesta antigua confirma datos en otra pantalla.
+Lista Familia sin consultar miembros invisibles y saldos de otras familias en
+paralelo; conciliación Personal continúa esperando confirmación completa.
+Hoja de movimientos con indicador en Guardar y campos/cierre bloqueados al
+confirmar. Sin cambios de cálculos, persistencia o dependencias.
+
+246 pruebas/8 auditores sin tarjetas, TypeScript/ESLint generales; dos regresiones
+originales rojas en f305bf0f por duplicación de consultas y guardado sin indicador.
+Marca comprobada visualmente en el emulador. Datos financieros locales/remotos
+idénticos antes/después (50 movimientos, 252 marcas), sin guardar dinero;
+sesión sin espacios activos. FPS de desarrollo: dos pasadas 46,0/36,4 frente
+a la anterior 42,7, con variabilidad/tirones. La segunda incluye la muestra
+de cuatro cuadros; presentación no distingue pausas sin cambios de cuadros
+perdidos. NO acredita mejora estable ni 60 constantes.
+
+**Sigue/falta:** perfilar tirones y comparar de forma controlada en emulador y
+versión final con datos representativos; pendientes financieros anteriores sin
+cerrar. Metas en pausa, tarjetas fuera, deslizamiento no añadido. Sin entrega
+APK/AAB/OTA/Play ni despliegue de Firebase.
+
 ## 18/10/2026 — Cambio de espacios con menos redibujados (desarrollo)
 
 Marca `18oct-espacios-menos-redibujado`, base dafc53f. Cajas mantiene la

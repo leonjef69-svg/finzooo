@@ -1,5 +1,25 @@
 # Pruebas y auditores
 
+18/10 Consultas en vuelo: verificar-recargas-espacios-compartidas-real ejecuta
+recargar Familia y foco Cajas originales, espera de cuenta y coordinador reales;
+solo IO/React adaptados. Reentrada antes de completar (una consulta), manual
+que sustituye la anterior, rechazo, ocho segundos de antigüedad, cuentas/sesiones/
+revisiones, lista sin miembros, saldos en paralelo y conciliación no parcial.
+Roja en f305bf0f por dos consultas frente a una. verificar-guardado-localizado-
+espacios-real ejecuta la hoja/campos JSX originales: indicador y bloqueo de
+Guardar/cierre/categoría/fecha/notas, conexión a los tres formularios y distinción
+del Actualizar general. Roja en f305bf0f por indicador ausente, no API nueva.
+Adaptadores anteriores ampliados con dependencias originales, sin retirar
+aserciones. 246 pruebas/8 auditores sin tarjetas, TypeScript/ESLint completos.
+Android: navegación y marca nueva comprobadas, 50 movimientos/252 marcas y
+datos financieros locales/remotos idénticos. Sin guardar movimientos y sin
+espacios activos: no prueba confirmaciones financieras Android. Dos pasadas
+de navegación en desarrollo: 46,0/36,4 FPS frente a 42,7 anterior, variables;
+se incluye la muestra de cuatro cuadros. Presentación no distingue pausas sin
+cambios de cuadros perdidos: NO mejora estable demostrada.
+Sigue perfilar tirones y comparar controladamente en el emulador/versión final.
+Pendientes financieros previos intactos; Metas en pausa y tarjetas fuera.
+
 18/10 Fluidez: verificar-cambio-espacios-ligero-real ejecuta agrupadores,
 setters/suscripción y fila JSX originales. React y plataforma adaptados;
 no representa una medición Android ni del React Compiler. Diez mil movimientos,
