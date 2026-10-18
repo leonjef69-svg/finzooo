@@ -1,5 +1,11 @@
 # Lo que hay que rellenar en Play Console
 
+18/10/2026 — Aportes Personal/Familia/Cajas: confirmación independiente de la
+pantalla y reintento conservando la misma orden mientras vive el formulario.
+Reutiliza referencias existentes; no añade campo persistente, colección,
+permiso, destinatario ni retención nuevos. No modifica Metas, no despliega
+Firebase y no publica esta ficha ni políticas.
+
 17/10/2026 — Familia/Cajas/Personal: correcciones de confirmación al abandonar
 una pantalla y coordinación temporal de lecturas, sin campo, permiso,
 destinatario o retención nuevos. Los avisos distinguen retirar recibos del

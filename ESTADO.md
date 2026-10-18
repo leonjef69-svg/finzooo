@@ -1,5 +1,56 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 18/10/2026 — aportes y reintentos
+
+Marca `18oct-aportes-cambio-seguro`, base 655f076. El usuario deja Metas
+pendiente expresamente: no se cambia su cálculo, reserva, formularios ni datos.
+Tarjetas continúan fuera de alcance. Esta tanda trata solo vínculos monetarios
+de Personal con Familia y Cajas, no reconstruye el ingreso inicial antiguo.
+
+La prueba original reprodujo otro salto al salir durante la confirmación:
+crear Familia con aporte Personal, agregarlo o editarlo podía omitir la
+actualización local inmediata. La confirmación financiera ahora usa la misma
+cuenta/sesión sin depender de que su pantalla siga montada; la continuación
+visual sí se cancela. Conserva el guardado existente y sus comprobaciones.
+
+También se reprodujo doble aporte al perder la respuesta remota y reintentar
+Agregar desde Personal: la pantalla generaba otro ID Personal y por eso el
+auxiliar remoto no reconocía la orden. Se conserva la misma confirmación/ID
+antes del envío, mientras vive el formulario. Tras recibir confirmación remota,
+un fallo local reintenta solo el mismo débito; un rechazo definitivo permite
+corregir el formulario incluso cuando llega en un reintento.
+Un aporte incierto bloquea abrir otra Familia y crear otra desde ese formulario;
+se identifica la Familia pendiente y se permite volver a ella para confirmar.
+La comprobación impide aplicar el aporte anterior desde Guardar en otro espacio.
+Estas referencias y el tipo de creación son solo memoria, no datos persistidos.
+No es un diario durable nuevo ni garantiza la identidad de un alta incierta tras cerrar el
+proceso, cambiar de sesión o reiniciar la creación completa de una Familia.
+
+Nueva regresión ejecuta acciones, espera por cuenta, auxiliares de envío,
+cálculos y registro de devolución originales, con React/almacén/SDK adaptados:
+S/500→400 al aportar 100→500 al devolver, respuesta repetida sin ingreso nuevo,
+anulación del par manteniendo 500 y devolución borrada no resucitada. Incluye
+creación/alta/edición al salir, doble toque, cuenta/sesión, rechazo definitivo,
+fallo local y respuesta perdida. Contra 655f076 falla por débito omitido, no por
+API ausente; la ampliación de pérdida de respuesta reprodujo dos órdenes antes
+de corregirla. No equivale a escritura financiera ni restauración Android real.
+
+243 pruebas y 8 auditores sin tarjetas aprobados, TypeScript/ESLint generales
+aprobados. Los adaptadores anteriores recibieron la espera de cuenta original
+y la referencia pendiente inicial, sin retirar comprobaciones. Emulador
+reconectado al servidor actual tras atascarse la recarga del cliente de desarrollo;
+se reinició solo la app, sin limpiar datos. Personal/Familia/Cajas revisados y
+formularios modernos abiertos/cancelados, sin confirmar movimientos. Comparación
+exacta local, Familia, datos financieros de Personal en nube y saldos de Cajas
+sin diferencias: 48 movimientos, 234 marcas y metas intactas. No se prueba así
+un ciclo financiero físico. Evidencias privadas en .tmp, excluidas de Git.
+
+**Sigue/falta:** ciclo financiero Android/cuenta de prueba completo, restauración en
+segundo dispositivo, recuperación durable de altas con respuesta incierta y
+anulación remota de varios registros ante fallo entre ellos. El origen del
+importe inicial antiguo no se deduce de una marca sin importe/tipo. Metas en
+pausa a petición del usuario; sin APK/AAB/OTA/Play ni despliegues de Firebase.
+
 ## Familia/Cajas/Personal — 17/10/2026 — confirmaciones al cambiar de pantalla
 
 Marca `17oct-devolucion-cambio-seguro`, base 2d97a63. Primera tanda de

@@ -81,6 +81,7 @@ const family = { ...scope, auth: { currentUser: { uid: "A" } }, familia: { id: "
   setMonto() {}, setDescripcion() {}, setNotes() {}, setMovementDate() {}, setOrigenDinero() {}, setTipo() {},
   setEditandoNombreFamilia() {}, setSeleccionando() {}, setInvitacionVisible() {}, setPreparandoInvitacion() {},
 };
+family.captureAccountTask = handlerOriginal("utils/accountTask.ts", "captureAccountTask", { auth: family.auth, getAccountStorageSession: () => 1 });
 function familyAction(name) {
   const node = find(node => ts.isVariableDeclaration(node) && node.name.getText(familyTree) === name, familyTree);
   return evaluate(node.initializer, family, familyTree);

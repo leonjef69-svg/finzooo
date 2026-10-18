@@ -1,5 +1,24 @@
 # Pruebas y auditores
 
+18/10 Personal/Familia/Cajas: verificar-aportes-cambio-pantalla-real ejecuta
+crear/guardar/editar originales con espera de cuenta real, envío compartido,
+registro de devolución, planes de anulación y cálculos originales. React,
+almacén y SDK adaptados; no prueba Android ni Firebase publicado. Comprueba
+salir al confirmar, doble toque, cuenta A→B/sesión nueva, error remoto/local,
+reintento de débito sin repetir envío y respuesta perdida sin dos IDs Personal.
+Un rechazo definitivo libera el formulario también al reintentar. Ciclo
+S/500→400→500, devolución repetida sin ingreso ordinario extra, anulación del
+par sin perder dinero y confirmación antigua sin resucitar la devolución.
+Falla contra 655f076 por actualización omitida al salir; la ampliación de red
+falló antes del arreglo por dos órdenes remotas. Adaptadores anteriores reciben
+captureAccountTask original, no se retiran sus aserciones. Metas en pausa;
+faltan ciclo financiero Android/segundo dispositivo y recuperación durable de
+altas inciertas tras cerrar el proceso. Tarjetas fuera de auditoría activa.
+Corrida final: 243 pruebas/8 auditores sin tarjetas y TypeScript/ESLint generales
+aprobados. Revisión visual Android de navegación/formularios cancelados sin
+dinero real: 48 movimientos, 234 marcas y fuentes financieras locales/remotas
+idénticos. No equivale a probar confirmaciones monetarias en Android físico.
+
 17/10 Confirmación al cambiar de pantalla: 242 pruebas y 8 auditores sin
 tarjetas; TypeScript/ESLint generales. verificar-devolucion-cambio-pantalla-real
 ejecuta los manejadores originales de Familia/Caja y recordPersonalReturn:

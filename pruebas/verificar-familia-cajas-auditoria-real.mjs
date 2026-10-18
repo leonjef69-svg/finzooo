@@ -32,6 +32,7 @@ function arrow(file, name, context) {
     addOrUpdateTransaction: () => true, t: key => key, showToast: () => { announced++; }, horaDe: () => "10:00", fechaHoy: () => "2026-10-15",
     Date, setMonto() {}, setDescripcion() {}, setNotes() {}, setMovementDate() {}, setOrigenDinero() {}, setTipo() {},
   };
+  context.captureAccountTask = handlerOriginal("utils/accountTask.ts", "captureAccountTask", { auth: context.auth, getAccountStorageSession: () => 1 });
   const save = arrow("screens/Family.tsx", "guardar", context);
   await assert.rejects(save(), /personal-save-failed/, "no anuncia éxito antes del guardado confirmado de Personal");
   assert.equal(remote, 1); assert.equal(announced, 0); assert.equal(commits, 1);

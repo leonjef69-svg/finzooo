@@ -1,5 +1,30 @@
 # Entregas de Fino
 
+## 18/10/2026 — Aportes confirmados al salir y reintento único (desarrollo)
+
+Marca `18oct-aportes-cambio-seguro`, base 655f076. Crear Familia con dinero
+Personal, agregar y editar aportes confirman su contraparte aunque se haya
+salido de la pantalla, sin trasladarla a otra cuenta/sesión. Agregar desde
+Personal conserva la misma orden/ID al perder la respuesta; después de confirmar
+el destino, un fallo local reintenta solo el débito. Rechazo definitivo libera
+el formulario también durante el reintento. Metas queda pendiente por petición
+expresa, sin cambios en su cálculo ni datos. No hay campos persistentes o
+servidor nuevos. Una confirmación pendiente identifica su Familia y no se
+ejecuta como si perteneciera a otra familia o a una creación nueva.
+
+Regresión original roja contra 655f076, confirmaciones tardías, doble toque,
+fallos y ciclo controlado S/500→400→500, sin ingreso duplicado ni resurrección
+de una devolución anulada. React/SDK/almacén adaptados: no dinero real.
+243 pruebas/8 auditores sin tarjetas y TypeScript/ESLint generales aprobados.
+Emulador con servidor actual, formularios Familia/Caja abiertos y cancelados.
+Comparación financiera local/remota sin diferencias: 48 movimientos, 234 marcas,
+metas y saldos de Familia/Cajas intactos. Sin confirmaciones monetarias reales.
+
+**Sigue/falta:** prueba financiera real con cuenta autorizada y segundo
+dispositivo, recuperación de altas inciertas tras cierre del proceso y fallo
+entre anulaciones remotas. Datos iniciales antiguos no se reconstruyen.
+Sin APK/AAB/OTA/Play, despliegue Firebase o tarjetas; Metas en pausa.
+
 ## 17/10/2026 — Devoluciones y anulación al cambiar de sección (desarrollo)
 
 Marca `17oct-devolucion-cambio-seguro`; base 2d97a63. La confirmación remota

@@ -279,14 +279,17 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
       const valor = parseAmountInput(monto, moneda); if (valor <= 0) return;
       if (!validSpaceDate(movementDate)) { showToast(t("common.validDateYmd")); return; }
+      const personalTask = captureAccountTask(uid);
       const aporteEditado = editandoAporteId ? movimientos.find(item => item.id === editandoAporteId) : undefined;
       if (aporteEditado?.personalTransactionId != null) {
         const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
         if (valor < minimo - 0.005) { showToast(t("boxes.contributionUsed")); return; }
         if (valor - aporteEditado.monto > saldoPersonalEn(aporteEditado.fecha)) { showToast(t("boxes.notEnoughPersonal")); return; }
-        await wait(() => actualizarAportePersonal("box", caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion));
-        const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
-        if (personal && !await wait(() => repairLinkedTransferTransactions([{ ...personal, amount: valor }]))) throw new Error("personal-save-failed");
+        await wait(async () => {
+          await personalTask.wait(() => actualizarAportePersonal("box", caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion));
+          const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
+          if (personal && !await personalTask.wait(() => repairLinkedTransferTransactions([{ ...personal, amount: valor }]))) throw new Error("personal-save-failed");
+        });
         setEditandoAporteId(null); limpiar(); return;
       }
       if (modo === "gasto" && !canSpendFromSpace(movimientos, valor)) { showToast(t("boxes.notEnoughSpace")); return; }
@@ -294,19 +297,29 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       if (desdePersonal && moneda !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
       if (desdePersonal && valor > saldoPersonalEn(movementDate)) { showToast(t("boxes.notEnoughPersonal")); return; }
       const personalTransactionId = desdePersonal ? nextId() : undefined;
-      const movementId = await wait(() => guardarMovimientoCajaCompartida(caja.id, uid, {
-        tipo: modo, monto: valor, descripcion: nombre.trim().slice(0, 60), fecha: movementDate,
-        ...(desdePersonal ? {} : { category }), notes: notes.trim(), method: desdePersonal ? "transfer" : method,
-        ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}),
-      }));
-      if (personalTransactionId != null) {
-        const debit = { id: personalTransactionId, type: "expense", amount: valor, category: "otros", date: movementDate,
-          time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: caja.nombre }), notes: notes.trim(),
-          origin: "manual", internalTransfer: "box", internalTransferLink: movementId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre } as const;
-        pendingDebit.current = { confirm: () => repairLinkedTransferTransactions([debit]) };
-        if (!await wait(pendingDebit.current.confirm)) throw new Error("personal-save-failed");
-        pendingDebit.current = null;
-      }
+      let movementId: string | undefined;
+      const confirm = async () => {
+        try {
+          if (!movementId) movementId = await personalTask.wait(() => guardarMovimientoCajaCompartida(caja.id, uid, {
+            tipo: modo, monto: valor, descripcion: nombre.trim().slice(0, 60), fecha: movementDate,
+            ...(desdePersonal ? {} : { category }), notes: notes.trim(), method: desdePersonal ? "transfer" : method,
+            ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}),
+          }));
+        } catch (error) {
+          if (typeof (error as { details?: { reason?: unknown } })?.details?.reason === "string") pendingDebit.current = null;
+          throw error;
+        }
+        if (personalTransactionId != null) {
+          const debit = { id: personalTransactionId, type: "expense", amount: valor, category: "otros", date: movementDate,
+            time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: caja.nombre }), notes: notes.trim(),
+            origin: "manual", internalTransfer: "box", internalTransferLink: movementId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre } as const;
+          return personalTask.wait(() => repairLinkedTransferTransactions([debit]));
+        }
+        return true;
+      };
+      if (personalTransactionId != null) pendingDebit.current = { confirm };
+      if (!await wait(confirm)) throw new Error("personal-save-failed");
+      pendingDebit.current = null;
     }
     limpiar();
   });

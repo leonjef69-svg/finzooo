@@ -37,7 +37,7 @@ function harness() {
     withImmediateRemoval, setMovimientosOcultos() {},
     useCallback: callback => callback,
     mounted: { current: true }, reloadId: { current: 0 }, familiaElegida: { current: "a" }, confirmedReload: { current: 0 },
-    actionLock: { current: false }, cierresPendientes: { current: new Set() }, familiaEnMemoria: memory, VENTANA_CAMBIO_RAPIDO_MS: 2000,
+    actionLock: { current: false }, pendingDebit: { current: null }, cierresPendientes: { current: new Set() }, familiaEnMemoria: memory, VENTANA_CAMBIO_RAPIDO_MS: 2000,
     familia: a, familias: [a, b], miembros: [{ uid: "old-member" }], movimientos: ma, verTodas: true,
     seleccionandoFamilias: false, seleccionarFamilia() {}, invitacion: "old-invite", filter: "ingreso",
     tRef: { current: key => key }, toastRef: { current: () => {} },
@@ -47,6 +47,7 @@ function harness() {
       if (!valid()) throw Error("stale"); const result = await work(); if (!valid()) throw Error("stale"); return result;
     } }),
   };
+  s.captureAccountTask = handlerOriginal("utils/accountTask.ts", "captureAccountTask", { auth: s.auth, getAccountStorageSession: s.getAccountStorageSession });
   for (const name of ["Familia", "Familias", "Miembros", "Movimientos", "VerTodas", "FamiliasSincronizadas", "SaldosFamilias", "MovimientosFamilias",
     "Cargando", "Actualizando", "ErrorCarga", "Tipo", "Invitacion", "Filter", "Seleccionados", "Seleccionando"]) {
     const key = name[0].toLowerCase() + name.slice(1);

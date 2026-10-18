@@ -4,6 +4,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { familyMutationOriginal } from "./helpers/family-mutation-original.mjs";
+import { handlerOriginal } from "./helpers/handler-original.mjs";
 
 const baseline = process.env.FINO_TEST_SHARED_FORM_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Hash inválido");
@@ -33,6 +34,7 @@ function boxForm() {
     limpiar: () => { s.cleaned = (s.cleaned || 0) + 1; }, showToast: message => notices.push(message), t: key => key,
     setEditandoAporteId() {},
   };
+  s.captureAccountTask = handlerOriginal("utils/accountTask.ts", "captureAccountTask", { auth: { currentUser: { uid: "A" } }, getAccountStorageSession: () => 1 });
   run(`${original("components/SpaceMovementFields.tsx", "validSpaceDate")}\n${original("screens/SharedBoxes.tsx", "guardar")}\nglobalThis.save=guardar;`, s);
   return { s, writes, debits, notices };
 }
