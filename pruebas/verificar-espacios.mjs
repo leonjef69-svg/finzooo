@@ -16,9 +16,9 @@ for (const id of ["personal", "family", "boxes"]) {
 }
 assert.match(switcher, /accessibilityRole="tablist"/);
 assert.match(switcher, /accessibilityState=\{\{ selected \}\}/);
-assert.match(switcher, /reemplazarUnaVez\("\/\(tabs\)"\)/, "Personal vuelve al Inicio actual sin aceptar doble toque");
-assert.match(switcher, /reemplazarUnaVez\("\/family"\)/, "Familia tiene pantalla propia y protegida");
-assert.match(switcher, /reemplazarUnaVez\("\/boxes"\)/, "Cajas tiene una pantalla propia y protegida");
+assert.match(switcher, /cambiarEspacioUnaVez\(navigation, "\/\(tabs\)"\)/, "Personal vuelve al Inicio actual sin aceptar doble toque");
+assert.match(switcher, /cambiarEspacioUnaVez\(navigation, "\/family"\)/, "Familia tiene pantalla propia y protegida");
+assert.match(switcher, /cambiarEspacioUnaVez\(navigation, "\/boxes"\)/, "Cajas tiene una pantalla propia y protegida");
 assert.match(layout, /<Stack\.Screen name="family"/, "la ruta principal de Familia queda registrada en el navegador raíz");
 assert.match(layout, /<Stack\.Screen name="boxes"/, "la ruta principal de Cajas queda registrada en el navegador raíz");
 assert.doesNotMatch(switcher, /reemplazarUnaVez\("\/negocio"\)/, "Cajas no abre Modo negocio");

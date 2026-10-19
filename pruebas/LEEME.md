@@ -1,5 +1,19 @@
 # Pruebas y auditores
 
+19/10 Regreso sin remontar: verificar-regreso-personal-sin-remontar-real ejecuta
+selector/nav originales con StackRouter/StackActions instalados reales.
+Treinta ciclos conservan Inicio; máximo un espacio delante. Etiqueta saliente,
+dos órdenes pendientes, Atrás, entrada directa, raíz Expo, acceso interpuesto,
+estado no inicializado, doble toque, error/reintento y otras aperturas cubiertos.
+Roja en 5b73fb28 por destruir Inicio; primera solución de la tanda también roja
+por apilar el segundo toque saliente, corregida antes de entregar. Suites previas
+de destinos/doble toque mantienen sus aserciones con el navegador nuevo.
+Android habitual A/B/A/B: 48 cambios, diez regresos por variante,
+2.287,4→1.099,5 ms de mediana. No FPS; método, todas las pasadas y limitaciones
+en ESTADO.md. Datos locales/remotos iguales 50/260, formularios cancelados y
+Atrás revisados. TypeScript/ESLint y 250 pruebas/ocho auditores sin tarjetas.
+Sigue medir FPS sostenidos/versión final y listas pobladas; Metas en pausa.
+
 19/10 Cajas sin guardados repetidos: verificar-cajas-guardado-repetido-real
 ejecuta la cola original con Android/cifrado adaptados y cuenta cifrados/IO.
 Roja en 4d169115 por repetir un cifrado idéntico. Cubre copia autenticada/confirmada,

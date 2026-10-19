@@ -1,5 +1,92 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 19/10/2026 — tres puntos: medir, corregir, comparar
+
+Marca `19oct-regreso-personal-sin-remontar`, base 5b73fb28. Se completa la
+tanda solicitada de demora al volver a Personal: medición desde el toque,
+localización/corrección del trabajo que la provoca y comparación antes/después.
+No equivale a cerrar toda la auditoría financiera ni a acreditar 60 FPS.
+Metas sigue en pausa; tarjetas fuera de alcance.
+
+La salida usaba replace también para Inicio: destruía/recreaba Home y TODO su
+navegador de pestañas al regresar. El perfil Hermes inicial mostró trabajo de
+montaje/creación nativa, y las trazas del emulador confirmaron cinco claves
+distintas de Inicio por pasada anterior. Ahora se conserva UN Inicio detrás de
+Familia O Cajas; esos dos se sustituyen entre sí y el regreso retira el de delante.
+No monta ni precarga tres pantallas completas, ni cambia a un carrusel. Retener
+Inicio tiene un coste de memoria; la mejora es evitar reconstrucción, no un APK
+más pequeño ni una reducción de RAM demostrada. No se congela el contexto
+financiero: el Inicio conservado sigue recibiendo los datos actuales.
+
+El selector usa el navegador raíz público de Expo/React Navigation. La acción
+se decide contra el árbol vigente al ejecutarse y apunta al Stack de espacios,
+no a la etiqueta de un botón saliente. Se detectó y corrigió en la propia tanda
+que dos destinos rápidos desde un Inicio saliente podían apilar Familia y Cajas.
+El SDK instalado resuelve popTo a un Inicio existente, o reemplaza si una
+entrada directa no lo tenía. Doble toque, regreso rápido, fallo/reintento,
+estado no inicializado y pantalla de acceso protegidos; helpers generales de
+abrir/reemplazar/Atrás no cambian. Sin temporizador de espera añadido.
+
+Nueva regresión ejecuta open original y utils/nav originales con el StackRouter
+y StackActions instalados reales; solo adapta el transporte/React. Treinta
+ciclos conservan la clave de Inicio y máximo un espacio delante; comprueba dos
+órdenes con etiqueta saliente o preparadas antes de cambiar el árbol, Atrás,
+entrada directa, envoltorio raíz Expo, acceso interpuesto mientras esperaba,
+doble toque, rechazo/reintento y aperturas generales. Roja en 5b73fb28 porque
+destruye Inicio, no por un helper ausente. También se vio roja contra la primera
+solución de la tanda al apilar el segundo destino saliente; corregida antes de
+entregar. Suites anteriores de rutas/doble toque adaptadas a las nuevas acciones
+sin retirar sus aserciones de destinos, bloqueo ni reintento.
+
+Medición nueva: toque Android ACTION_UP con timestamp nativo; conversión
+Date.now/performance.now contrastada con el reloj del aparato, y grabación
+screenrecord con reloj visible/PTS. Se busca el primer cuadro de dos consecutivos
+con selector y contenido principal coincidentes con una referencia estable
+(MAE RGB <4). Inspección visual de cuadros anterior/posterior. Incluye espera JS
+y transición hasta contenido colocado; no es confirmación de servidor, latencia
+de red, primer píxel parcial ni FPS. Los intervalos que acotan el regreso llegan
+a 121,2 ms: se informan tiempos aproximados, no precisión de milisegundos.
+
+Comparación final alternada A/B/A/B, MISMA compilación y emulador habitual
+Medium_Phone de 60 Hz, solo navegación: A restaura temporalmente en runtime el
+replace anterior; B usa la solución final. Doce cambios por pasada: 48 cambios.
+Ninguna prueba automática, análisis de vídeo o compilación simultáneos durante
+esas cuatro pasadas. Diez regresos a Personal por variante, TODOS medibles:
+
+- A: medianas 2.260,3 / 2.314,5 ms; conjunta 2.287,4 ms,
+  rango 1.423,9–3.099,1 ms.
+- B: medianas 1.069,1 / 1.103,0 ms; conjunta 1.099,5 ms,
+  rango 737,5–2.256,3 ms. Reducción de la mediana de regreso: 51,9 %.
+- Trazas Android: A cambia cinco veces la clave de Inicio por pasada;
+  B conserva la misma, con máximo dos rutas y nunca Familia y Cajas acumuladas.
+
+No se afirma que todos los cambios sean más rápidos: las salidas a Familia/Cajas
+siguen variables (medianas automáticas 1.155,8 frente a 1.235,5 ms, con 13/14
+casos anteriores y 14/14 nuevos). Un Caja→Familia anterior no coincidió con la
+referencia automática: se conservaron sus 47 cuadros y se inspeccionó que la
+página sí aparece; no se presenta como espera infinita ni se usa para comparar
+regresos. Las cinco pasadas preliminares base1/base2/nuevo1/nuevo2/nuevo3,
+incluidos recortes, variación y una con análisis simultáneo, se conservan
+privadas y no se mezclan con el contraste final. No se selecciona la mejor pasada.
+La comparación acredita mejora del regreso, NO 60 FPS estables ni todos los
+contenidos/volúmenes: las listas de espacios estaban vacías y la app es desarrollo.
+
+Sonda de toque, observador y variante A retirados de fuentes/runtime. Evidencias
+privadas en .tmp, sin capturas, códigos o datos de cuenta subidos a Git.
+Información de la app confirmó la marca nueva. Android: Crear/Cancelar en
+Familia y Cajas, Atrás real a Personal y navegación revisados sin guardar dinero.
+Datos locales/remotos EXACTAMENTE iguales: 50 movimientos, 260 marcas,
+presupuestos, arrastres, Metas, Cajas y devoluciones pendientes. No se cambiaron
+fórmulas, archivos financieros, cifrado, guardado, reglas, cuentas ni dependencias.
+TypeScript/ESLint generales y 250 pruebas/ocho auditores aprobados (sin tarjetas).
+
+**Sigue/falta:** medir FPS sostenidos/versión final y listas pobladas, y perfilar
+las salidas a Familia/Cajas si se retoma una siguiente tanda. Los tres puntos
+de este objetivo quedan completos, no se declara resuelta toda la fluidez de
+la app. Pendientes financieros previos de red incierta, recuperación durable,
+anulación remota parcial y segundo participante continúan abiertos. Metas en
+pausa y tarjetas fuera. Sin APK/AAB/OTA/Play ni despliegue Firebase.
+
 ## Personal/Familia/Cajas — 19/10/2026 — Cajas sin cifrar copias idénticas
 
 Marca `19oct-cajas-sin-guardado-repetido`, base 4d169115. Al entrar de nuevo

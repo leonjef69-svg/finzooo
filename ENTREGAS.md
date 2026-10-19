@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 19/10/2026 — Regreso a Personal sin reconstruir Inicio (desarrollo)
+
+Marca `19oct-regreso-personal-sin-remontar`, base 5b73fb28. Se conserva UN
+Inicio al salir; Familia/Cajas se sustituyen entre sí. Cambio con navegador
+raíz real, destino resuelto contra el árbol actual, sin duplicados por un toque
+saliente. Atrás, entrada directa, doble toque y reintento conservados. Sin
+congelar datos financieros, precargar tres pantallas ni añadir dependencias.
+
+Tres puntos completados: medir desde toque, corregir la reconstrucción y
+comparar. Android habitual, A/B/A/B en misma compilación, 48 cambios. Diez
+regresos medidos por variante: mediana 2.287,4→1.099,5 ms (51,9 % menos).
+Intervalo de cuadro de hasta 121,2 ms: cifras aproximadas, no FPS. Rangos,
+pasadas completas, limitaciones y evidencia de clave conservada en ESTADO.md.
+Salidas a Familia/Cajas todavía variables; no se afirma mejora universal.
+
+Sonda y variante anterior retiradas antes de entregar. Marca nueva comprobada,
+Crear/Cancelar y Atrás revisados. Datos locales/remotos idénticos (50/260 y
+demás campos financieros). TypeScript/ESLint y 250 pruebas/ocho auditores
+aprobados; regresión con navegador original roja en 5b73fb28 por recrear Inicio.
+
+**Sigue/falta:** FPS sostenidos/versión final, listas pobladas y pendientes
+financieros anteriores. Metas en pausa, tarjetas fuera. Sin APK/OTA/Play/Firebase.
+
 ## 19/10/2026 — Evitar guardados idénticos de Cajas (desarrollo)
 
 Marca `19oct-cajas-sin-guardado-repetido`, base 4d169115. Solo las copias

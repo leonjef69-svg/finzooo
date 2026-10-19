@@ -1,5 +1,11 @@
 # Lo que hay que rellenar en Play Console
 
+19/10/2026 — Se conserva Inicio al navegar a Familia/Cajas, sin crear copias
+financieras ni claves persistentes nuevas. Medición privada en el emulador,
+retirada antes de entregar; no se envía telemetría nueva ni se añaden permisos,
+proveedores, campos o destinatarios. No modifica Metas, retención de cuenta ni
+servicios Firebase. Sin publicar ficha, política, APK o actualización remota.
+
 19/10/2026 — Fluidez de espacios: cálculo/construcción diferida de paneles
 cerrados, solo presentación. Sin nueva clave persistente, colección, permiso,
 telemetría enviada, destinatario o retención. No modifica libros financieros,

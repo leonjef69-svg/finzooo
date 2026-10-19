@@ -1,7 +1,8 @@
 import { Boxes, UserRound, UsersRound } from "lucide-react-native";
 import { Text, TouchableOpacity, View } from "react-native";
+import { useNavigation } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
-import { reemplazarUnaVez } from "@/utils/nav";
+import { cambiarEspacioUnaVez } from "@/utils/nav";
 
 export type FinoSpace = "personal" | "family" | "boxes";
 
@@ -16,16 +17,18 @@ const OPTIONS = [
  *
  * Personal conserva la app financiera actual. Familia y Cajas abren sus rutas
  * propias; sus comprobaciones de cuenta, Pro y datos siguen en cada pantalla.
+ * Inicio se conserva al salir; solo Familia/Cajas se sustituyen entre sí.
  * Cambiar de pestaña no altera movimientos ni crea un espacio nuevo.
  */
 export default function SpaceSwitcher({ active }: { active: FinoSpace }) {
   const { t } = useAppData();
+  const navigation = useNavigation("/");
 
   function open(id: FinoSpace) {
     if (id === active) return;
-    if (id === "personal") reemplazarUnaVez("/(tabs)");
-    else if (id === "family") reemplazarUnaVez("/family");
-    else reemplazarUnaVez("/boxes");
+    if (id === "personal") cambiarEspacioUnaVez(navigation, "/(tabs)");
+    else if (id === "family") cambiarEspacioUnaVez(navigation, "/family");
+    else cambiarEspacioUnaVez(navigation, "/boxes");
   }
 
   return (

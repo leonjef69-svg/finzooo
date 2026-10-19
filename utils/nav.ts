@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { router, useNavigationContainerRef } from "expo-router";
+import { StackActions, type NavigationProp, type NavigationState, type ParamListBase, type PartialState } from "@react-navigation/native";
 
 // `isReady()` puede conservar un `true` viejo durante Fast Refresh, cuando el
 // contenedor anterior ya se desmontó y el nuevo todavía no tiene árbol. La
@@ -123,6 +124,7 @@ export function useNavigateWhenReady(
  */
 const ultimosViajes = new Map<string, number>();
 let ultimoReemplazo: { clave: string; cuando: number } | null = null;
+let ultimoCambioEspacio: { ruta: string; cuando: number } | null = null;
 let ultimoRetroceso = 0;
 const BLOQUEO_NAVEGACION_MS = 1500;
 
@@ -162,6 +164,47 @@ export function reemplazarUnaVez(ruta: Parameters<typeof router.replace>[0]): vo
   router.replace(ruta);
   // Si el navegador rechaza la orden, el siguiente toque debe poder reintentar.
   ultimoReemplazo = { clave, cuando: ahora };
+}
+
+type SpaceRoute = "/(tabs)" | "/family" | "/boxes";
+type SpaceStack = NavigationState | PartialState<NavigationState>;
+
+function spaceStack(state: SpaceStack | undefined): SpaceStack | undefined {
+  let current: SpaceStack | undefined = state;
+  while (current) {
+    if (["(tabs)", "family", "boxes"].every(name => current?.routeNames?.includes(name))) return current;
+    current = current.routes[current.index ?? current.routes.length - 1]?.state;
+  }
+  return undefined;
+}
+
+/** Conserva UN Inicio al cambiar de espacio. Familia/Cajas se sustituyen
+ * entre sí; volver retira la pantalla de delante en vez de recrear también
+ * el navegador de pestañas. No precarga tres pantallas ni acumula visitas.
+ * popTo también reemplaza con Inicio si se entró por un enlace directo.
+ */
+export function cambiarEspacioUnaVez(navigation: Pick<NavigationProp<ParamListBase>, "dispatch"> & { getState: () => NavigationState | undefined }, destino: SpaceRoute): void {
+  const available = spaceStack(navigation.getState());
+  const active = available?.routes[available.index ?? available.routes.length - 1]?.name;
+  if (!available || !active || !["(tabs)", "family", "boxes"].includes(active)) return;
+  const ahora = Date.now();
+  const elapsed = ultimoCambioEspacio ? ahora - ultimoCambioEspacio.cuando : Infinity;
+  if (ultimoCambioEspacio?.ruta === destino && elapsed >= 0 && elapsed < BLOQUEO_NAVEGACION_MS) return;
+  const name = destino === "/(tabs)" ? "(tabs)" : destino.slice(1);
+  // Resolver contra el árbol vigente AL ejecutar la orden: otro toque puede
+  // proceder todavía del Inicio saliente. No fiarse de su etiqueta antigua.
+  navigation.dispatch(state => {
+    const stack = spaceStack(state);
+    const current = stack?.routes[stack.index ?? stack.routes.length - 1]?.name;
+    if (!stack?.key || !current || !["(tabs)", "family", "boxes"].includes(current)) {
+      return { ...StackActions.popTo(state.routes[state.index].name), target: state.key };
+    }
+    const action = name === "(tabs)" || current === name ? StackActions.popTo(name)
+      : current === "(tabs)" ? StackActions.push(name) : StackActions.replace(name);
+    return { ...action, target: stack.key };
+  });
+  // Una orden rechazada permite reintentar inmediatamente.
+  ultimoCambioEspacio = { ruta: destino, cuando: ahora };
 }
 
 export function volverUnaVez(): void {
