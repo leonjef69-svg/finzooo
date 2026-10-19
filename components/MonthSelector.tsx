@@ -39,7 +39,9 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
   const currentKey = `${month.y}-${String(month.m + 1).padStart(2, "0")}`;
   const label = `${monthNames[month.m]} ${month.y}`;
   const dark = colorScheme === "dark";
-  const monthBalances = useMemo(() => Object.fromEntries(months.map((key) => {
+  // Volver a Inicio no debe calcular todos los meses para un panel cerrado.
+  // Al abrirlo se usan las fuentes actuales, sin guardar otra copia del saldo.
+  const monthBalances = useMemo(() => !open ? {} : Object.fromEntries(months.map((key) => {
     const totals = totalsForMonth(transactions, key);
     const total = availablePersonalBalance({
       budget: presupuestoDelMes(budgets, key),
@@ -47,16 +49,16 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
       ...totals,
     });
     return [key, total];
-  })), [months, transactions, budgets, carryoverCleared]);
+  })), [open, months, transactions, budgets, carryoverCleared]);
   const monthMovementCounts = useMemo(() => {
-    if (!showMovementCount) return {};
+    if (!open || !showMovementCount) return {};
     const grouped: Record<string, Transaction[]> = Object.fromEntries(months.map((key) => [key, []]));
     for (const transaction of transactions) {
       const key = transaction.date.slice(0, 7);
       if (grouped[key]) grouped[key].push(transaction);
     }
     return Object.fromEntries(months.map((key) => [key, compactPersonalTransferRows(grouped[key]).length]));
-  }, [months, showMovementCount, transactions]);
+  }, [open, months, showMovementCount, transactions]);
 
   return (
     <>
@@ -74,7 +76,7 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
         <ChevronDown size={14} color={dark ? "#cbd5e1" : "#475569"} />
       </TouchableOpacity>
 
-      <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
+      {open ? <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <View className="flex-1 justify-end bg-black/45">
           <View className="max-h-[72%] rounded-t-3xl bg-white px-5 pb-8 pt-4 dark:bg-noche-2">
             <View className="mb-4 flex-row items-center justify-between">
@@ -141,7 +143,7 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
             )}
           </View>
         </View>
-      </Modal>
+      </Modal> : null}
     </>
   );
 }

@@ -53,8 +53,7 @@ for (const kind of ["box", "family"]) {
 }
 for (const [code, visible] of [["", true], ["ABCD2345", false]]) {
   const tree = render("box", code, visible), count = shares.length;
-  assert.equal(tree.props.visible, false);
-  nodes(tree).find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === t("family.shareInvitation")).props.onPress();
+  assert.equal(tree, null, "no construye controles de una invitación cerrada o sin código");
   await tick(); assert.equal(shares.length, count, "No comparte códigos vacíos ni una invitación cerrada");
 }
 for (const kind of ["box", "family"]) {

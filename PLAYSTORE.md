@@ -1,5 +1,10 @@
 # Lo que hay que rellenar en Play Console
 
+19/10/2026 — Fluidez de espacios: cálculo/construcción diferida de paneles
+cerrados, solo presentación. Sin nueva clave persistente, colección, permiso,
+telemetría enviada, destinatario o retención. No modifica libros financieros,
+cifrado, sincronización ni Metas; no publica APK, ficha ni servicios Firebase.
+
 19/10/2026 — Pruebas autorizadas de Personal/Familia/Cajas en el emulador
 habitual y aviso de borrado corregido. No se añade dato, colección, permiso,
 destinatario, telemetría ni retención. Se usan los libros/recibos y marcas

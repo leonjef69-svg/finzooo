@@ -1085,7 +1085,7 @@ export default function Home({
       <ConfirmDialog
         visible={confirmandoBorrarTodo}
         title={t("home.deleteAllTitle", { count: movimientosBorrablesDelMes.length, month: monthLabel })}
-        message={removalMessage(movimientosBorrablesDelMes.map(row => row.id))}
+        message={confirmandoBorrarTodo ? removalMessage(movimientosBorrablesDelMes.map(row => row.id)) : ""}
         confirmLabel={t("home.deleteAllConfirm")}
         cancelLabel={t("common.cancel")}
         danger
@@ -1095,7 +1095,7 @@ export default function Home({
       <ConfirmDialog
         visible={confirmandoSeleccionados}
         title={t("home.deleteSelectedTitle", { count: seleccionadosBorrables.length })}
-        message={removalMessage(seleccionadosBorrables)}
+        message={confirmandoSeleccionados ? removalMessage(seleccionadosBorrables) : ""}
         confirmLabel={t("common.delete")}
         cancelLabel={t("common.cancel")}
         danger
@@ -1103,7 +1103,7 @@ export default function Home({
         onConfirm={confirmBulkDelete}
       />
 
-      <Modal
+      {avisosAbiertos ? <Modal
         transparent
         animationType="slide"
         statusBarTranslucent
@@ -1267,7 +1267,7 @@ export default function Home({
           )}
           </View>
         </View>
-      </Modal>
+      </Modal> : null}
     </View>
   );
 }

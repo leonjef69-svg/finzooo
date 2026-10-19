@@ -26,6 +26,7 @@ export default function SpaceMembersSheet({
 }) {
   const { t } = useAppData();
   const insets = useSafeAreaInsets();
+  if (!visible) return null;
   const orderedMembers = [...members].sort((a, b) => {
     if (a.rol !== b.rol) return a.rol === "owner" ? -1 : 1;
     return a.nombre.localeCompare(b.nombre);

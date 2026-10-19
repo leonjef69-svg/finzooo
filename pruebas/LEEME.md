@@ -1,5 +1,17 @@
 # Pruebas y auditores
 
+19/10 Paneles cerrados: verificar-paneles-cerrados-ligeros-real ejecuta selector,
+hojas, expresiones de confirmación y fórmulas originales. React/IO adaptados;
+selector cerrado sin cálculos/filas, apertura con arrastre/presupuesto, novedades,
+reapertura/selección, hojas cerradas sin JSX/categorías/ordenación y preparación
+de códigos conservada. Avisos abiertos mantienen IDs exactos. Roja en 4c4564d5
+por dos cálculos frente a cero. Compartir/cancelar/fallos de la suite anterior
+se conservan, con ausencia de controles al cerrar. Android: navegación,
+selector y Crear/Cancelar; datos financieros locales/remotos idénticos 50/260.
+No se guardaron formularios. FPS variables sin mejora estable demostrada;
+metodología, resultados completos y pendientes en ESTADO.md. TypeScript/ESLint
+generales y 248 pruebas/ocho auditores aprobados; Metas en pausa y tarjetas fuera.
+
 19/10 Aviso de selección: verificar-aviso-borrado-seleccion-real ejecuta el
 aviso y traducciones originales en tres idiomas. Selección de uno/dos movimientos
 sin anunciar borrado total ni «1 movimientos»; cantidad y advertencia monetaria

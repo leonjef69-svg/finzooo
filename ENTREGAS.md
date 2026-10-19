@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 19/10/2026 — Paneles cerrados más ligeros (desarrollo)
+
+Marca `19oct-navegacion-paneles-ligeros`, base 4c4564d5. Selector mensual sin
+saldos/conteos/filas mientras está cerrado; avisos de borrar/campana y hojas de
+Familia/Cajas sin construir contenido oculto. Abiertos usan datos actuales y
+conservan controles, candado, guardado y preparación. Sin cambios financieros,
+rutas, consultas, dependencias ni Metas.
+
+Regresión con originales roja en 4c4564d5 por cálculo mensual innecesario.
+Android habitual: navegación, selector y Crear/Cancelar revisados. Los 50
+movimientos/260 marcas y demás campos financieros locales/remotos son idénticos
+antes/después. No se guardó ni borró dinero o espacios de prueba.
+
+FPS de desarrollo NO mejorados de forma demostrable: antes 38,1/41,1; después
+12,3/37,7/30,4; alternado en misma compilación A 39,6/39,2 frente a B 40,6/33,9.
+No se omiten las pasadas peores. Método/limitaciones en ESTADO.md; opción de
+comparación temporal retirada. TypeScript/ESLint generales y 248 pruebas/ocho
+auditores aprobados (tarjetas excluidas).
+
+**Sigue/falta:** tirones, medición representativa/final y pendientes financieros
+de la tanda anterior. Metas en pausa, tarjetas fuera. Sin APK/OTA/Play/Firebase.
+
 ## 19/10/2026 — Pruebas financieras en Android habitual y aviso de borrado (desarrollo)
 
 Marca `19oct-pruebas-espacios-aviso-claro`, base 11efc55b. Únicamente emulador

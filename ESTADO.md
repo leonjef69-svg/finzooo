@@ -1,5 +1,64 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 19/10/2026 — menos trabajo de paneles cerrados
+
+Marca `19oct-navegacion-paneles-ligeros`, base 4c4564d5. No cambia rutas,
+transición, consultas, cifrado, guardado ni cálculos monetarios. No mantiene
+tres pantallas pesadas montadas ni añade deslizamiento o dependencias.
+Metas continúa en pausa y tarjetas fuera de alcance.
+
+Inicio ya no calcula saldos/conteos de TODOS los meses mientras el selector
+está cerrado; al abrir usa las mismas fórmulas y fuentes actuales, y una llegada
+real actualiza el panel abierto. Tampoco construye sus filas ocultas. Las
+explicaciones de borrar se preparan solo al abrir la confirmación, con los
+mismos IDs y avisos, y el contenido de la campana solo se monta al abrirla.
+No se retrasa el cálculo del saldo visible ni se altera el indicador de avisos.
+
+Formularios de movimientos, invitación y miembros en Familia/Cajas conservan
+sus hooks, pero cerrados no construyen JSX/categorías ni ordenan integrantes.
+Al abrir conservan campos, cancelación, código real, preparación, compartir,
+copiar, candado y bloqueo mientras se guarda. No se cambia una operación
+financiera por una confirmación aparente ni se oculta su espera de servidor.
+
+Regresión nueva ejecuta JSX/expresiones y cálculos originales con React/IO
+adaptados: cero cálculo mensual cerrado frente a dos en la base; apertura,
+actualización, reapertura y selección correctas; cero árbol/categorías/ordenación
+de hojas cerradas, guardado/espera visibles y avisos con IDs exactos. Roja en
+4c4564d5 por trabajo real innecesario, no API ausente. La prueba anterior de
+compartir comprueba ahora ausencia de controles cerrados/vacíos; conserva los
+casos de compartir/copiar, errores, cancelación y preparación. No retira guardas.
+
+Emulador habitual `Medium_Phone`, Metro 8081 y cuenta conservada. Navegación,
+selector de meses con saldos/conteos y Crear/Cancelar de Familia/Cajas revisados
+sin guardar formularios. Comparación local/remota EXACTA antes/después: 50
+movimientos, 260 marcas, presupuestos, arrastres, Metas, Cajas y pendientes
+financieros idénticos; cero espacios activos. No se crearon registros de prueba.
+Las hojas de detalle sin espacios activos se verifican con originales adaptados,
+no se presenta esta revisión como otro ciclo monetario real en Android.
+
+Mediciones de desarrollo, mismo emulador a 60 Hz: antes 38,1/41,1; después
+12,3/37,7/30,4 presentaciones por segundo agregadas. Primera pasada posterior
+coincide con preparación/revisión del código: no permite atribuir la diferencia
+al cambio. Comparación alternada A/B en LA MISMA compilación con una opción
+temporal retirada después: A anticipado 39,6/39,2; B diferido 40,6/33,9.
+No demuestra subida de FPS ni 60 estables; B incluye la muestra de tres cuadros
+y pausa de 443,7 ms, no se descarta. Método heredado: primera ventana de 500 ms
+de presentaciones tras confirmar ruta, reloj con incertidumbre ~10 ms; no es
+latencia desde toque ni FPS sostenidos, y menos presentaciones también pueden
+ser menos actualizaciones. Listas vacías, variación del PC y desarrollo limitan
+la comparación. Los metadatos viejos del medidor en las primeras capturas no
+identifican el código: las revisiones/variantes correctas son las de esta entrada.
+Perfil Hermes y evidencias privadas en .tmp, fuera de Git. Sin opción diagnóstica
+ni camino anticipado alternativo en el código entregado. TypeScript/ESLint
+generales y 248 pruebas/ocho auditores aprobados (tarjetas excluidas).
+
+**Sigue/falta:** localizar y reducir los tirones restantes con mediciones más
+representativas y versión final, especialmente el montaje/IO al volver a
+Personal. Menos trabajo oculto comprobado NO equivale a más FPS demostrados.
+Pendientes financieros previos de red incierta, recuperación durable, anulación
+remota parcial y otro participante no se cierran aquí. Sin APK/AAB/OTA/Play ni
+despliegue Firebase; Metas en pausa y tarjetas fuera.
+
 ## Personal/Familia/Cajas — 19/10/2026 — recorridos reales en el emulador habitual
 
 Marca `19oct-pruebas-espacios-aviso-claro`, base 11efc55b. Por petición expresa

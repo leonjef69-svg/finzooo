@@ -19,6 +19,7 @@ export default function SpaceInvitationSheet({
 }) {
   const { t, showToast } = useAppData();
   const insets = useSafeAreaInsets();
+  if (!visible || (!code && !loading)) return null;
 
   async function shareCode() {
     if (!visible || !code || loading) return;

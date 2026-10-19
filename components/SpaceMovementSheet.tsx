@@ -47,6 +47,8 @@ export default function SpaceMovementSheet({
   const { t, userCountry } = useAppData();
   const [showCategories, setShowCategories] = useState(false);
   const { height } = useWindowDimensions();
+  // Mantener los hooks, pero no construir campos/categorías que no se ven.
+  if (!visible) return null;
   const categoryType = type === "ingreso" ? "income" : "expense";
   const categories = categoryType === "income" ? ingresosDisponibles() : gastosDisponibles();
   const flag = COUNTRIES.find(country => country.currency === currency)?.flag
