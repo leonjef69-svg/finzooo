@@ -1,5 +1,16 @@
 # Lo que hay que rellenar en Play Console
 
+19/10/2026 — Negocio compacto: los negocios pueden conservar `modo` y
+`reconocerCombinaciones`; sus ingresos añaden opcionalmente `clasificacion`
+(pendiente/confirmada y copia de producto, nombre, precio y cantidad) y
+`vinculoManual` (referencia del registro que el usuario decidió unir).
+Pertenecen a las listas financieras cifradas y copia Pro de Negocio existentes,
+con igual destino/conservación/borrado de cuenta; no es una colección nueva.
+No se transforma el dinero ni se carga la demostración en la cuenta.
+No se añaden permisos, proveedores, IA, telemetría ni acceso a avisos de Plin.
+Actualizar la declaración final con estos campos antes de distribuir.
+No se publica ni modifica la política/huella aceptada desde este rediseño.
+
 19/10/2026 — Se conserva Inicio al navegar a Familia/Cajas, sin crear copias
 financieras ni claves persistentes nuevas. Medición privada en el emulador,
 retirada antes de entregar; no se envía telemetría nueva ni se añaden permisos,

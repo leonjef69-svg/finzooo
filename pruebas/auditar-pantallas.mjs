@@ -27,7 +27,7 @@ const rel = (f) => path.relative(RAIZ, f).replace(/\\/g, "/");
 // Solo se admite un destino local existente, distinto y dentro de su carpeta.
 function aliasCompatibilityValid(file, directory) {
   const text = fs.readFileSync(file, "utf8").replace(/^\s*\/\/[^\r\n]*(?:\r?\n|$)/gm, "").trim();
-  const match = /^export\s*\{\s*default\s*\}\s*from\s*["'](\.\/[\w/-]+)["'];?$/.exec(text);
+  const match = /^export\s*\{\s*default\s*\}\s*from\s*["'](\.\/[\w/\[\]-]+)["'];?$/.exec(text);
   if (!match) return false;
   const target = path.resolve(path.dirname(file), `${match[1]}.tsx`);
   return target !== file && target.startsWith(`${directory}${path.sep}`) && fs.existsSync(target)

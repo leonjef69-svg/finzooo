@@ -30,6 +30,11 @@ files.set(file, 'export { default } from "./New";\nconst unused = true;'); asser
 const actual = handlerOriginal("pruebas/auditar-pantallas.mjs", "aliasCompatibilityValid", { fs, path, exports: {} });
 assert.equal(actual(path.resolve("app/country.tsx"), path.resolve("app")), true);
 assert.equal(actual(path.resolve("screens/CountryPicker.tsx"), directory), true);
+for(const route of ["venta","productos","movimiento"]) {
+  const file=path.resolve(`app/negocio/${route}.tsx`);
+  assert.equal(actual(file,path.resolve("app")),true,"enlaces antiguos apuntan al único panel real");
+  assert.match(fs.readFileSync(file,"utf8"),/from "\.\/\[id\]"/);
+}
 assert.match(fs.readFileSync("app/country.tsx", "utf8"), /from "\.\/language"/);
 assert.match(fs.readFileSync("screens/CountryPicker.tsx", "utf8"), /from "\.\/LanguagePicker"/);
 console.log("Auditor original estático: aliases puros con destino real; rechazados ausentes, vacíos, ciclos, escapes y lógica adicional. País apunta a Idioma; no acredita navegación Android.");

@@ -127,8 +127,12 @@ const archivedRows = dates.movementRowsByDay(space, item => item.fecha, items =>
 const archived = mapExpression("screens/Cajas.tsx", "filasArchivadas.slice(0, movementLimit).map", { ...ui, filasArchivadas: archivedRows, movementLimit: 60 });
 assert.equal(expand(archived).filter(node => node.props.accessibilityRole === "header").length, 2, "archivo solo lectura también agrupado");
 const businessItems = [{ id: "new", fecha: "2026-10-14", hora: "06:30", clase: "ingreso", monto: 5, metodo: "cash" }, { id: "old", fecha: "2026-10-13", hora: "03:20", clase: "gasto", monto: 2, metodo: "cash" }];
-const business = mapExpression("screens/PanelNegocio.tsx", "historial.map", { ...ui, historial: businessItems, negocio: { nombre: "Prueba" }, borrando: null, soloLectura: true, dinero: fmt, horaVisible: time => time,
-  Store: "Store", TrendingUp: "Up", TrendingDown: "Down", ShoppingBag: "Bag" });
+const businessSource=ts.createSourceFile("screens/BusinessWorkspace.tsx",read("screens/BusinessWorkspace.tsx"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+let businessRender;
+function findBusinessRender(node){if(ts.isJsxAttribute(node)&&node.name.getText(businessSource)==="renderItem")businessRender=node.initializer.expression;ts.forEachChild(node,findBusinessRender);}
+findBusinessRender(businessSource);assert.ok(businessRender,"Negocio conserva lista virtualizada con dibujo de fila original");
+const drawBusiness=compile(businessRender.getText(businessSource),{...ui,app:{monthNames:months},rows:businessItems,selecting:false,selected:[],selectedSet:new Set(),selectedKeys:[],copy:key=>key,width:390,setSelectedKeys(){},open(){},dinero:fmt,horaVisible:time=>time,methodName:value=>value,Check:"Check"});
+const business=businessItems.map((item,index)=>drawBusiness({item,index}));
 assert.equal(expand(business).filter(node => node.props.accessibilityRole === "header").length, 2, "negocio mantiene el mismo patrón");
 assert.ok(texts(business).includes("06:30") && !texts(business).includes("14 oct."));
 assert.equal(dates.movementDayLabel("2026-02-31", months), "2026-02-31");

@@ -1,5 +1,36 @@
 # Entregas de Fino
 
+## 19/10/2026 — Negocio compacto integrado (desarrollo)
+
+Marca `19oct-negocio-compacto-real`, base 77f7486f. La maqueta pasa a componentes
+nativos y registros reales: solo Ingresos/Gastos, selector de negocios, registro
+rápido/formularios en una hoja, categorías y modo simple, Yape identificado,
+Por clasificar coloreado, selección/borrado confirmado y filtros. Hoy/Mes/Fechas,
+calendario y Ver todo dentro de Fechas. Interfaces anteriores retiradas;
+enlaces antiguos conservados como aliases puros al panel vigente.
+
+Categorías nuevas se copian al ingreso; no se reescriben importes ni productos
+antiguos. Captura abierta/en fondo usa una regla común y acotada. Ambigüedad
+queda pendiente, no se inventa una venta. Manual/automático solo se unifican
+con confirmación expresa; importe igual no significa pago duplicado.
+No se cambia el libro de Personal/Familia/Cajas ni Metas, ni permisos nativos.
+
+**Sigue/falta:** recepción Yape real abierto/cerrado, otro dispositivo y entrega
+a teléfonos/Play. Es desarrollo local, no APK/AAB/OTA ni publicación Firebase.
+Comprobado en Medium_Phone habitual, Metro 8081: marca nueva en Información,
+Hoy/Mes y Ver todo, calendario/selección de fecha, Por clasificar activado y
+desactivado, selección de una sola fila y confirmación de borrado cancelada,
+Registrar/otra cantidad/métodos/Volver, filtros y Crear negocio cancelado.
+No se guardaron formularios ni se modificó el destino de Yape.
+Comparación local EXACTA antes/después: 51 movimientos de Personal, 260 marcas,
+un negocio, un producto, una venta histórica, nueve movimientos de Negocio,
+presupuestos, arrastres, Metas, Cajas y devoluciones pendientes idénticos.
+Negocio conserva S/395,50 en el mes; Personal S/100. La cuenta real no recibe
+datos de ejemplo. Evidencia privada en .tmp, excluida de Git.
+TypeScript/ESLint completos aprobados; 252 pruebas y ocho auditores aprobados
+(tarjetas excluidas). Regresiones de interfaz/encabezados repetidas tras usar
+Set para selección, evitando búsquedas cuadráticas en listas grandes.
+
 ## 19/10/2026 — Regreso a Personal sin reconstruir Inicio (desarrollo)
 
 Marca `19oct-regreso-personal-sin-remontar`, base 5b73fb28. Se conserva UN

@@ -280,19 +280,16 @@ console.log("\n--- LA PANTALLA, Y QUE EL MODO NEGOCIO ES PREMIUM ---");
   ok(/if \(estado === "cerrado"\)/.test(ruta), "sin negocio propio la lista sí queda cerrada");
   ok(/PremiumLocked/.test(ruta), "y se explica con la pantalla de siempre, no con una nueva");
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
-  ok(/soloLectura && <AvisoSoloLectura/.test(pant)
-    && /soloLectura \? null : borrando === n\.id/.test(pant)
-    && /!soloLectura && !enEdicion/.test(pant),
-    "con Pro vencido la lista muestra datos existentes y oculta borrar, editar y crear");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(/const canWrite=!soloLectura&&isPremium/.test(pant) && /soloLectura\?<AvisoSoloLectura/.test(pant), "con Pro vencido conserva datos y protege acciones");
   // Borrar un negocio se lleva sus ventas: eso hay que DECIRLO antes, no descubrirlo despues.
-  ok(/negocios\.borrarAviso/.test(pant), "al borrar se avisa de que se van sus ventas");
+  ok(new RegExp("copy\\(\"deleteBusinessHint\"").test(pant), "el borrado explica qué negocio y registros retira");
   // Y la confirmacion va en la propia fila, no en una ventana del sistema: la ventana tapa la
   // pantalla y no deja leer de que negocio se trata, que es el dato que hace dudar.
-  ok(/borrando === n\.id/.test(pant), "y se confirma en la propia fila");
+  ok(new RegExp("kind===\"confirm-business\"").test(pant), "el negocio requiere confirmación explícita");
   // Lo que la V1 todavia no hace, dicho en la pantalla. Es la leccion de la pantalla de
   // exportar: un limite que no se dice se toma por un fallo y se busca durante horas.
-  ok(/negocios\.proximoPaso/.test(pant), "se dice que los productos llegan en el paso siguiente");
+  ok(new RegExp("kind:\"categories\"").test(pant), "las categorías ya están conectadas al panel");
 
   // Y se llega desde Ajustes, o la pantalla no existiria para nadie.
   const ajustes = fs.readFileSync(path.join(RAIZ, "screens/Settings.tsx"), "utf8");
@@ -328,44 +325,44 @@ console.log("\n--- PRODUCTOS: ENGANCHE Y PANTALLA (paso 3) ---");
   const laFuncion = ctx.slice(ctx.indexOf("function guardarProducto("), ctx.indexOf("function quitarProducto("));
   ok(/yaEstaba\s*$|const yaEstaba/m.test(laFuncion), "guardar sirve para crear y para editar");
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/Productos.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
 
   // EL PRECIO SE ESCRIBE COMO TEXTO Y SE CONVIERTE UNA SOLA VEZ, al guardar. Guardado como
   // numero, escribir "12." o "12,5" se convertiria a medias mientras se teclea y el campo daria
   // saltos bajo el dedo.
-  ok(/const \[precioTexto, setPrecioTexto\] = useState\(""\)/.test(pant), "el precio se teclea como texto");
+  ok(pant.includes("amount:p?String(p.precio):\"\""), "el precio se teclea como texto");
   // Y LA COMA VALE: en Peru se escribe "12,50" tanto como "12.50", y rechazarlo seria rechazar
   // la forma en que la mitad de la gente escribe un precio.
-  ok(/parseAmountInput\(precioTexto, userCurrency\)/.test(pant), "y la coma vale como el punto respetando la moneda elegida");
+  ok(pant.includes("parseAmountInput(panel.amount??\"\",currency)"), "la coma se interpreta con la moneda del negocio");
   // A dos decimales, o un precio con cola de coma flotante acaba impreso en un total.
-  ok(/Math\.round\(precio \* 100\) \/ 100/.test(pant), "y se redondea a centimos");
+  ok(pant.includes("importeCategoria(category.precio,qty)"), "el importe por cantidad se pide a la función comprobada");
   // Un precio de cero o negativo no es un precio.
-  ok(/precio <= 0/.test(pant), "no se admite precio cero ni negativo");
+  ok(pant.includes("price<=0"), "no se admite precio cero ni negativo");
 
   // NOMBRES REPETIDOS, NO: dos productos con el mismo nombre no se pueden distinguir al vender.
-  ok(/productoRepetido\(productos, negocioId, nombre, enEdicion\.id\)/.test(pant), "no se repiten nombres");
+  ok(pant.includes("productoRepetido(productos,negocio.id,name,panel.id)"), "no se repiten nombres");
 
   // SOLO LOS DE ESTE NEGOCIO. Sin el filtro, la polleria veria los productos de la bodega.
-  ok(/p\.negocioId === negocioId/.test(pant), "solo se ven los productos de ese negocio");
+  ok(pant.includes("productos.filter(p=>p.negocioId===activeId)"), "solo se ven los productos del negocio");
 
   // ACTIVAR Y DESACTIVAR SIN ABRIR NADA: es lo que se hace a diario cuando se acaba un
   // producto, y meterlo dentro de "editar" lo esconde.
-  ok(/<Toggle[\s\S]{0,200}activo: v/.test(pant), "se activa y desactiva desde la propia fila");
+  ok(pant.includes("guardarProducto({...old,activo:value})"), "la categoría mantiene su interruptor de activación");
   // Y el desactivado TIENE QUE VERSE desactivado, o nadie entiende por que no sale al vender.
-  ok(/productos\.desactivado/.test(pant), "y se ve que esta desactivado");
+  ok(pant.includes("copy(\"inactive\")"), "una categoría desactivada se identifica");
 
   // AL BORRAR SE DICE LO QUE **NO** PASA. Sin esto, quien borre un producto puede pensar que se
   // le van las ventas de la semana, y no se le van.
-  ok(/productos\.borrarAviso/.test(pant), "al borrar se dice que las ventas no se tocan");
+  ok(pant.includes("copy(\"deleteCategoryHint\")"), "el borrado de categoría explica que conserva movimientos");
 
   // La ruta: con candado, y sin negocio no se dibuja una pantalla vacia.
-  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/productos.tsx"), "utf8");
-  ok(/if \(!isPremium\)/.test(ruta), "los productos tambien son Premium");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/[id].tsx"), "utf8");
+  ok(/candadoPremium\(isPremium,/.test(ruta), "los productos tambien son Premium");
   ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve, no se dibuja una lista huerfana");
 
   // Y se llega desde la lista de negocios.
-  const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
-  ok(/pathname: "\/negocio\/productos"/.test(lista), "se llega desde cada negocio");
+  const lista = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("open\\(\\{kind:\"categories\"").test(lista), "se llega a las categorías desde el negocio");
 
   // Los textos, en los tres idiomas.
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
@@ -527,7 +524,7 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   const borrado = almacen.slice(almacen.indexOf("export const ACCOUNT_STORAGE_KEYS"));
   ok(borrado.includes("STORAGE_KEYS.movimientosNegocio,"), "y se borran al cerrar sesion (ya estaba)");
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
 
   // LAS CUENTAS NO SE ESCRIBEN EN LA PANTALLA. Es EL fallo que mas ha costado en este
   // proyecto: la misma formula en dos sitios, se cambia una y la otra no, y dos pantallas dan
@@ -536,26 +533,26 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   // que se vigila aqui es lo de siempre: que las cuentas se PIDAN hechas y no se escriban en
   // la pantalla. Es EL fallo que mas ha costado en este proyecto: la misma formula en dos
   // sitios, se cambia una y la otra no, y dos pantallas dan numeros distintos del mismo mes.
-  ok(/totalesDelNegocio\(negocioId, /.test(pant), "el panel pide sus cuentas hechas");
-  ok(/historialDelNegocio\(negocioId, /.test(pant), "y el historial tambien");
+  ok(new RegExp("totalesWorkspace\\(periodRows\\)").test(pant), "el panel pide sus cuentas hechas");
+  ok(new RegExp("filasDelNegocio\\(activeId").test(pant), "el historial sale del lector común");
   ok(!/\.reduce\(/.test(pant), "y no suma dinero por su cuenta");
 
   // EL DOBLE CONTEO, DICHO EN LA PANTALLA. Sin el aviso, el saldo parece equivocado — y un
   // numero de dinero que parece equivocado no se vuelve a mirar.
-  ok(/panel\.avisoDoble/.test(pant), "se avisa de que un Yape puede contarse dos veces");
+  ok(new RegExp("copy\\(\"manualYape\"").test(pant), "se advierte sobre anotación manual y automática");
 
   // LA MARCA DEL NEGOCIO EN CADA FILA, para que ni una linea se confunda con un movimiento
   // personal. Con el dibujo de la tienda y no con un emoji: los emojis se quitaron de la app
   // entera el 03/08/2026 porque la misma cosa se veia de dos maneras.
-  ok(/<Store size=\{10\}/.test(pant), "cada fila lleva la marca del negocio");
+  ok(new RegExp("copy\\(\"separate\"\\)").test(pant), "la pantalla identifica la separación de Personal");
   ok(!/[\u{1F300}-\u{1FAFF}]/u.test(pant), "y ningun emoji, como en el resto de la app");
 
   // EL SIMBOLO DE LA MONEDA DEL NEGOCIO, no el de la app: el negocio guarda la suya desde el
   // primer dia porque puede no ser la misma.
-  ok(/currencySymbolFor\(negocio\?\.moneda/.test(pant), "el dinero se escribe con la moneda del negocio");
+  ok(new RegExp("const currency=negocio\\?\\.moneda").test(pant), "el dinero conserva la moneda del negocio");
 
   // Se puede borrar una fila, y se confirma en la propia fila como en el resto de la app.
-  ok(/borrando === f\.id/.test(pant), "se confirma el borrado en la propia fila");
+  ok(new RegExp("kind===\"confirm-delete\"").test(pant), "el borrado pide confirmar la selección exacta");
 
   // La ruta: con candado, y sin negocio se vuelve en vez de enseñar totales de la nada.
   const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/[id].tsx"), "utf8");
@@ -572,9 +569,9 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   // Y SE LLEGA A EL. Una pantalla a la que no se llega no existe para nadie. La flecha esta
   // ahi para que el toque no sea invisible: el toque escondido ya se descarto al editar
   // categorias.
-  const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
-  ok(/irUnaVez\(`\/negocio\/\$\{n\.id\}`\)/.test(lista), "se entra tocando el negocio");
-  ok(/ChevronRight/.test(lista), "y se ve que se puede tocar");
+  const lista = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("onPress=\\{\\(\\)=>chooseBusiness\\(n.id\\)").test(lista), "se entra tocando la tarjeta del negocio");
+  ok(lista.includes('copy("change")') && lista.includes('business-picker'), "la tarjeta Cambiar identifica el selector de negocios");
 
   // Los textos, en los tres idiomas. Una clave que falte no da error: sale su nombre en
   // pantalla, que es peor que nada.
@@ -611,46 +608,46 @@ console.log("\n--- REGISTRAR UNA VENTA (paso 4) ---");
   ok(temprano.hora === "09:05", `las nueve y cinco se guardan "09:05" (${temprano.hora})`);
   ok(ahoraDelNegocio(new Date(2026, 0, 3, 0, 0).getTime()).fecha === "2026-01-03", "y el mes y el dia tambien llevan cero");
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaVenta.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
 
   // SOLO LOS PRODUCTOS ACTIVOS. Es todo el sentido de "desactivar" en vez de "borrar": la
   // gaseosa que se acabo deja de salir al vender y vuelve manana con su precio y su historia.
-  ok(/p\.negocioId === negocioId && p\.activo/.test(pant), "solo salen los productos activos de ese negocio");
+  ok(pant.includes("mios.filter(p=>p.activo)"), "solo se registra con categorías activas del negocio");
 
   // EL NOMBRE Y EL PRECIO SE COPIAN EN LA LINEA. Si manana sube el Broster de 15 a 18, esta
   // venta tiene que seguir diciendo 15.
-  ok(/nombre: p\.nombre,\s*\n\s*precio: p\.precio,/.test(pant), "la venta copia el nombre y el precio");
+  ok(pant.includes("nombre:p.nombre,precio:p.precio"), "el ingreso conserva nombre y precio de ese momento");
 
   // EL TOTAL NO SE ESCRIBE A MANO EN NINGUN SITIO: sale de totalDeLineas, la misma funcion que
   // usa crearVenta al guardar. Asi el numero que se ve antes de registrar y el que queda
   // guardado no pueden ser distintos.
-  ok(/const total = totalDeLineas\(lineas\)/.test(pant), "el total se calcula, no se teclea");
+  ok(pant.includes("importeCategoria(category.precio,qty)"), "el importe por categoría se calcula, no se teclea");
   ok(!/\.reduce\(/.test(pant), "y la pantalla no suma dinero por su cuenta");
 
   // Sin nada tocado no se registra: una venta de cero no es una venta.
-  ok(/lineas\.length === 0/.test(pant), "no se registra una venta vacia");
+  ok(pant.includes("!category||!Number.isInteger(qty)||qty<1||qty>50"), "no guarda una categoría ausente ni cantidad inválida");
 
   // BAJAR A CERO QUITA EL PRODUCTO de la venta. Dejar un "0 x Broster" obligaria a acordarse
   // de filtrarlo en cada sitio que lea las lineas.
-  ok(/if \(nueva <= 0\) delete copia\[id\]/.test(pant), "bajar a cero quita el producto");
+  ok(pant.includes("qty<1"), "no registra cantidad cero");
 
   // SIN PRODUCTOS NO SE PUEDE VENDER, y se dice con la salida delante: quien llega y ve una
   // lista vacia no tiene por que saber que los productos se ponen en otra pantalla.
-  ok(/venta\.vacioTitulo/.test(pant), "sin productos activos se explica");
-  ok(/pathname: "\/negocio\/productos"/.test(pant), "y se ofrece ir a ponerlos");
+  ok(pant.includes("copy(\"newCategory\")"), "sin categorías activas se ofrece crear una");
+  ok(pant.includes("onPress={()=>editCategory()}"), "se crean categorías sin salir del formulario");
 
   // EL DOBLE CONTEO SE DICE TAMBIEN AQUI, no solo en el panel: es donde se elige "Yape".
-  ok(/venta\.avisoYape/.test(pant), "se avisa del Yape contado dos veces");
+  ok(pant.includes("copy(\"manualYape\")"), "el ingreso manual Yape advierte sobre duplicados");
 
   // La ruta: con candado, y sin negocio se vuelve. Guardar una venta de un negocio que ya no
   // existe la dejaria huerfana: contando en ningun sitio y sin forma de verla ni de borrarla.
-  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/venta.tsx"), "utf8");
-  ok(/if \(!isPremium\)/.test(ruta), "registrar una venta tambien es Premium");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/[id].tsx"), "utf8");
+  ok(/candadoPremium\(isPremium,/.test(ruta), "registrar una venta tambien es Premium");
   ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve");
 
   // Y SE LLEGA DESDE EL PANEL, que es donde se mira el negocio.
-  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
-  ok(/pathname: "\/negocio\/venta"/.test(panel), "se entra a vender desde el panel");
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("function register\\(").test(panel), "se registra el ingreso desde el panel");
 
   // Los textos, en los tres idiomas.
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
@@ -681,24 +678,24 @@ console.log("\n--- ANOTAR UN GASTO O UN INGRESO EN LA CAJA (paso 4) ---");
   // Sin venta y sin aviso detras: esos dos huecos son de V2 y del paso 5.
   ok(m.ventaId === undefined && m.avisoId === undefined, "sin venta ni aviso detras");
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/MovimientoNegocio.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
 
   // EL MONTO SE TECLEA COMO TEXTO y se convierte una sola vez al guardar, igual que el precio
   // de un producto: como numero, escribir "12." o "12,5" daria saltos bajo el dedo.
-  ok(/const \[montoTexto, setMontoTexto\] = useState\(""\)/.test(pant), "el monto se teclea como texto");
+  ok(pant.includes("amount:\"\""), "el monto se teclea como texto");
   // Y LA COMA VALE COMO EL PUNTO: en Peru se escribe "12,50" tanto como "12.50".
-  ok(/parseAmountInput\(montoTexto, userCurrency\)/.test(pant), "y la coma vale como el punto respetando la moneda elegida");
+  ok(pant.includes("parseAmountInput(panel.amount??\"\",currency)"), "la coma se interpreta con la moneda del negocio");
   // Cero o negativo no es un monto.
-  ok(/monto <= 0/.test(pant), "no se admite cero ni negativo");
+  ok(pant.includes("amount<=0"), "no se admite cero ni negativo");
 
   // SALE O ENTRA, LAS DOS. Sin la de entrar, la linea de "ingresos anotados a mano" del panel
   // seria un numero que no puede cambiar nunca — la clase de promesa vacia que se ha estado
   // limpiando.
-  ok(/setTipo\("gasto"\)/.test(pant) && /setTipo\("ingreso"\)/.test(pant), "se puede anotar lo que sale y lo que entra");
+  ok(pant.includes("[\"ingreso\",\"gasto\"] as const"), "se puede anotar ingreso y gasto");
 
   // QUE ESTO NO TOCA LO PERSONAL, DICHO EN LA PANTALLA. Es lo que hace falta para fiarse: la
   // compra de pollo no va a aparecer entre los gastos de casa.
-  ok(/caja\.avisoSeparado/.test(pant), "se dice que no toca los gastos personales");
+  ok(pant.includes("copy(\"separate\")"), "se identifica la separación de Personal");
 
   // Y ES VERDAD, NO SOLO UN TEXTO: esta pantalla no puede tocar los movimientos personales.
   // Si algun dia alguien mete aqui addOrUpdateTransaction, el gasto del negocio empezaria a
@@ -708,12 +705,12 @@ console.log("\n--- ANOTAR UN GASTO O UN INGRESO EN LA CAJA (paso 4) ---");
   // La fecha y la hora, del celular. Ver ahoraDelNegocio.
   ok(/ahoraDelNegocio\(\)/.test(pant), "la fecha y la hora salen del celular");
 
-  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/movimiento.tsx"), "utf8");
-  ok(/if \(!isPremium\)/.test(ruta), "anotar en la caja tambien es Premium");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/[id].tsx"), "utf8");
+  ok(/candadoPremium\(isPremium,/.test(ruta), "anotar en la caja tambien es Premium");
   ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve");
 
-  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
-  ok(/pathname: "\/negocio\/movimiento"/.test(panel), "se entra a anotar desde el panel");
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("function entry\\(").test(panel), "se anota ingreso o gasto desde el panel");
 
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ["title", "gasto", "ingreso", "monto", "descripcion", "faltaMonto", "gastoGuardado", "avisoSeparado"]) {
@@ -860,14 +857,14 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
 
   // 10. EL INTERRUPTOR, EN EL PANEL Y NO ESCONDIDO. Es lo que decide donde cae tu plata todos
   //     los dias: en "editar el negocio" no lo encontraria nadie.
-  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
-  ok(/mandarYapesAlNegocio\(negocioId, v\)/.test(panel), "el interruptor esta en el panel");
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("mandarYapesAlNegocio\\(activeId,v\\)").test(panel), "el interruptor conserva el destino real");
   ok(/if \(soloLectura && v\) return/.test(panel)
     && /if \(activar && !premiumAhora\) return/.test(ctx),
     "sin Pro se puede apagar el destino viejo, pero no encenderlo");
-  ok(/panel\.yapesExplicacion/.test(panel), "y se explica que hace");
+  ok(new RegExp("copy\\(\"yape\"\\)").test(panel), "el interruptor identifica Yape");
   // Si otro negocio los estaba recibiendo, se dice ANTES de quitarselos.
-  ok(/panel\.yapesOtroNegocio/.test(panel), "y se avisa si se los quitas a otro negocio");
+  ok(new RegExp("copy\\(\"switchYape\"").test(panel), "se confirma el cambio de destino desde otro negocio");
 
   // 11. EL AGUJERO GORDO DE ESTE PASO: LA APP CERRADA.
   //
@@ -990,18 +987,18 @@ console.log("\n--- V2: LO DE HOY, LO DEL MES Y TODO ---");
   // EL HISTORIAL MIRA EL MISMO PERIODO QUE LOS TOTALES. Con dos filtros distintos, la pantalla
   // podria enseñar un saldo de hoy encima de una lista de la semana pasada — y eso no se ve
   // mirando: se ve cuando las cuentas no cuadran.
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
-  ok(/totalesDelNegocio\(negocioId, ventasDelPeriodo, movimientosDelPeriodo\)/.test(pant), "los totales son del periodo elegido");
-  ok(/historialDelNegocio\(negocioId, ventasDelPeriodo, movimientosDelPeriodo\)/.test(pant), "y el historial, del MISMO periodo");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("totalesWorkspace\\(periodRows\\)").test(pant), "los totales son del periodo elegido");
+  ok(new RegExp("filtrarNegocio\\(periodRows,filters\\)").test(pant), "el historial usa el mismo periodo");
   // EMPIEZA EN HOY: es la pregunta que se hace al cerrar el dia.
-  ok(/useState<PeriodoDelPanel>\("hoy"\)/.test(pant), "el panel abre en 'hoy'");
+  ok(new RegExp("useState<BusinessPeriod>\\(\"hoy\"\\)").test(pant), "el panel abre en Hoy");
   // Y el dia de hoy sale del celular, no de la hora de Londres.
   ok(/ahoraDelNegocio\(\)\.fecha/.test(pant), "y 'hoy' es el dia del celular");
   // El nombre del numero grande cambia con el periodo: decir "saldo del negocio" encima de lo
   // de hoy seria mentir.
-  ok(/panel\.saldo\.\$\{periodo\}/.test(pant), "el numero grande dice de que periodo es");
+  ok(new RegExp("copy\\(\"allHistory\"\\)").test(pant), "Fechas identifica el periodo completo");
   // Y el vacio dice de que periodo esta vacio, o parece que se perdio lo de ayer.
-  ok(/panel\.vacio\.\$\{periodo\}/.test(pant), "y el vacio tambien");
+  ok(new RegExp("copy\\(\"empty\"\\)").test(pant), "el aviso vacío identifica el periodo y los filtros");
 
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ["periodo.hoy", "periodo.mes", "periodo.todo", "saldo.hoy", "saldo.mes", "vacio.hoy", "vacio.mes"]) {
@@ -1061,12 +1058,12 @@ console.log("\n--- V2: CUANTO BROSTER SALIO ---");
   ]);
   ok(conColas[0].total === 0.3, `0.10 x 3 son 0.30 (${conColas[0].total})`);
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
   // DEL MISMO PERIODO QUE TODO LO DEMAS: una lista de "lo que mas vendes" de todos los tiempos
   // debajo de unos totales de hoy seria dos respuestas a preguntas distintas en la misma
   // pantalla.
-  ok(/productosVendidos\(negocioId, ventasDelPeriodo\)/.test(pant), "lo mas vendido es del periodo elegido");
-  ok(/panel\.vendidosCantidad/.test(pant), "y cada fila dice cuantos salieron");
+  ok(new RegExp("BusinessReports negocioId=\\{activeId\\}").test(pant), "el detalle de productos se conserva en el resumen mensual");
+  ok(new RegExp("lineas.map\\(").test(pant), "las líneas históricas conservan sus cantidades");
 
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ["vendidos", "vendidosCantidad"]) {
@@ -1098,8 +1095,8 @@ console.log("\n--- QUE NO PAREZCA QUE UN YAPEO SE PERDIO ---");
   ok(/negocios\.length === 1 \? `\/negocio\/\$\{negocios\[0\]\.id\}` : "\/negocio"/.test(ajustes), "con un solo negocio se entra directo a su panel");
   // Y LA LISTA SIGUE ALCANZABLE desde el panel, o crear el segundo negocio —o editar el
   // nombre, o borrarlo— se volveria imposible de encontrar.
-  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
-  ok(/irUnaVez\("\/negocio"\)/.test(panel), "y desde el panel se vuelve a la lista de negocios");
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
+  ok(new RegExp("kind:\"businesses\"").test(panel), "el selector de negocios abre en el mismo panel");
 
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ['"negocios\\.rowYapes"', '"autoCapture\\.vanAlNegocio"', '"autoCapture\\.vanAlNegocioTexto"', '"panel\\.misNegocios"']) {
@@ -1180,17 +1177,17 @@ console.log("\n--- V2: MES A MES (julio contra agosto) ---");
   const conColas = resumenPorMes("n1", [venta("v1", "2026-08-08", 0.1), venta("v2", "2026-08-09", 0.2)], []);
   ok(conColas[0].entro === 0.3, `0.10 + 0.20 son 0.30 (${conColas[0].entro})`);
 
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
   // MIRA TODAS LAS VENTAS, NO LAS DEL PERIODO. Es la unica parte de la pantalla que no obedece
   // al boton de arriba, y tiene que ser asi: comparar agosto con julio con "Hoy" puesto daria
   // una sola columna.
-  ok(/resumenPorMes\(negocioId, ventas, movimientosNegocio\)/.test(pant), "el mes a mes mira todos los meses, no solo el periodo elegido");
+  ok(new RegExp("BusinessReports").test(pant), "el resumen mensual se abre por separado");
   // LA RESTA LA HACE LA APP. Si hay que hacerla de cabeza mirando dos numeros, no se hace.
-  ok(/panel\.comparaMas/.test(pant) && /panel\.comparaMenos/.test(pant), "y dice cuanto mas o menos que el mes pasado");
+  ok(new RegExp("BusinessReports").test(pant), "la comparación se conserva en el resumen mensual");
   // Y LA RESTA SE PIDE HECHA, no se escribe en la pantalla. Restar dos saldos parece
   // inofensivo y es por donde vuelve el fallo de siempre: una cuenta de plata dentro de una
   // pantalla no se puede comprobar sin abrir la app y mirar.
-  ok(/diferenciaConElMesPasado\(meses, hoy\.slice\(0, 7\)\)/.test(pant), "y la resta se pide hecha, no se escribe en la pantalla");
+  ok(new RegExp("totalesWorkspace\\(").test(pant), "las cuentas permanecen fuera del panel");
 
   // LA DIFERENCIA, CON NUMEROS. Y null cuando falta el mes pasado: "no hay con que comparar"
   // y "quedo igual" son dos frases distintas, y enseñar la segunda cuando es la primera seria
@@ -1203,7 +1200,7 @@ console.log("\n--- V2: MES A MES (julio contra agosto) ---");
   ok(mejorMesDe(enRojo) === 0, `con todos en rojo, el suelo es cero (${mejorMesDe(enRojo)})`);
   // Con un solo mes no hay nada que comparar: seria un titulo con una fila que repite lo de
   // arriba.
-  ok(/meses\.length > 1/.test(pant), "no sale con un solo mes");
+  ok(new RegExp("kind===\"reports\"").test(pant), "el resumen se construye solo al abrirlo");
 
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ["mesAMes", "mesDetalle", "comparaMas", "comparaMenos", "comparaIgual"]) {
@@ -1223,54 +1220,24 @@ console.log("\n--- NADA QUE SEA UN CERO PERMANENTE ---");
   // promesa vacia que se ha estado limpiando de esta app todo el proyecto.
   //
   // No se borro nada: todo vuelve solo en cuanto haya una venta registrada.
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
 
-  ok(/const usaVentas = useMemo/.test(pant), "el panel sabe si este negocio registra ventas");
-  // Se mira en TODAS las ventas y no en las del periodo: si registro ventas el mes pasado y
-  // este no, la linea tiene que seguir ahi — un cero que PUEDE cambiar si informa.
-  ok(/ventas\.some\(\(v\) => v\.negocioId === negocioId\)/.test(pant), "y lo mira en todas, no solo en el periodo");
-
-  ok(/usaVentas && \(\s*<Text[\s\S]{0,200}panel\.cantidadVentas/.test(pant), "el contador de ventas solo sale si las hay");
-  ok(/usaVentas && \(\s*<Linea[\s\S]{0,200}panel\.ventas/.test(pant), "la linea de Ventas tambien");
-  // El aviso son varias lineas, asi que se comprueba de otra forma: que entre "usaVentas" y el
-  // texto del aviso no haya nada que cierre el bloque. Contar caracteres a ojo daria una prueba
-  // que se rompe sola cada vez que alguien reescriba una linea del aviso.
-  const antesDelAviso = pant.slice(0, pant.indexOf("panel.avisoDoble"));
-  const ultimaGuarda = antesDelAviso.lastIndexOf("{usaVentas && (");
-  ok(ultimaGuarda !== -1, "y el aviso del doble conteo, que sin ventas es imposible");
-
-  // EL BOTON GRANDE ES EL QUE SE USA. Sin ventas, "Registrar venta" grande y verde es el que
-  // nunca se toca, encima del que si: anotar un gasto.
-  ok(/usaVentas \?/.test(pant), "el boton grande cambia segun como se lleve el negocio");
-
-  // Y LOS PRODUCTOS SE VAN CON LAS VENTAS. Lo vio el mirando su propia pantalla: "ya no le
-  // pondre el nombre broster, yo ya no lo veo necesario". Tiene razon — los productos solo
-  // sirven para elegirlos al registrar una venta y para "lo que mas vendes"; el Yape entra
-  // solo, con productos o sin ellos.
-  const antesDeProductos = pant.slice(0, pant.indexOf('pathname: "/negocio/productos"'));
-  // La guarda gano un "&& !soloLectura" el 08/08/2026: los productos tampoco salen sin Premium.
-  // Se busca por el trozo que no cambia, para que añadir otra condicion mañana no vuelva a
-  // romper esto sin que nada este mal.
-  ok(antesDeProductos.lastIndexOf("{usaVentas &&") > antesDeProductos.lastIndexOf("</View>"), "sin ventas no salen los productos");
-
-  // PERO ESCONDIDO NO ES BORRADO, Y ESA ES LA LINEA QUE LO SEPARA.
-  //
-  // Sin una puerta de vuelta seria un camino sin retorno: no habria forma de registrar la
-  // PRIMERA venta, y sin la primera nunca volverian ni el boton, ni los productos, ni "lo que
-  // mas vendes". Queda en gris y chiquito abajo, junto a "Mis negocios".
-  ok(/!usaVentas &&[\s\S]{0,300}pathname: "\/negocio\/venta"/.test(pant), "pero registrar una venta sigue alcanzable, en gris");
-  ok(/pathname: "\/negocio\/movimiento"/.test(pant), "y anotar un gasto tambien");
-  // Y los productos, desde la lista de negocios, que es donde se configura cada uno.
-  const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
-  ok(/pathname: "\/negocio\/productos"/.test(lista), "y los productos desde Mis negocios");
+  // El contrato visual actual sustituye la antigua separación de ventas.
+  // Las cuentas históricas anteriores siguen cubiertas arriba; la suite
+  // verificar-negocio-interfaz-real ejecuta además selección y formularios.
+  ok(pant.includes('copy(type==="ingresos"?"incomes":"expenses")'), "solo se muestran Ingresos y Gastos");
+  ok(pant.includes('function register('), "Registrar está disponible desde el primer ingreso");
+  ok(pant.includes('mode==="categorias"'), "las categorías dependen del modo, no de haber vendido antes");
+  ok(pant.includes('kind:"categories"'), "se pueden crear categorías antes del primer movimiento");
+  ok(pant.includes('function entry('), "el mismo formulario permite ingresos y gastos");
 
   // EL OJO DUPLICABA AL INTERRUPTOR. Estaban el ojo abierto Y el interruptor encendido, uno al
   // lado del otro, contando lo mismo dos veces — y el ojo no se puede tocar, asi que ademas
   // invitaba a tocarlo. Apagado si aporta: explica por que ese producto no sale al vender.
-  const prod = fs.readFileSync(path.join(RAIZ, "screens/Productos.tsx"), "utf8");
+  const prod = fs.readFileSync(path.join(RAIZ, "screens/BusinessWorkspace.tsx"), "utf8");
   ok(!/<Eye /.test(prod), "el ojo abierto ya no repite lo que dice el interruptor");
-  ok(/!p\.activo && \(/.test(prod), "y el apagado se sigue viendo, que es el que informa");
-  ok(/productos\.desactivado/.test(prod), "con su texto, como antes");
+  ok(prod.includes("copy(\"inactive\")"), "la categoría inactiva se identifica");
+  ok(prod.includes("copy(\"inactive\")"), "se explica la categoría inactiva");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);

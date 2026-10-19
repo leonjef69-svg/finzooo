@@ -22,9 +22,9 @@
 // también tus pagos a la caja del negocio metería la compra del almuerzo entre los gastos del
 // local.
 //
-// Y NO SE ADIVINA QUÉ SE VENDIÓ. Un yapeo de S/ 15 significa "entraron S/ 15" y nada más:
-// *"En V1 NO quiero que el sistema diga: recibiste S/15, entonces vendiste un Broster"*.
-// Juntarlo con su venta es V2, y para eso está el hueco de `ventaId`.
+// El modo simple conserva solo el ingreso. En categorías, las reglas de precio
+// guardan una coincidencia exacta única; ambigüedad/límites quedan pendientes.
+// Un importe parecido a otro manual nunca autoriza borrarlo ni descontarlo.
 
 import {
   ahoraDelNegocio,
@@ -32,7 +32,9 @@ import {
   type MetodoDeVenta,
   type MovimientoNegocio,
   type Negocio,
+  type Producto,
 } from "@/utils/negocio";
+import { clasificacionAlRecibir } from "@/utils/negocioWorkspace";
 import type { Transaction } from "@/types";
 
 /**
@@ -132,7 +134,8 @@ export function separarLoDelNegocio(
   aRegistrar: Transaction[],
   avisoDe: Record<number, number>,
   negocio: Negocio | undefined,
-  yaEnLaCaja: MovimientoNegocio[]
+  yaEnLaCaja: MovimientoNegocio[],
+  productos: Producto[] = []
 ): { personales: Transaction[]; delNegocio: MovimientoNegocio[] } {
   const yaVistos = new Set(yaEnLaCaja.map((m) => m.avisoId).filter(Boolean));
   // SIN NEGOCIO QUE RECIBA, TODO SIGUE COMO SIEMPRE. Es la línea que hace que encender el
@@ -185,6 +188,7 @@ export function separarLoDelNegocio(
         hora,
         origen: "automatico",
         avisoId,
+        clasificacion: clasificacionAlRecibir(negocio,productos,mov.amount),
       })
     );
   }

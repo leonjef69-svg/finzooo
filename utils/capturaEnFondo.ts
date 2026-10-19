@@ -2,7 +2,7 @@ import { flushPendingSaves, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/sto
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { mergeTransactions } from "@/utils/mergeTransactions";
 import { negocioQueRecibeYapesSegunPlan, separarLoDelNegocio } from "@/utils/negocioCaptura";
-import type { MovimientoNegocio, Negocio } from "@/utils/negocio";
+import type { MovimientoNegocio, Negocio, Producto } from "@/utils/negocio";
 import { loadPrueba, pruebaVigente } from "@/utils/pruebaPremium";
 import { reserveIdsAbove } from "@/utils/id";
 import * as notificationReader from "@/modules/notification-reader";
@@ -84,7 +84,7 @@ export async function capturarEnFondo(): Promise<number> {
   // ahi la proxima vez que se abre.
   await guardarPendientes(captured);
 
-  const [guardadas, learned, logPrevio, perfil, negocios, cajaGuardada, premiumCuenta, inicioPrueba] = await Promise.all([
+  const [guardadas, learned, logPrevio, perfil, negocios, cajaGuardada, premiumCuenta, inicioPrueba, productos] = await Promise.all([
     loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
     loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
     loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
@@ -101,6 +101,7 @@ export async function capturarEnFondo(): Promise<number> {
     loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
     loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
     loadPrueba(),
+    loadJSON<Producto[]>(STORAGE_KEYS.productos, []),
   ]);
 
   // Los identificadores nuevos tienen que ir por encima de los que ya
@@ -129,7 +130,8 @@ export async function capturarEnFondo(): Promise<number> {
     toAdd,
     avisoDe,
     negocioQueRecibeYapesSegunPlan(Array.isArray(negocios) ? negocios : [], premiumNegocio),
-    caja
+    caja,
+    Array.isArray(productos) ? productos : []
   );
 
   // El registro de lo visto se guarda siempre, aunque no se añada nada: es lo

@@ -14,7 +14,7 @@ const fileNames = [
   "screens/AppLockSettings.tsx", "screens/CalendarioPagos.tsx", "screens/CategoryCustomize.tsx",
   "screens/DuplicateReview.tsx", "screens/ExportPdfSheet.tsx", "screens/GoalFormSheet.tsx",
   "screens/GoalPickerSheet.tsx", "screens/History.tsx", "screens/Home.tsx", "screens/ImportSheet.tsx",
-  "screens/MoveMoneySheet.tsx", "screens/Negocios.tsx", "screens/NuevaCategoria.tsx", "screens/NuevaVenta.tsx",
+  "screens/MoveMoneySheet.tsx", "screens/Negocios.tsx", "screens/BusinessWorkspace.tsx", "components/business/BusinessPrimitives.tsx", "screens/NuevaCategoria.tsx", "screens/NuevaVenta.tsx",
   "screens/NuevoPagoProgramado.tsx", "screens/PanelNegocio.tsx", "screens/Premium.tsx", "screens/Productos.tsx",
   "screens/SavingsDetail.tsx", "screens/SavingsList.tsx", "screens/ScanReceipt.tsx", "screens/ScheduledExportSettings.tsx",
   "screens/Settings.tsx", "screens/VoiceEntry.tsx", "screens/AddChooser.tsx", "screens/AddSheet.tsx",
@@ -74,26 +74,31 @@ for (const lang of ["es", "en", "pt"]) {
   const save = originalButton("screens/Home.tsx", "saveBudgetInline", { t, saveBudgetInline: () => { action = "saved"; } });
   assert.equal(save.accessibilityLabel, t("common.save")); save.onPress(); assert.equal(action, "saved");
   for (const [file, needle, deps, expected, operation] of [
-    ["screens/Productos.tsx", "abrirEdicion(p)", { p: { id: "p" }, abrirEdicion: value => { action = "edit:" + value.id; } }, "common.edit", "edit:p"],
-    ["screens/Productos.tsx", "setBorrando(p.id)", { p: { id: "p" }, setBorrando: value => { action = "delete:" + value; } }, "common.delete", "delete:p"],
-    ["screens/Negocios.tsx", "setBorrando(n.id)", { n: { id: "n" }, setBorrando: value => { action = "delete:" + value; } }, "common.delete", "delete:n"],
     ["screens/ExportPdfSheet.tsx", "editarContacto(c)", { c: { id: "c", name: "Ana" }, editarContacto: value => { action = "edit:" + value.id; } }, "accessibility.editContact", "edit:c"],
     ["screens/ExportPdfSheet.tsx", "borrarContacto(c.id)", { c: { id: "c", name: "Ana" }, borrarContacto: value => { action = "delete:" + value; } }, "accessibility.deleteContact", "delete:c"],
   ]) {
     const button = originalButton(file, needle, { t, ...deps });
     assert.equal(button.accessibilityLabel, t(expected, { name: "Ana" })); button.onPress(); assert.equal(action, operation);
   }
+  const businessDelete = handlerOriginal("components/business/BusinessPrimitives.tsx", "BusinessButton", {
+    React: { createElement: (type, props, ...children) => ({type,props,children}) }, TouchableOpacity: "button", Text: "text",
+  })({ label:t("common.delete"), onPress:()=>{action="delete:business";}, danger:true });
+  assert.equal(businessDelete.props.accessibilityRole,"button");
+  assert.equal(businessDelete.children[0].children[0],t("common.delete"));
+  businessDelete.props.onPress();assert.equal(action,"delete:business");
   for (const checked of [false, true]) {
     const favorite = originalButton("screens/NuevaCategoria.tsx", "alternarFavorito", { t, esFav: checked, alternarFavorito: () => { action = "favorite"; } });
     assert.equal(favorite.accessibilityRole, "togglebutton"); assert.equal(favorite.accessibilityState.checked, checked);
     assert.equal(favorite.accessibilityLabel, t(checked ? "accessibility.removeFavorite" : "accessibility.addFavorite"));
     favorite.onPress(); assert.equal(action, "favorite");
   }
-  for (const delta of [-1, 1]) {
-    const button = originalButton("screens/NuevaVenta.tsx", "sumar(p.id, " + delta + ")", { t, p: { id: "p", nombre: "Pan" }, sumar: (id, amount) => { action = id + ":" + amount; } }, delta < 0 ? "Minus" : "Plus");
-    assert.equal(button.accessibilityLabel, t(delta < 0 ? "accessibility.decreaseProduct" : "accessibility.increaseProduct", { name: "Pan" }));
-    button.onPress(); assert.equal(action, "p:" + delta);
-  }
+  // El registro nuevo usa un campo de cantidad, no dos iconos pequeños.
+  const quantity = handlerOriginal("components/business/BusinessPrimitives.tsx", "BusinessField", {
+    React: { createElement: (type, props, ...children) => ({type,props,children}) }, View:"View",Text:"Text",TextInput:"TextInput",
+  })({label:t("caja.monto"),value:"2",onChange:value=>{action=value;},amount:true});
+  const editable=quantity.children.find(child=>child?.type==="TextInput");
+  assert.equal(editable.props.accessibilityLabel,t("caja.monto"));
+  assert.equal(editable.props.value,"2");editable.props.onChangeText("1");assert.equal(action,"1");
   for (const x of ["dibujo", "foto", "color"]) {
     const tab = originalButton("screens/NuevoPagoProgramado.tsx", "setPestana(x)", { t, x, pestana: x, setPestana: value => { action = value; } });
     assert.equal(tab.accessibilityRole, "tab"); assert.equal(tab.accessibilityState.selected, true);

@@ -53,6 +53,7 @@ import {
   type Producto,
   type Venta,
 } from "@/utils/negocio";
+import { borrarFilasNegocio, vincularCobroNegocio } from "@/utils/negocioWorkspace";
 import {
   marcarPagado,
   movimientoDelPago,
@@ -414,6 +415,8 @@ type AppDataContextValue = {
   guardarMovimientoNegocio: (movimiento: MovimientoNegocio) => void;
   /** Borra un movimiento del negocio. */
   quitarMovimientoNegocio: (id: string) => void;
+  borrarFilasDelNegocio: (negocioId: string, keys: string[]) => void;
+  vincularCobroDelNegocio: (negocioId: string, automaticoId: string, manualKey: string) => void;
   setIsPremium: (v: boolean) => void;
   /**
    * Mirar la app como alguien que no paga. **Solo quita Premium, nunca lo da.**
@@ -2062,7 +2065,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           // LA CAJA DE MEMORIA **Y** LA DEL DISCO. Un yapeo que el trabajo de fondo acabara de
           // anotar está en el disco y todavía no en el estado, y sin juntarlas volvería a
           // entrar. Ver recogerDelDisco.
-          fusionarMovimientosNegocio(datosDelNegocio.movimientos, lectura.caja)
+          fusionarMovimientosNegocio(datosDelNegocio.movimientos, lectura.caja),
+          datosDelNegocio.productos
         );
 
         const siguienteLog = [...baseLog, ...log].slice(-40);
@@ -2775,6 +2779,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function quitarMovimientoNegocio(id: string) {
     setDatosNegocio((antes) => ({ ...antes, movimientos: antes.movimientos.filter((m) => m.id !== id) }));
+  }
+  function borrarFilasDelNegocio(negocioId: string, keys: string[]) {
+    setDatosNegocio(antes => borrarFilasNegocio(antes, negocioId, keys));
+  }
+  function vincularCobroDelNegocio(negocioId: string, automaticoId: string, manualKey: string) {
+    setDatosNegocio(antes => vincularCobroNegocio(antes, negocioId, automaticoId, manualKey));
   }
 
   async function activarPruebaPremium(): Promise<boolean> {
@@ -3586,6 +3596,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     movimientosNegocio: datosNegocio.movimientos,
     guardarMovimientoNegocio,
     quitarMovimientoNegocio,
+    borrarFilasDelNegocio,
+    vincularCobroDelNegocio,
     setIsPremium,
     verComoGratis,
     setVerComoGratis,

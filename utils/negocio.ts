@@ -18,11 +18,10 @@
 // depender de que los datos no estén ahí. En una app de dinero eso vale más que la
 // elegancia. El camino personal no se toca ni una línea.
 //
-// QUÉ NO HACE LA V1, A PROPÓSITO
-//
-// No adivina productos. Un Yape de S/ 15 significa *"entraron S/ 15 por Yape"* y nada más:
-// *"En V1 NO quiero que el sistema diga: recibiste S/15, entonces vendiste un Broster"*. Eso
-// llega en V3 con la voz. Tampoco hay inventario ni stock.
+// Desde el 19/10/2026 hay dos modos explícitos: simple o categorías con precios.
+// En categorías se conserva la coincidencia exacta comprobada; si hay dudas,
+// se pide clasificar. No se infiere inventario, no se usa IA y no se reescribe
+// el historial anterior. Las ventas antiguas siguen legibles como ingresos.
 
 import { sanitizeName } from "@/utils/categoryCustom";
 import { loadJSON, saveJSON, saveJSONBatchNow, STORAGE_KEYS } from "@/utils/storage";
@@ -61,6 +60,9 @@ export type Negocio = {
   destinoYapes: DestinoDeLosYapes;
   /** Cuándo se creó, en milisegundos. Para ordenarlos sin depender del nombre. */
   creadoEn: number;
+  /** Ausente en archivos anteriores: se respeta su catálogo existente. */
+  modo?: "categorias" | "simple";
+  reconocerCombinaciones?: boolean;
 };
 
 export type Producto = {
@@ -174,6 +176,9 @@ export type MovimientoNegocio = {
    * movimientos ya guardados que no lo tienen.
    */
   avisoId?: string;
+  /** Copia del nombre/precio al registrar; editar el catálogo no cambia el pasado. */
+  clasificacion?: { estado: "confirmada" | "pendiente"; lineas: LineaDeVenta[] };
+  vinculoManual?: string;
 };
 
 /** Todo lo del negocio junto. Es lo que se guarda y lo que viaja a la nube. */
@@ -362,6 +367,7 @@ export function crearMovimientoNegocio(datos: {
   origen?: "manual" | "automatico";
   ventaId?: string;
   avisoId?: string;
+  clasificacion?: MovimientoNegocio["clasificacion"];
 }): MovimientoNegocio {
   return {
     id: nuevoId("mov"),
@@ -375,6 +381,7 @@ export function crearMovimientoNegocio(datos: {
     origen: datos.origen ?? "manual",
     ...(datos.ventaId ? { ventaId: datos.ventaId } : {}),
     ...(datos.avisoId ? { avisoId: datos.avisoId } : {}),
+    ...(datos.clasificacion ? { clasificacion: datos.clasificacion } : {}),
   };
 }
 

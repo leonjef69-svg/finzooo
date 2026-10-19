@@ -66,16 +66,16 @@ console.log("\n--- SE PUEDE VER LO PROPIO SIN PREMIUM ---");
 console.log("\n--- Y NO SE PUEDE CREAR NI CAMBIAR NADA ---");
 {
   // La mitad que se rompe en silencio. Un candado que deja pasar no da error: solo regala.
-  const panel = leer("screens/PanelNegocio.tsx");
-  ok(/soloLectura \? null : usaVentas \?/.test(panel), "sin Premium no sale el boton grande de registrar");
-  ok(/usaVentas && !soloLectura/.test(panel), "ni los de gasto y productos");
-  ok(/!usaVentas && !soloLectura/.test(panel), "ni el enlace gris de registrar una venta");
+  const panel = leer("screens/BusinessWorkspace.tsx");
+  ok(panel.includes('const canWrite=!soloLectura&&isPremium'), "sin Premium no se habilita registrar");
+  ok(panel.includes('if(!canWrite||busy.current)return;'), "el guardado también comprueba acceso y doble toque");
+  ok(panel.includes('canWrite?<BusinessButton label={`+ ${copy("createBusiness")}'), "crear negocios se protege por el mismo acceso");
   const ctx = leer("contexts/AppDataContext.tsx");
   ok(/if \(soloLectura && v\) return;/.test(panel)
     && /if \(activar && !premiumAhora\) return;/.test(ctx)
     && /pruebaVigente\(pruebaInicio, Date\.now\(\)\)/.test(ctx),
     "sin Pro solo se puede apagar un destino antiguo de yapeos, nunca encenderlo");
-  ok(/\) : soloLectura \? null : \(/.test(panel), "y no se puede borrar del historial");
+  ok(panel.includes('selecting&&canWrite?') && panel.includes('if(!canWrite && !['), "sin Premium no se borra ni se mantienen formularios activos");
 
   const metas = leer("screens/SavingsList.tsx");
   ok(/!soloLectura && <TouchableOpacity[^\n]*setPanel\(\{ kind: "create"/.test(metas), "no se crea una meta nueva");
@@ -104,10 +104,10 @@ console.log("\n--- Y SE DICE POR QUE, QUE ES LO QUE LO SEPARA DE UN FALLO ---");
   ok(/irUnaVez\("\/premium"\)/.test(aviso), "y lleva a Premium desde ahi mismo");
 
   for (const [ruta, nombre] of [
-    ["screens/PanelNegocio.tsx", "el panel"],
+    ["screens/BusinessWorkspace.tsx", "el panel"],
     ["screens/SavingsList.tsx", "las metas"],
   ]) {
-    ok(/soloLectura && <AvisoSoloLectura \/>/.test(leer(ruta)), `${nombre} lo enseña`);
+    ok(/soloLectura\s*(?:&&|\?)\s*<AvisoSoloLectura\s*\/>/.test(leer(ruta)), `${nombre} lo enseña`);
   }
 
   // Y EL TEXTO TIENE QUE DECIR QUE NO SE PIERDE NADA. Es lo primero que piensa quien ve un

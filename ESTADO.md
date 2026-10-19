@@ -1,5 +1,53 @@
 # Estado actual de Fino
 
+## Negocio — 19/10/2026 — maqueta integrada en la app
+
+Marca `19oct-negocio-compacto-real`, base 77f7486f. Panel único compacto con
+Ingresos/Gastos, selector de negocios, Yape identificado, Hoy/Mes/Fechas y
+Ver todo dentro de Fechas. Calendario local sin dependencia o APK nuevo.
+Buscar/filtros por tipo, origen, método/categoría; Por clasificar táctil con
+selección visible. FlatList y selección por claves tipadas/Set, no por monto.
+Registro y categorías en una sola hoja privada; Volver conserva borradores,
+Cerrar los descarta. Se conservan moneda propia, Pro/solo lectura, pausa,
+categorías activas/inactivas, resumen mensual, precio histórico y borrados.
+
+Los formularios antiguos se retiraron. Sus archivos y enlaces son aliases
+puros al panel vigente; no vuelven a abrir otra interfaz. Los tipos/ventas
+históricas se conservan como fuente de ingresos, sin migración destructiva.
+No se copian datos de la maqueta. Dos pagos del mismo monto siguen sumando;
+solo el mismo aviso nativo se descarta por identidad. Unir manual/automático
+requiere elección/confirmación y conserva la marca de borrado del manual.
+
+Modo simple sin categorías; modo categorías guarda una copia de las líneas
+en nuevos ingresos. Precio exacto/combinación única se clasifica al capturar,
+tanto abierta como en fondo. Ambigüedad o límite de búsqueda queda pendiente
+(12 unidades/categorías, 18.000 pasos, S/2.000 en búsqueda de combinaciones).
+No es prueba de qué se vendió ni inventario. Los cobros antiguos sin categoría
+se presentan pendientes sin reescribir sus datos ni adivinar un producto.
+La selección del destino Yape no concede el permiso nativo: se indica si falta
+activar la captura general. No amplía el lector a Plin; su método manual previo
+sigue disponible donde corresponde.
+
+Regresiones nuevas ejecutan captura/helper/contexto y JSX/controlador originales
+con React/Android/IO adaptados. Rojas en la base por ingreso sin clasificación
+y panel anterior, respectivamente; cantidad decimal también detectada antes de
+corregir su limpieza. Cubren exactos/ambiguos, importes iguales, fechas/calendario,
+selección individual con IDs coincidentes entre tipos, borrado/tumbas, vincular,
+borradores/volver, monedas, modos y Pro. Se actualizan contratos visuales
+obsoletos, sin retirar las pruebas de dinero/nube originales.
+
+Validación: TypeScript/ESLint y 252 pruebas/ocho auditores, con regresiones de
+selección repetidas tras el ajuste final. Android habitual revisado sin guardar
+ni borrar dinero; lectura local exacta antes/después (51 Personal, 260 marcas,
+1 negocio/producto/venta y 9 movimientos de Negocio, más libros auxiliares).
+Marca nueva vista en Información; entrega visual dejada en Negocio/Este mes.
+
+**Sigue/falta:** comprobar un cobro Yape real abierto/cerrado y dos dispositivos
+con esta clasificación, y la entrega a teléfonos/Play. Ver ENTREGAS.md para
+el resultado final del emulador y pruebas. Esta integración no certifica FPS,
+ni cierra los pendientes financieros generales de Familia/Cajas. Metas en pausa,
+tarjetas y Telegram fuera; sin APK/AAB/OTA ni despliegue Firebase.
+
 ## Personal/Familia/Cajas — 19/10/2026 — tres puntos: medir, corregir, comparar
 
 Marca `19oct-regreso-personal-sin-remontar`, base 5b73fb28. Se completa la

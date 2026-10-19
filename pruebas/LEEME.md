@@ -1,5 +1,20 @@
 # Pruebas y auditores
 
+19/10 Negocio compacto: verificar-negocio-maqueta-real ejecuta captura y modelo
+originales (no HTML): exactos/combinaciones/ambiguos, duplicados por aviso frente
+a pagos distintos de igual monto, simple, fechas/filtros, vinculación explícita,
+marcas de borrado/fusión y fuentes intactas. verificar-negocio-interfaz-real
+ejecuta JSX/controlador/contexto originales con hooks e IO adaptados: dos totales,
+calendario/Fechas/Ver todo, selección exacta, borrado confirmado, categoría rápida,
+Deshacer, volver con borradores y Pro. Ambas rojas en la base 77f7486f por el
+comportamiento anterior (no solo por importar un helper nuevo). La interfaz
+permite FINO_BUSINESS_UI_BASELINE=77f7486f para repetir el contraste.
+Se sustituyen comprobaciones de interfaz V1 obsoletas, conservando cuentas,
+sincronización, guardado local y permisos. Aliases puros de Negocio comprobados
+sin exceptuar rutas vacías o con lógica; no se acepta inventar un destino.
+Pruebas financieras no escriben en el emulador ni en la cuenta real. Metas sigue
+en pausa. El recorrido Android y la entrega se documentan en ENTREGAS.md.
+
 19/10 Regreso sin remontar: verificar-regreso-personal-sin-remontar-real ejecuta
 selector/nav originales con StackRouter/StackActions instalados reales.
 Treinta ciclos conservan Inicio; máximo un espacio delante. Etiqueta saliente,

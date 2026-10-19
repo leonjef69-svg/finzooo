@@ -63,7 +63,7 @@ console.log("\n--- LAS TRES PUERTAS, TODAS CERRADAS ---");
 
   // 3. EL INTERRUPTOR DEL PANEL DEL NEGOCIO —"los yapeos entran aqui"—, que es la misma
   //    funcion por otro camino. Sin esto quedaba un interruptor que reparte algo que no llega.
-  const panel = leer("screens/PanelNegocio.tsx");
+  const panel = leer("screens/BusinessWorkspace.tsx");
   ok(/hayRegistroAutomatico\(userCurrency\) && \(/.test(panel), "3. el interruptor del negocio se esconde");
 }
 
