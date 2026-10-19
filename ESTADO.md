@@ -1,5 +1,63 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 19/10/2026 — Cajas sin cifrar copias idénticas
+
+Marca `19oct-cajas-sin-guardado-repetido`, base 4d169115. Al entrar de nuevo
+en Cajas se solicitaba guardar la copia local aunque el contenido fuera igual;
+la cola agrupaba llamadas cercanas, pero después repetía AES/HMAC y escritura.
+Se evita únicamente ese guardado diferido de `cajasDinero` si coincide con una
+copia v2 autenticada o un guardado confirmado, de la misma sesión/revisión, y
+los bytes actuales de Android siguen siendo EXACTAMENTE los comprobados.
+Prueba transitoria única, limitada a 512 Ki caracteres combinados y retirada
+al descartar pendientes/salir; ninguna clave persistente nueva. Copias grandes,
+distintas, ausentes o sin comprobación usan el camino normal. Un error de la
+lectura opcional también conserva el guardado normal. Un fallo al cargar datos
+reales mantiene el bloqueo protector, y un fallo de escritura obliga a reintentar.
+
+No se modifica `saveJSONNow` ni el lote indivisible Personal/Cajas ni su lectura
+posterior de confirmación. Migración de texto/v1, cambios reales, orden de la
+cola y protección frente a otra cuenta/lote conservados. No se reutiliza una
+copia visual como prueba financiera. Sin cambiar rutas, datos remotos, fórmulas,
+interfaz, bibliotecas o cifrado. Metas en pausa y tarjetas fuera de alcance.
+
+Regresión nueva con cola original y Android/cifrado adaptados: roja en 4d169115
+por cifrar una copia idéntica (1 frente a 0). Cubre cambios y objeto mutado en
+cola, escrituras inmediatas y lotes no omitidos, época posterior al lote,
+migración v1/texto, falta de copia, fallo/respuesta perdida y reintento, sustitución
+de bytes, fallo opcional/de lectura real, cambio de cuenta en plena comprobación,
+descarte/borrado, otras claves intactas, orden y límite de memoria. La suite
+previa de guardado Personal/Cajas con SQLite real sigue aprobada.
+La comprobación antigua de errores buscaba literalmente `.catch(...)` y no
+aceptaba `try/catch`; se sustituye por fallo nativo real con almacén/cifrado
+originales, aviso emitido, guardado no confirmado y reintento durable correcto.
+
+Emulador habitual Medium_Phone, Metro 8081, solo navegación autorizada: contador
+temporal de solicitudes/cifrados/escrituras observó 9 solicitudes de Cajas y
+1 escritura (14.525 caracteres); no significa ocho cifrados evitados porque
+también existe agrupación de 400 ms. Contadores retirados del runtime y nunca
+incluidos en fuentes de la app. Datos financieros locales/remotos EXACTAMENTE
+iguales antes/después: 50 movimientos, 260 marcas, presupuestos, arrastres,
+Metas, Cajas y pendientes; cero familias activas. No se guardó ningún formulario.
+Marca nueva comprobada en Información de la app y regreso final a Personal.
+
+Medición de desarrollo sin contador: antes 48,3; después 49,6 y 45,2
+presentaciones/s agregadas. Pasada con contador 51,5, no comparable. Misma
+ventana heredada de hasta 500 ms tras confirmar ruta, incertidumbre ~10 ms;
+no mide latencia desde el toque ni FPS sostenidos ni distingue inactividad de
+cuadros perdidos. Se conservan todas las muestras, incluida pausa de 170,5 ms.
+Listas vacías y variación de PC/desarrollo limitan la comparación: NO acredita
+subida estable ni 60 FPS. La mejora comprobada es menos trabajo repetido.
+Evidencias privadas en .tmp; sin datos de cuenta en Git. No cambia PLAYSTORE.md:
+no se recopila ni se guarda una clase nueva de información.
+TypeScript y ESLint generales sin errores; 249 pruebas y ocho auditores
+aprobados en la pasada final (tarjetas excluidas).
+
+**Sigue/falta:** reducir los tirones restantes, especialmente la vuelta a
+Personal, y medir de forma más representativa con una versión final. Los
+pendientes financieros de red incierta, recuperación durable, anulación remota
+parcial y segundo participante no se cierran con esta optimización. Metas
+continúa pendiente y tarjetas fuera; sin APK/AAB/OTA/Play/despliegue Firebase.
+
 ## Personal/Familia/Cajas — 19/10/2026 — menos trabajo de paneles cerrados
 
 Marca `19oct-navegacion-paneles-ligeros`, base 4c4564d5. No cambia rutas,

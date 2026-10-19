@@ -1,5 +1,19 @@
 # Pruebas y auditores
 
+19/10 Cajas sin guardados repetidos: verificar-cajas-guardado-repetido-real
+ejecuta la cola original con Android/cifrado adaptados y cuenta cifrados/IO.
+Roja en 4d169115 por repetir un cifrado idéntico. Cubre copia autenticada/confirmada,
+cambios/objeto mutado en cola, inmediatos y lotes no omitidos, época, migración,
+fallo/respuesta perdida/reintento, bytes sustituidos, lectura opcional fallida,
+bloqueo de lectura real, sesión cambiada en espera, descarte/borrado, otras claves,
+orden y memoria acotada. Suite previa Personal/Cajas SQLite aprobada.
+El guardado local sustituye la búsqueda literal de catch por fallo nativo real,
+aviso, guardado no confirmado y reintento con cifrado/almacén originales. Android
+habitual solo navegación: nueve solicitudes/una escritura, datos financieros
+locales/remotos idénticos 50/260. No acredita FPS estables; resultados y pendientes
+en ESTADO.md. Metas en pausa y tarjetas fuera.
+TypeScript/ESLint generales y 249 pruebas/ocho auditores aprobados.
+
 19/10 Paneles cerrados: verificar-paneles-cerrados-ligeros-real ejecuta selector,
 hojas, expresiones de confirmación y fórmulas originales. React/IO adaptados;
 selector cerrado sin cálculos/filas, apertura con arrastre/presupuesto, novedades,

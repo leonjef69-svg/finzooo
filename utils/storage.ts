@@ -267,6 +267,7 @@ function markUnreadableLocalData(): void {
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
   if (!canAccessKey(key)) return fallback;
   const version = accountAccessVersion;
+  const epoch = writeEpochs.get(key) ?? 0;
   try {
     const raw = await AsyncStorage.getItem(key);
     if (raw == null) return fallback;
@@ -274,6 +275,7 @@ export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
     if (accountKeySet.has(key) && (version !== accountAccessVersion || !canAccessKey(key))) return fallback;
     if (decrypted != null) {
       const parsed = JSON.parse(decrypted) as T;
+      rememberBoxesWrite(key, decrypted, raw, version, epoch);
       // Los datos AES-CBC antiguos siguen siendo legibles, pero se actualizan
       // en segundo plano al formato autenticado v2 en la primera lectura.
       if (!raw.startsWith("v2:")) saveJSON(key, parsed);
@@ -313,6 +315,19 @@ const writeEpochs = new Map<string, number>();
 let writeQueue: Promise<unknown> = Promise.resolve();
 const inFlightWrites = new Set<Promise<unknown>>();
 const failedWriteKeys = new Set<string>();
+// Solo una prueba transitoria de la copia de Cajas ya autenticada o guardada.
+// Al volver de Personal/Familia la pantalla solicita guardar incluso sin
+// cambios: evitar ese AES/HMAC repetido, no las confirmaciones de dinero.
+// Antes de omitirlo se vuelven a comparar los bytes actuales en Android.
+let boxesWriteProof: { json: string; raw: string; version: number; epoch: number } | null = null;
+
+function rememberBoxesWrite(key: string, json: string, raw: string, version: number, epoch: number): void {
+  if (key !== STORAGE_KEYS.cajasDinero) return;
+  if (version !== accountAccessVersion || epoch !== (writeEpochs.get(key) ?? 0) || !canAccessKey(key) || unreadableLocalData) return;
+  // La memoria adicional está acotada; una copia grande usa el camino normal.
+  boxesWriteProof = raw.startsWith("v2:") && json.length + raw.length <= 512 * 1024
+    ? { json, raw, version, epoch } : null;
+}
 type StorageWriteErrorListener = () => void;
 let storageWriteErrorListener: StorageWriteErrorListener | null = null;
 let lastStorageWriteErrorAt = 0;
@@ -364,19 +379,32 @@ function writeNow(key: string, value: unknown, epoch = writeEpochs.get(key) ?? 0
     reportStorageWriteError();
     return Promise.resolve();
   }
-  return enqueueWrite(() => encryptText(JSON.stringify(value))
-    .then(async (encrypted) => {
+  return enqueueWrite(async () => {
+    try {
+      const json = JSON.stringify(value);
+      const proof = key === STORAGE_KEYS.cajasDinero ? boxesWriteProof : null;
+      if (proof && proof.version === version && proof.epoch === epoch && proof.json === json && !failedWriteKeys.has(key)) {
+        // Un cambio de sesión o lote mientras se espera nunca cuenta como
+        // confirmación. Un fallo de esta lectura opcional usa el guardado
+        // habitual; no convierte un intento fallido en una copia confirmada.
+        let raw: string | null = null;
+        try { raw = await AsyncStorage.getItem(key); } catch { /* guardar normalmente */ }
+        if (!canAccessKey(key) || version !== accountAccessVersion || epoch !== (writeEpochs.get(key) ?? 0)) return;
+        if (unreadableLocalData) throw new Error("local-data-unreadable");
+        if (raw === proof.raw) return;
+        boxesWriteProof = null;
+      }
+      const encrypted = await encryptText(json);
       if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion) || epoch !== (writeEpochs.get(key) ?? 0)) return false;
       if (unreadableLocalData) throw new Error("local-data-unreadable");
       await AsyncStorage.setItem(key, encrypted);
-      return true;
-    })
-    .then((written) => { if (written) failedWriteKeys.delete(key); })
-    .then(() => undefined)
-    .catch(() => {
+      failedWriteKeys.delete(key);
+      rememberBoxesWrite(key, json, encrypted, version, epoch);
+    } catch {
       failedWriteKeys.add(key);
       reportStorageWriteError();
-    }));
+    }
+  }).then(() => undefined);
 }
 
 /**
@@ -533,6 +561,7 @@ export async function flushPendingSavesChecked(): Promise<boolean> {
 // datos de la cuenta: lo que quedara en cola pertenece a la sesión que se
 // está cerrando y volvería a escribir en disco lo que se acaba de borrar.
 export function discardPendingSaves(): void {
+  boxesWriteProof = null;
   for (const timer of pendingTimers.values()) clearTimeout(timer);
   pendingTimers.clear();
   pendingValues.clear();

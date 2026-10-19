@@ -1,5 +1,24 @@
 # Entregas de Fino
 
+## 19/10/2026 — Evitar guardados idénticos de Cajas (desarrollo)
+
+Marca `19oct-cajas-sin-guardado-repetido`, base 4d169115. Solo las copias
+diferidas idénticas de Cajas evitan cifrado/escritura tras comprobar bytes
+actuales v2, sesión y revisión. Guardados inmediatos y lote financiero con
+confirmación intactos; cambios, migración, errores y reintentos conservados.
+Memoria acotada, sin claves nuevas ni cambios de fórmulas/interfaz/Metas.
+
+Regresión original roja en la base por un cifrado innecesario; casos de fallos,
+sesiones, lotes, orden y copia reemplazada. Android habitual: nueve solicitudes,
+una escritura; contador retirado, no equivale a ocho cifrados evitados. Datos
+financieros locales/remotos idénticos (50 movimientos/260 marcas). Solo navegación.
+Medición sin contador: 48,3 antes frente a 49,6/45,2 después; NO prueba subida
+estable de FPS. Método/limitaciones y demás evidencias en ESTADO.md.
+TypeScript/ESLint generales y 249 pruebas/ocho auditores aprobados (sin tarjetas).
+
+**Sigue/falta:** tirones restantes y medición representativa/final; pendientes
+financieros previos abiertos. Metas en pausa, tarjetas fuera. Sin APK/OTA/Play/Firebase.
+
 ## 19/10/2026 — Paneles cerrados más ligeros (desarrollo)
 
 Marca `19oct-navegacion-paneles-ligeros`, base 4c4564d5. Selector mensual sin

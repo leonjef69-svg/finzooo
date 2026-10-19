@@ -14,9 +14,6 @@ const fallos = [];
 if (!storage.includes("export function subscribeStorageWriteErrors")) {
   fallos.push("El guardado local no permite informar sus fallos.");
 }
-if (!/\.catch\(\(\) => \{\s*failedWriteKeys\.add\(key\);\s*reportStorageWriteError\(\);/.test(storage)) {
-  fallos.push("El guardado agrupado todavía oculta sus errores.");
-}
 if (!contexto.includes("subscribeStorageWriteErrors(() =>")) {
   fallos.push("La app no escucha los errores del almacenamiento.");
 }
@@ -58,6 +55,29 @@ async function runStorageScenario(source) {
   new Function("module", "exports", "require", result.outputFiles[0].text)(loaded, loaded.exports, require);
   await loaded.exports.run();
 }
+
+await runStorageScenario(`
+  import assert from "node:assert/strict";
+  import AsyncStorage from "@react-native-async-storage/async-storage";
+  import * as SecureStore from "expo-secure-store";
+  import { saveJSON, loadJSON, flushPendingSavesChecked, subscribeStorageWriteErrors, STORAGE_KEYS } from "@/utils/storage";
+  export async function run() {
+    await SecureStore.setItemAsync("finzo_encryption_key_v1", "a".repeat(64));
+    let notices = 0;
+    const unsubscribe = subscribeStorageWriteErrors(() => { notices++; });
+    const originalWrite = AsyncStorage.setItem;
+    try {
+      AsyncStorage.setItem = async () => { throw new Error("native-write-failed"); };
+      saveJSON(STORAGE_KEYS.transactions, [{ id: 21 }]);
+      assert.equal(await flushPendingSavesChecked(), false, "un fallo real no confirma el guardado agrupado");
+      assert.equal(notices, 1, "la interfaz debe recibir el fallo real, independientemente de cómo esté escrito el catch");
+      AsyncStorage.setItem = originalWrite;
+      saveJSON(STORAGE_KEYS.transactions, [{ id: 21 }]);
+      assert.equal(await flushPendingSavesChecked(), true, "el reintento sí se confirma tras escribir");
+      assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 21 }]);
+    } finally { AsyncStorage.setItem = originalWrite; unsubscribe(); }
+  }
+`);
 
 await runStorageScenario(`
   import assert from "node:assert/strict";
