@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 19/10/2026 — Pruebas financieras en Android habitual y aviso de borrado (desarrollo)
+
+Marca `19oct-pruebas-espacios-aviso-claro`, base 11efc55b. Únicamente emulador
+habitual, cuenta conservada y Metro 8081. Recorridos reales de Familia, Caja
+privada y compartida con dinero Personal/externo, aportes posteriores, gasto,
+invitación/conversión, devolución, selección/borrado y cierre. Caja poblada
+conservada tras cerrar/reabrir Fino. No se reprodujo duplicación ni formulario
+antiguo en los casos ensayados. No equivale a probar todos los fallos de red.
+
+Se corrige «Borrar todos» al eliminar un solo movimiento y su plural incorrecto
+en tres idiomas. Regresión con aviso/traducciones originales roja en 11efc55b;
+aviso nuevo comprobado en Android. Sin cambio de lógica financiera ni API.
+
+Datos previos conservados: 50 movimientos idénticos en teléfono/nube y saldo
+inicial restaurado. Solo se retiraron los registros nuevos `Prueba … 19oct`;
+ocho marcas de recibos de prueba adicionales, sin espacios activos al terminar.
+Presupuestos/arrastres/Metas intactos. TypeScript/ESLint y 247 pruebas/ocho
+auditores aprobados (sin tarjetas). No se entrega APK ni publica una actualización.
+
+**Sigue/falta:** segundo participante, fallos de red, recuperación durable y
+anulación remota parcial; perfilar navegación/FPS, sin mejora nueva medida.
+Metas en pausa, tarjetas fuera; ningún despliegue Firebase/Play.
+
 ## 18/10/2026 — Consultas únicas en curso y guardado identificado (desarrollo)
 
 Marca `18oct-espacios-consultas-unicas`, base f305bf0f. Familia/Cajas comparten

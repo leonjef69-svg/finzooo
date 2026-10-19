@@ -1,5 +1,11 @@
 # Lo que hay que rellenar en Play Console
 
+19/10/2026 — Pruebas autorizadas de Personal/Familia/Cajas en el emulador
+habitual y aviso de borrado corregido. No se añade dato, colección, permiso,
+destinatario, telemetría ni retención. Se usan los libros/recibos y marcas
+existentes para registros de prueba identificados; se conservan datos previos.
+No se modifica Metas ni se publica ficha, política, APK o servicio Firebase.
+
 18/10/2026 — Consultas de espacios en curso compartidas y guardado localizado:
 coordinación temporal solo en memoria, sin resultados retenidos, nuevos campos
 persistentes, permisos, destinatarios, telemetría enviada ni cambios monetarios.

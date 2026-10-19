@@ -1,5 +1,67 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 19/10/2026 — recorridos reales en el emulador habitual
+
+Marca `19oct-pruebas-espacios-aviso-claro`, base 11efc55b. Por petición expresa
+del usuario se abandona el segundo emulador: se usa únicamente `Medium_Phone`
+con su sesión habitual y Metro 8081/código del repositorio. No se borró su
+almacenamiento, reinstaló el APK ni cambió de cuenta. Se retiró la preparación
+local de pruebas que no llegó a incorporarse a Git; no queda un modo de
+autenticación/servidor alternativo en el código de la app.
+
+La cuenta NO estaba vacía: 50 movimientos antiguos, 252 marcas de borrado y un
+presupuesto de pruebas anterior. Se conservaron. Solo se crearon espacios nuevos
+con nombre `Prueba … 19oct`, mediante la interfaz Android y sin alterar los
+registros anteriores ni Metas. Lecturas de diagnóstico compararon teléfono y
+Firebase real; no se reconstruyó ningún libro mediante esos diagnósticos.
+
+Recorridos comprobados en línea como propietario:
+
+- Familia creada con S/100 de Personal; añadir S/20 externos, gastar S/5,
+  generar/cerrar invitación y devolver S/100. Personal baja una vez y vuelve
+  a su importe inicial. Quitar el par del historial Personal conserva dinero
+  y registros compartidos; anularlo desde Familia retira ambas contrapartes.
+  Selección y borrado de un gasto y del ingreso externo; cierre con saldo cero.
+- Otra Familia creada con S/20 externos: Personal no baja. Aporte posterior de
+  S/10 desde Personal, devolución, borrado de los tres registros y cierre.
+- Caja privada creada con S/100 de Personal y S/20 externos. Invitar la prepara
+  para compartir; se cerró el código mientras seguía preparando y se reabrió
+  después. Conservó S/120, los dos movimientos y UN aporte Personal, con su
+  referencia actualizada. Lista con UNA caja, código disponible y formulario
+  nuevo al agregar. En compartida: gasto S/5, devolución S/100, borrado del
+  gasto/externo y anulación del par completo; cierre con saldo cero.
+- Otra Caja privada con S/20 externos y aporte posterior Personal S/10.
+  Cierre/reapertura completa de Fino: permanecen una caja con S/30, dos
+  movimientos y un solo descuento S/10 en Personal. Devolución, borrado de los
+  tres movimientos y cierre; no se borró almacenamiento para reiniciar.
+
+La demora inicial de invitar una Caja incluye preparar su copia compartida y
+confirmaciones de servidor; en estas pruebas no reprodujo una copia duplicada
+ni el formulario antiguo. No se eliminó esa confirmación ni se promete código
+instantáneo. Guardar/devolver/anular también requieren confirmación: comparar
+una lectura en mitad de la operación no representa su resultado terminado.
+
+Se encontró un fallo de texto real: seleccionar UN gasto anunciaba «Borrar
+todos los movimientos» y «1 movimientos». Se corrige el aviso común en los tres
+idiomas, sin cambiar cálculos, borrados ni avisos monetarios. Nueva regresión
+ejecuta `spaceDeletionNotice`, sus dependencias y traducciones originales;
+roja en 11efc55b por el título incorrecto. Aviso corregido visto en Android.
+
+Limpieza SOLO de lo creado en esta tanda: Personal vuelve al importe inicial,
+50 movimientos antiguos idénticos local/remoto, ningún movimiento de prueba
+activo y cero espacios activos. Se añaden ocho marcas por los recibos de prueba
+eliminados (260 en total); las anteriores se conservan. Presupuestos, arrastres,
+Metas y pendientes anteriores idénticos. Los espacios compartidos cerrados y
+las marcas conservan la retención prevista: no es una purga de la cuenta.
+Evidencias privadas en .tmp, fuera de Git. TypeScript/ESLint generales aprobados;
+247 pruebas y ocho auditores aprobados, con tarjetas excluidas.
+
+**Sigue/falta:** segundo participante/dispositivo, pérdida de red/respuestas
+inciertas, recuperación durable de altas y anulación remota parcial; estos
+recorridos felices no cierran esos riesgos. Persisten tirones de navegación:
+no hubo nueva medición de FPS ni mejora estable demostrada en esta tanda.
+Metas en pausa, tarjetas fuera. Sin APK/AAB/OTA/Play ni despliegue Firebase.
+
 ## Personal/Familia/Cajas — 18/10/2026 — consultas en curso compartidas
 
 Marca `18oct-espacios-consultas-unicas`, base f305bf0f. Volver antes de que

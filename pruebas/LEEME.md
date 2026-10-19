@@ -1,5 +1,15 @@
 # Pruebas y auditores
 
+19/10 Aviso de selección: verificar-aviso-borrado-seleccion-real ejecuta el
+aviso y traducciones originales en tres idiomas. Selección de uno/dos movimientos
+sin anunciar borrado total ni «1 movimientos»; cantidad y advertencia monetaria
+intactas. Roja en 11efc55b por el título que anunciaba borrar todo. Android
+habitual: aviso nuevo visto durante el borrado de un gasto de prueba.
+Recorridos de Familia/Cajas documentados en ESTADO.md; 50 movimientos anteriores
+idénticos local/remoto y ocho marcas nuevas solo de recibos de prueba retirados.
+TypeScript/ESLint y 247 pruebas/ocho auditores aprobados (sin tarjetas). Metas en pausa y
+tarjetas fuera. Pendientes red incierta, otro participante y rendimiento.
+
 18/10 Consultas en vuelo: verificar-recargas-espacios-compartidas-real ejecuta
 recargar Familia y foco Cajas originales, espera de cuenta y coordinador reales;
 solo IO/React adaptados. Reentrada antes de completar (una consulta), manual
