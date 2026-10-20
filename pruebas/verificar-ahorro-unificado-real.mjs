@@ -81,8 +81,11 @@ assert.doesNotMatch(savingsListSource, /recent\.map\(tx/, "Ahorro muestra las me
 assert.doesNotMatch(savingsListSource, /savings\.historyLink|params: \{ savings: "1" \}/, "Ahorro no muestra un acceso separado al historial");
 assert.doesNotMatch(home, /savings\.historyLink|personalHistoryHint|params: \{ savings: "1" \}/, "Inicio tampoco muestra el acceso separado al historial de ahorro");
 assert.match(historySource, /id: "savings"/, "los registros antiguos siguen disponibles en el filtro general de Historial");
-for (const language of ["es", "en", "pt"]) assert.ok(fs.readFileSync("constants/i18n.ts", "utf8").includes(`  ${language}: {`));
-assert.ok(fs.readFileSync("constants/i18n.ts", "utf8").includes('"savings.total": "Saldo Total en Personal"'));
+const translations = fs.readFileSync("constants/i18n.ts", "utf8");
+for (const language of ["es", "en", "pt"]) assert.ok(translations.includes(`  ${language}: {`));
+for (const key of ["savings.tabGoals", "savings.tabMovements", "savings.movementSummary"])
+  assert.equal((translations.match(new RegExp(`"${key}":`, "g")) || []).length, 3, `${key} está traducido en los tres idiomas`);
+assert.ok(translations.includes('"savings.total": "Saldo Total en Personal"'));
 // JSX original y pulsaciones reales de sus callbacks, con React/IO adaptados.
 let hooks = [], cursor = 0, calls = [], outcome = false;
 const React = { createElement: (type, props, ...children) => ({ type, props: props || {}, children }) };
@@ -98,7 +101,8 @@ const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
   GoalFormSheet: "GoalForm", MoveMoneySheet: "Move", ConfirmDialog: "Confirm", AvisoSoloLectura: "ReadOnly",
   UseSavingsSheet: "Use",
 });
-const props = { goals: [goal], disponible: 500, apartado: 200, libre: 300, monthLabel: "Octubre", onBack() {} };
+const screenGoal = { ...goal, target: 1000, completed: false };
+const props = { goals: [screenGoal], disponible: 500, apartado: 200, libre: 300, monthLabel: "Octubre", onBack() {} };
 const render = (extra = {}) => { cursor = 0; return screen({ ...props, ...extra }); };
 function all(node) { if (!node || typeof node !== "object") return []; if (Array.isArray(node)) return node.flatMap(all); return [node, ...node.children.flatMap(all)]; }
 const find = (root, predicate) => all(root).find(predicate);
@@ -106,6 +110,9 @@ let root = render();
 assert.equal(find(root, node => node.type === "Receipt"), undefined, "Ahorro no duplica filas del historial");
 assert.equal(find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.historyLink"))), undefined,
   "Ahorro no muestra un botón separado para el historial");
+const movementTab = find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.tabMovements")));
+const goalsTab = find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.tabGoals")));
+assert.ok(movementTab && goalsTab, "Metas y Movimientos aparecen como dos botones compactos");
 const header = root.children[0];
 assert.equal(find(header, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.newGoal")))?.type, "Button", "Nueva meta está en el encabezado, antes del resumen/lista");
 const createButton = find(header, node => node.type === "Button"); createButton.props.onPress();
@@ -117,6 +124,19 @@ const saveButton = find(root, node => node.type === "Button" && node.children.so
 saveButton.props.onPress(); root = render(); const move = find(root, node => node.type === "Move"); assert.equal(move.props.mode, "add");
 outcome = true; assert.equal(await move.props.onConfirm(20), true); assert.equal(calls.at(-1).goalId, 1);
 assert.equal(find(render(), node => node.type === "Move"), undefined, "confirmar cierra una sola hoja sin otra pantalla de meta");
+movementTab.props.onPress(); root = render();
+assert.ok(find(root, node => node.type === "Text" && node.children.includes("savings.movementSummary")), "Movimientos explica que presenta un resumen por meta");
+const summaryRow = find(root, node => node.type === "View" && node.props.testID === "savings-movement-summary-1");
+assert.equal(summaryRow?.type, "View", "la meta tiene una sola fila resumen en Movimientos");
+assert.ok(all(summaryRow).some(node => node.type === "Text" && node.children.includes("Laptop")), "el resumen identifica la meta");
+assert.ok(all(summaryRow).some(node => node.type === "Text" && node.children.includes("S/200")), "el resumen muestra cuánto hay ahorrado");
+assert.ok(all(summaryRow).some(node => node.type === "Text" && node.children.includes("S/1000")), "el resumen muestra el objetivo sin crear otro movimiento");
+assert.equal(find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.save"))), undefined, "Movimientos no repite las acciones de las tarjetas de metas");
+const secondGoal = { ...goal, id: 2, creationId: "goal-b", name: "Viaje", saved: 50, target: 1000 };
+root = render({ goals: [goal, secondGoal] });
+assert.equal(all(root).filter(node => node.props.testID?.startsWith("savings-movement-summary-")).length, 2, "Movimientos muestra una sola fila por meta");
+find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.tabGoals"))).props.onPress(); root = render();
+assert.ok(find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.save"))), "Metas vuelve a mostrar las metas y sus acciones");
 const emptyGoal = { ...goal, saved: 0, completed: false };
 assert.equal(find(render({ goals: [emptyGoal], apartado: 0, libre: 500 }), node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.use"))), undefined,
   "Registrar gasto solo aparece cuando la meta tiene dinero");

@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 20/10/2026 — Ahorro separado en Metas y Movimientos (desarrollo)
+
+La pantalla ahora alterna entre «Metas» y «Movimientos» con dos botones
+compactos. Metas conserva las tarjetas y acciones. Movimientos presenta un
+resumen actualizado, con una fila por meta y sus montos ahorrado/objetivo; los
+aportes y devoluciones no crean filas adicionales. El saldo disponible de
+Personal sigue visible arriba. Los gastos reales desde una meta siguen siendo
+un solo gasto. No cambia ni migra datos. Regresión roja antes del cambio, luego
+TypeScript/ESLint y 254 pruebas/ocho auditores aprobados. `CODE_MARKER` actualizado.
+Sin APK/AAB/OTA/publicación.
+
+**Sigue/falta:** revisión visual en el emulador habitual; la captura expiró dos
+veces y no se realizaron acciones financieras. No se genera APK por este cambio.
+
 ## 20/10/2026 — ajustes de flujo de Negocio (desarrollo)
 
 Marca `20oct-categoria-compacta`, base `3f822e32`. Al crear un negocio

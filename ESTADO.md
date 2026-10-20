@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## Ahorro — 20/10/2026 — vistas separadas de metas y movimientos
+
+Se añadieron dos botones compactos, «Metas» y «Movimientos». Metas conserva las
+tarjetas y acciones actuales. Movimientos muestra un resumen compacto, una fila
+por meta, con el ahorro actual y su objetivo; al aportar o devolver dinero, el
+resumen usa el saldo actualizado sin crear filas repetidas. El saldo disponible
+de Personal sigue visible en el resumen superior. Los gastos reales pagados con
+ahorro siguen siendo un único gasto en Personal. No se tocaron movimientos ni
+saldos guardados.
+
+Regresión de `verificar-ahorro-unificado-real.mjs`: botones, cambio entre vistas,
+una fila por meta y traducciones en español, inglés y portugués; la prueba dio
+rojo antes del cambio. Las pruebas financieras previas siguen comprobando
+aportes/devoluciones sin movimientos artificiales. TypeScript, ESLint y el lote
+completo aprobados: 254 pruebas y 8 auditores. Se actualizó `CODE_MARKER`.
+
+**Sigue/falta:** la captura del emulador habitual agotó el tiempo dos veces;
+falta la revisión visual allí. No se tocó ni guardó dinero del emulador. No se
+genera APK ni se publica por este ajuste.
+
 ## Premium — 20/10/2026 — solo se quita el encabezado y su corona
 
 Se conserva la lista completa de beneficios y el bloque de registro automático.

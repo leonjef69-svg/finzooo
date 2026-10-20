@@ -1,5 +1,11 @@
 # Pruebas y auditores
 
+20/10 Ahorro: `verificar-ahorro-unificado-real.mjs` cubre el selector Metas /
+Movimientos, los botones para alternar, una fila resumen por meta y sus importes
+de ahorro/objetivo, además de traducciones. La prueba UI fallaba antes de añadir
+las vistas; las regresiones financieras siguen asegurando que aportar/devolver
+no cree movimientos artificiales y que una compra sea un único gasto.
+
 20/10 Negocio: la regresión existente `verificar-negocio-interfaz-real.mjs`
 comprueba que crear un negocio abra la configuración de Yape/combinaciones y
 permita seguir a las categorías; interruptores editan solo la tienda sintética.
