@@ -1,16 +1,16 @@
 # Estado actual de Fino
 
-## Premium — 20/10/2026 — ficha compacta sin lista de beneficios
+## Premium — 20/10/2026 — solo se quita el encabezado y su corona
 
-Se retiraron la lista «Todos los beneficios», su corona y el bloque informativo
-de registro automático de la pantalla Premium. El espacio ahora se usa para
-mostrar con claridad los precios de Plus y Pro, el periodo elegido y las
-acciones disponibles; no se alteraron las funciones, la prueba, los precios ni
-los datos. Se corrigió «Finzo Pro» por «Fino Pro» y el acceso desde Ajustes ya
-dice «Ver planes disponibles».
+Se conserva la lista completa de beneficios y el bloque de registro automático.
+Solo se quitó el título «Todos los beneficios» dentro de la ficha y la corona
+que lo acompañaba; la etiqueta breve del plan Pro, los precios, opciones,
+acciones y prueba quedan como antes. Se mantiene «Fino Pro» corregido por la
+petición anterior. No se modificaron datos.
 
-**Sigue/falta:** ejecutar las comprobaciones del proyecto y revisar la pantalla
-en el emulador. No se genera APK ni se publica por este cambio.
+**Sigue/falta:** TypeScript, ESLint y pruebas aprobadas; la captura del emulador
+agotó el tiempo, por lo que falta la revisión visual allí. No se genera APK ni
+se publica por este ajuste.
 
 ## Ahorro — 20/10/2026 — retirado el acceso directo al historial
 

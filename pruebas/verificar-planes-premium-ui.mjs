@@ -20,7 +20,10 @@ assert.match(pantalla, /AHORRO_PRO_ANUAL/, "la pantalla calcula el ahorro desde 
 assert.match(pantalla, /premium\.savingsAnnual/, "el anual informa su ahorro");
 assert.match(pantalla, /premium\.priceProposal/, "el usuario ve que todavía no puede pagar");
 assert.match(pantalla, /premium\.plusName[\s\S]*premium\.proName/, "la pantalla permite comparar Plus y Pro");
-assert.doesNotMatch(pantalla, /premium\.allBenefits|premium\.perk|Crown/, "la ficha ya no muestra beneficios ni coronas");
+assert.match(pantalla, /premium\.autoRegInfoText/, "el registro automático conserva su explicación y alcance");
+assert.match(pantalla, /premium\.perkFamilyBoxes/, "la lista de beneficios permanece disponible");
+assert.equal((pantalla.match(/t\("premium\.allBenefits"\)/g) ?? []).length, 1, "el plan Pro conserva su etiqueta, sin duplicarla como encabezado");
+assert.doesNotMatch(pantalla, /Crown size=\{22\}/, "el encabezado ya no tiene corona");
 assert.match(pantalla, /premium\.planPitch/, "mantiene el mensaje de presentación del plan");
 assert.match(pantalla, /comprasDisponibles\(\) && plan === "pro"/, "el pago solo aparece para Pro si la tienda está habilitada");
 assert.doesNotMatch(pantalla, /setIsPremium\(true\)/, "la selección visual nunca regala Pro");

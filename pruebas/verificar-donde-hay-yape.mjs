@@ -79,10 +79,13 @@ console.log("\n--- Y NO SE APAGA NADA DE LO QUE YA ESTABA ---");
 
 console.log("\n--- LA VENTA SOLO PROMETE FUNCIONES PREMIUM REALES ---");
 {
-  // La pantalla conserva las opciones de plan y sus acciones, sin volver a mostrar la
-  // lista de beneficios que el usuario pidió retirar.
+  // Se conserva la lista de beneficios; solo se elimina el título redundante y su corona.
   const premium = leerSinComentarios("screens/Premium.tsx");
-  ok(!/premium\.allBenefits|premium\.perk|Crown|beneficios/.test(premium), "no vuelve a mostrar la lista ni la corona de beneficios");
+  ok(/perkYape/.test(premium) && /hayRegistroAutomatico/.test(premium), "muestra el registro automático como beneficio solo donde está disponible");
+  ok(premium.includes("premium.perkFamilyBoxes"), "mantiene familias y cajas compartidas en la lista");
+  ok(/TELEGRAM_ENABLED \? \[\{ Icon: MessageSquare, label: t\("premium\.perkTelegram"\) \}\] : \[\]/.test(premium), "Telegram solo se anuncia con servidor habilitado");
+  ok((premium.match(/t\("premium\.allBenefits"\)/g) ?? []).length === 1, "mantiene la etiqueta del plan Pro, sin repetir el encabezado dentro de la ficha");
+  ok(!/Crown size=\{22\}/.test(premium), "quita la corona que acompañaba al encabezado retirado");
   ok(/premium\.plusName[\s\S]*premium\.proName/.test(premium), "conserva la selección entre Plus y Pro");
   ok(/confirmarPrueba|comprar\(periodo\)/.test(premium), "conserva las acciones de prueba y compra");
 }
