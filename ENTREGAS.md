@@ -2,12 +2,12 @@
 
 ## 20/10/2026 — ajustes de flujo de Negocio (desarrollo)
 
-Marca `20oct-negocio-configuracion-rapida`, base `4cf65643`. Al crear un negocio
+Marca `20oct-categoria-compacta`, base `3f822e32`. Al crear un negocio
 aparece una configuración inicial con el destino de Yape, el interruptor de
 combinaciones y el acceso a crear categorías; ambas preferencias se pueden
 ajustar después desde Opciones. El registro abre categorías desde una tarjeta
-clara y «Nueva categoría» resalta como acción. Cantidad permite flechas y
-escritura directa (1–50). Movimientos muestran hora y origen bajo el nombre,
+compacta en la fila de la indicación; «Nueva categoría» resalta como acción.
+Cantidad permite flechas y escritura directa (1–50). Movimientos muestran hora y origen bajo el nombre,
 importe verde/rojo sin tarjeta de fondo y método de pago en su propia etiqueta.
 
 No cambia datos guardados, saldos, permisos, reglas de captura ni categorías

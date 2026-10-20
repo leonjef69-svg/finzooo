@@ -2,13 +2,14 @@
 
 ## Negocio — 20/10/2026 — configuración inicial, cantidad y movimientos
 
-Marca `20oct-negocio-configuracion-rapida`, base `4cf65643`. Después de crear
+Marca `20oct-categoria-compacta`, base `3f822e32`. Después de crear
 un negocio se abre una hoja breve con el destino automático de Yape, el
 reconocimiento de combinaciones y un botón para crear categorías y precios.
 Se puede terminar sin crear categorías; en modo simple no se muestra esa
-opción. La combinación queda accesible más adelante desde Opciones y las
-categorías desde el registro. El acceso a categorías ahora es una tarjeta
-táctil; «Nueva categoría» destaca en verde.
+opción. La combinación queda accesible más adelante desde Opciones. En el
+registro, «Categoría» abre el mismo catálogo desde una tarjeta compacta junto a
+la indicación; se quitó la tarjeta alta sin cambiar su función. «Nueva
+categoría» destaca en verde.
 
 La cantidad mantiene la escritura manual y añade flechas grandes, con el mismo
 límite válido de 1 a 50. Las filas del historial son tarjetas; debajo del nombre
@@ -25,13 +26,12 @@ color de texto sin fondo de Ingreso/Gasto y etiquetas de Yape/Efectivo. Falla
 contra `4cf65643`: la hora quedaba después del tipo de ingreso. Prueba normal
 aprobada con datos sintéticos, sin escribir la cuenta del emulador.
 
-Emulador Android habitual, código de Metro vigente: se vio el panel con el
-importe verde sin recuadro y el método de pago en su propia etiqueta, además de
-la tarjeta de categorías y la hoja de registro. Las flechas cambiaron 1→2→1 y
-el total visible S/1→S/2→S/1; se cerró sin guardar. No se creó una tienda real:
-su paso posterior se verificó con el controlador original y registros
-sintéticos. La lectura local antes/después de navegar y probar quedó
-exactamente igual.
+Emulador Android habitual, código de Metro vigente: se comprobó «Categoría» como
+tarjeta compacta al lado de la indicación, abre el mismo catálogo y se cerró el
+formulario sin guardar. También se había visto el importe verde sin recuadro,
+las etiquetas de pago y las flechas (1→2→1, S/1→S/2→S/1). No se creó una tienda
+real; su paso se verificó con registros sintéticos. La lectura local antes y
+después de navegar y probar quedó exactamente igual.
 
 Verificación final: `npx tsc --noEmit`, ESLint general y `node
 pruebas/correr.mjs --sin-tarjetas` aprobados: 252 pruebas y 8 auditores; las
