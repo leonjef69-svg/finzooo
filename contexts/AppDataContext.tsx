@@ -3331,12 +3331,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             if (source.deletedIds.includes(action.goal.id)) throw new Error("savings-invalid-action");
             intended = { ...action, goal: { ...action.goal, creationId: action.goal.creationId ?? issuedCreationId(action.goal.id) } };
           }
-          const plan = prepareSavingsAction(source.goals, intended, total, (goal, delta) => {
-            const id = nextId();
-            return { id, creationId: issuedCreationId(id), type: delta > 0 ? "expense" : "income", amount: Math.abs(delta), category: "otros",
-              date, time: horaDe(Date.now()), method: "transfer", description: goal.name, notes: "", origin: "manual", internalTransfer: "goal",
-              internalTransferLink: randomUUID(), internalTransferSpaceId: String(goal.id), internalTransferSpaceName: goal.name };
-          });
+          const plan = prepareSavingsAction(source.goals, intended, total, () => randomUUID());
           let nextMeta = mergeMutationMetadata(rows.metadata, source.metadata);
           if (plan.removed.length) nextMeta = rememberDeletion(nextMeta, "goal", plan.removed, recordOriginOf);
           const nextRows = prepareTransactionMutation(rows.transactions, rows.deletedIds, nextMeta, plan.upserts, [], randomUUID, issuedCreationId);

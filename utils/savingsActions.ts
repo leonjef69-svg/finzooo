@@ -28,28 +28,28 @@ const fail = () => { throw new Error("savings-invalid-action"); };
 const validAmount = (amount: number) => isSafeMoneyAmount(amount) && amount > 0;
 
 /** Un plan para el lote local: no escribe ni modifica sus fuentes.
- * Los recibos se conservan aunque se elimine una meta. No crean efectivo,
- * gastos, ingresos ni una segunda reserva en los cálculos de saldo. */
+ * Apartar/liberar dinero solo cambia la reserva de la meta: no es un gasto,
+ * ingreso ni una transferencia real y por eso no crea movimientos. Solo una
+ * compra genera una fila normal de gasto, enlazada a la meta que la financia. */
 export function prepareSavingsAction(goals: Goal[], action: SavingsAction, personalTotal: number,
-  movement: (goal: Goal, delta: number) => Transaction) {
+  operationId: () => string) {
   let next = goals.map(goal => ({ ...goal }));
   if (!Number.isFinite(personalTotal)) return fail();
   if ((action.kind === "create" || action.kind === "edit") && action.initial !== undefined
     && (!isSafeMoneyAmount(action.initial) || action.initial < 0)) return fail();
   const upserts: Transaction[] = [], removed: Goal[] = [];
-  const change = (id: number, delta: number, visibleReceipt = true) => {
+  const operations = new Set<string>();
+  const change = (id: number, delta: number) => {
     const goal = next.find(item => item.id === id);
     if (!goal || !validAmount(Math.abs(delta))) return fail();
     const cap = delta > 0 ? personalTotal - totalApartado(next) : goal.saved;
     if (moneyUnits(Math.abs(delta)) > moneyUnits(Math.max(0, cap))) return fail();
-    const row = movement(goal, delta);
-    if (!isSavingsMovement(row) || !row.creationId || !row.internalTransferLink
-      || row.internalTransferSpaceId !== String(id) || row.amount !== Math.abs(delta)
-      || row.type !== (delta > 0 ? "expense" : "income")) return fail();
-    const updated = goalWithFundingChange(goal, delta, row.internalTransferLink);
+    const idForOperation = operationId();
+    if (!idForOperation || operations.has(idForOperation)) return fail();
+    operations.add(idForOperation);
+    const updated = goalWithFundingChange(goal, delta, idForOperation);
     next = next.map(item => item.id === id ? updated : item);
-    if (visibleReceipt) upserts.push(row);
-    return { goalId: id, name: goal.name, amount: Math.abs(delta), operationId: row.internalTransferLink };
+    return { goalId: id, name: goal.name, amount: Math.abs(delta), operationId: idForOperation };
   };
   if (action.kind === "create" || action.kind === "edit") {
     const source = action.goal, existing = next.find(goal => goal.id === source.id);
@@ -72,9 +72,7 @@ export function prepareSavingsAction(goals: Goal[], action: SavingsAction, perso
     change(action.goalId, action.kind === "add" ? action.amount : -action.amount);
   } else if (action.kind === "delete") {
     const goal = next.find(item => item.id === action.goalId); if (!goal) return fail();
-    if (goal.saved > 0) change(goal.id, -goal.saved);
-    // La lápida se basa en el original vigente, no en una edición que ya no
-    // se guardará. El retiro final sí queda en el historial de Personal.
+    // Borrar una meta libera su reserva; no es un ingreso ni crea un movimiento.
     removed.push(goals.find(item => item.id === goal.id)!);
     next = next.filter(item => item.id !== goal.id);
   } else if (action.kind === "expense" || action.kind === "use") {
@@ -86,7 +84,7 @@ export function prepareSavingsAction(goals: Goal[], action: SavingsAction, perso
     const needed = action.kind === "use" ? expense.amount : expenseSavingsNeeded(expense.amount, personalTotal, next);
     const released = allocations.reduce((sum, item) => sum + moneyUnits(item.amount), 0n);
     if (released !== moneyUnits(needed)) return fail();
-    const funding = allocations.map(item => change(item.goalId, -item.amount, false));
+    const funding = allocations.map(item => change(item.goalId, -item.amount));
     upserts.push({ ...expense, goalFundingAllocations: funding });
   }
   return { goals: next, upserts, removed, reserved: moneyFromUnits(next.reduce((sum, goal) => sum + moneyUnits(goal.saved), 0n)) };

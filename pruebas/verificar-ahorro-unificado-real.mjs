@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { build } from "esbuild";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
 
-const revision = process.env.FINO_TEST_BASELINE;
+const revision = process.env.FINO_TEST_BASELINE || "c6f6a407";
 if (revision && !/^[a-f0-9]{7,40}$/.test(revision)) throw Error("Hash inválido");
 const require = createRequire(import.meta.url);
 const read = file => revision ? execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
@@ -15,8 +15,8 @@ async function bundle(entries, historical = false) {
     plugins: historical && revision ? [{ name: "fuentes-git", setup(build) { build.onLoad({ filter: /\.ts$/ }, args => ({ contents: read(args.path.slice(process.cwd().length + 1).replaceAll("\\", "/")), loader: "ts" })); } }] : [] });
   const module = { exports: {} }; new Function("require", "module", "exports", result.outputFiles[0].text)(require, module, module.exports); return module.exports;
 }
-// Primero comportamiento existente, también contra 866b969. La base falla
-// por liberar una meta cumplida, NO porque falte el nuevo módulo o una clave.
+// La base es la versión inmediatamente anterior a dejar de crear recibos
+// ficticios. Así esta prueba demuestra que antes sí se generaba una fila.
 const old = await bundle(["utils/ahorro.ts", "utils/finances.ts", "utils/saldoAnterior.ts", "utils/linkedTransfers.ts"], true);
 const goal = { id: 1, creationId: "goal-a", name: "Laptop", target: 200, saved: 200, completed: true, createdDate: "2026-10-16" };
 assert.equal(old.totalApartado([goal]), 200, "alcanzar el objetivo no gasta ni libera los fondos");
@@ -26,36 +26,41 @@ assert.equal(old.saldoAnteriorDe("2026-11", { "2026-10": 500 }, [receipt], []), 
 assert.equal(old.compactPersonalTransferRows([receipt, { ...receipt, id: 11, internalTransferLink: "b" }]).length, 2, "dos aportes no se agrupan en un supuesto envío a Caja");
 const api = await bundle(["utils/savingsActions.ts", "utils/personalHistory.ts"]);
 let seq = 10;
-const movement = (g, delta) => ({ ...receipt, id: ++seq, creationId: `receipt-${seq}`, type: delta > 0 ? "expense" : "income", amount: Math.abs(delta), internalTransferSpaceId: String(g.id), internalTransferSpaceName: g.name, internalTransferLink: `operation-${seq}` });
+const operationId = () => `operation-${++seq}`;
 const base = { ...goal, saved: 0, completed: false };
+const previousApi = await bundle(["utils/savingsActions.ts"], true);
+const previousAdd = previousApi.prepareSavingsAction([base], { kind: "add", goalId: 1, amount: 200 }, 500,
+  (item, delta) => ({ ...receipt, id: 12, creationId: "previous-receipt", type: delta > 0 ? "expense" : "income", amount: Math.abs(delta), internalTransferSpaceId: String(item.id), internalTransferLink: "previous-operation" }));
+assert.equal(previousAdd.upserts.length, 1, "la versión anterior sí añadía un movimiento artificial al aportar");
 const source = JSON.stringify([base]);
-const add = api.prepareSavingsAction([base], { kind: "add", goalId: 1, amount: 200 }, 500, movement);
+const add = api.prepareSavingsAction([base], { kind: "add", goalId: 1, amount: 200 }, 500, operationId);
 assert.equal(add.reserved, 200); assert.equal(old.saldoLibre(500, add.reserved), 300); assert.equal(JSON.stringify([base]), source);
-assert.equal(add.goals[0].completed, true); assert.equal(add.goals[0].funding.changes[add.upserts[0].internalTransferLink], 200);
-const withdraw = api.prepareSavingsAction(add.goals, { kind: "withdraw", goalId: 1, amount: 50 }, 300, movement);
-assert.equal(withdraw.reserved, 150); assert.equal(old.saldoLibre(300, withdraw.reserved), 150); assert.equal(withdraw.upserts[0].type, "income");
-const edit = api.prepareSavingsAction(add.goals, { kind: "edit", goal: { ...base, name: "PC", target: 400 } }, 500, movement);
+assert.equal(add.goals[0].completed, true); assert.equal(Object.values(add.goals[0].funding.changes).at(-1), 200);
+assert.equal(add.upserts.length, 0, "apartar dinero actualiza la meta y no crea un movimiento de gasto");
+const withdraw = api.prepareSavingsAction(add.goals, { kind: "withdraw", goalId: 1, amount: 50 }, 300, operationId);
+assert.equal(withdraw.reserved, 150); assert.equal(old.saldoLibre(300, withdraw.reserved), 150); assert.equal(withdraw.upserts.length, 0, "liberar dinero no crea un ingreso falso");
+const edit = api.prepareSavingsAction(add.goals, { kind: "edit", goal: { ...base, name: "PC", target: 400 } }, 500, operationId);
 assert.equal(edit.goals[0].saved, 200); assert.equal(edit.goals[0].completed, false); assert.equal(edit.upserts.length, 0);
-const created = api.prepareSavingsAction([], { kind: "create", goal: base, initial: 200 }, 500, movement);
-assert.equal(created.goals[0].saved, 200); assert.equal(created.upserts.length, 1);
-const removed = api.prepareSavingsAction(add.goals, { kind: "delete", goalId: 1 }, 500, movement);
-assert.equal(removed.goals.length, 0); assert.equal(removed.reserved, 0); assert.equal(removed.upserts[0].amount, 200); assert.equal(removed.upserts[0].type, "income");
-assert.equal(add.upserts.length, 1, "el plan de borrar no elimina recibos anteriores");
+const created = api.prepareSavingsAction([], { kind: "create", goal: base, initial: 200 }, 500, operationId);
+assert.equal(created.goals[0].saved, 200); assert.equal(created.upserts.length, 0, "crear una meta con aporte inicial no agrega una fila a Movimientos");
+const removed = api.prepareSavingsAction(add.goals, { kind: "delete", goalId: 1 }, 500, operationId);
+assert.equal(removed.goals.length, 0); assert.equal(removed.reserved, 0); assert.equal(removed.upserts.length, 0, "eliminar la meta libera el apartado, no registra un ingreso");
 const expense = { ...receipt, id: 20, internalTransfer: undefined, amount: 400 };
 assert.equal(api.expenseSavingsNeeded(400, 500, add.goals), 100);
-const funded = api.prepareSavingsAction(add.goals, { kind: "expense", transaction: expense, allocations: [{ goalId: 1, amount: 100 }] }, 500, movement);
+const funded = api.prepareSavingsAction(add.goals, { kind: "expense", transaction: expense, allocations: [{ goalId: 1, amount: 100 }] }, 500, operationId);
 assert.equal(funded.goals[0].saved, 100); assert.equal(funded.upserts.length, 1); assert.equal(funded.upserts[0].id, expense.id);
 assert.equal(funded.upserts[0].goalFundingAllocations[0].amount, 100);
 assert.equal(old.saldoLibre(100, funded.reserved), 0);
 assert.equal(old.totalsForMonth(funded.upserts, "2026-10").spent, 400);
 for (const kind of ["add", "withdraw"]) for (const amount of [NaN, Infinity, 0, -1, 501]) {
-  assert.throws(() => api.prepareSavingsAction(add.goals, { kind, goalId: 1, amount }, 500, movement));
+  assert.throws(() => api.prepareSavingsAction(add.goals, { kind, goalId: 1, amount }, 500, operationId));
 }
-for (const initial of [NaN, Infinity, -1, 501]) assert.throws(() => api.prepareSavingsAction([], { kind: "create", goal: base, initial }, 500, movement));
+for (const initial of [NaN, Infinity, -1, 501]) assert.throws(() => api.prepareSavingsAction([], { kind: "create", goal: base, initial }, 500, operationId));
 for (const allocations of [[], [{ goalId: 1, amount: 99 }], [{ goalId: 1, amount: -1 }, { goalId: 1, amount: 101 }], [{ goalId: 2, amount: 100 }]]) {
-  assert.throws(() => api.prepareSavingsAction(add.goals, { kind: "expense", transaction: expense, allocations }, 500, movement));
+  assert.throws(() => api.prepareSavingsAction(add.goals, { kind: "expense", transaction: expense, allocations }, 500, operationId));
 }
-for (const row of [receipt, withdraw.upserts[0]]) {
+const legacyReturn = { ...receipt, id: 11, creationId: "legacy-return", type: "income", amount: 50, internalTransferLink: "legacy-return-link" };
+for (const row of [receipt, legacyReturn]) {
   assert.equal(api.matchesPersonalMovementFilter(row, "savings"), true); assert.equal(api.matchesPersonalMovementFilter(row, "all"), true);
   for (const filter of ["expense", "income", "transfer"]) assert.equal(api.matchesPersonalMovementFilter(row, filter), false);
 }
@@ -63,7 +68,7 @@ assert.equal(api.matchesPersonalMovementFilter({ ...receipt, internalTransfer: "
 assert.equal(api.matchesPersonalMovementFilter(expense, "expense"), true);
 const recentApi = await bundle(["utils/recentMovementFilters.ts"]);
 assert.equal(recentApi.showInPersonalRecent(receipt), false, "los aportes no llenan Movimientos recientes de Personal");
-assert.equal(recentApi.showInPersonalRecent(withdraw.upserts[0]), false, "las devoluciones se consultan desde el historial de ahorro");
+assert.equal(recentApi.showInPersonalRecent(legacyReturn), false, "las devoluciones antiguas tampoco vuelven a llenar Inicio");
 assert.equal(recentApi.showInPersonalRecent(expense), true, "un gasto real pagado desde una meta sí queda entre los movimientos recientes");
 assert.equal(old.totalApartado([{ ...base, saved: 0.1 }, { ...base, id: 2, saved: 0.2 }]), 0.3);
 assert.equal(JSON.stringify([base]), source, "ni rechazos ni operaciones modifican la fuente");
@@ -119,4 +124,4 @@ assert.equal(find(render({ goals: [emptyGoal], apartado: 0, libre: 500 }), node 
 const readonly = render({ soloLectura: true });
 assert.equal(find(readonly.children[0], node => node.type === "Button"), undefined, "sin Premium conserva consulta, no ofrece crear");
 assert.equal(find(readonly, node => node.type === "ReadOnly")?.type, "ReadOnly");
-console.log("Ahorro original: 500→200 apartados→300 libres, retiro, meta cumplida, borrado con recibo, gasto elegido, filtros, precisión y mes siguiente. Sin datos reales ni prueba Android.");
+console.log("Ahorro original: aportes, devoluciones, cambios y borrado sin movimientos ficticios; compra con meta = un solo gasto; saldo, filtros, precisión y mes siguiente. Sin datos reales ni prueba Android.");

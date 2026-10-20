@@ -24,17 +24,17 @@ let sequence = 100;
 const goal = { id: 1, creationId: "goal-one", name: "Viaje", target: 20, saved: 20, completed: true, createdDate: "2026-10-17" };
 const receipt = (item, delta) => ({ id: ++sequence, creationId: `receipt-${sequence}`, internalTransferLink: `operation-${sequence}`, internalTransfer: "goal", internalTransferSpaceId: String(item.id),
   internalTransferSpaceName: item.name, type: delta > 0 ? "expense" : "income", amount: Math.abs(delta), date: "2026-10-17", category: "otros", description: item.name, notes: "", method: "transfer" });
+const operationId = () => `operation-${++sequence}`;
 const before = JSON.stringify(goal);
-const edited = api.prepareSavingsAction([goal], { kind: "edit", goal: { ...goal, target: 30 }, saved: 10, expectedSaved: 20 }, 100, receipt);
+const edited = api.prepareSavingsAction([goal], { kind: "edit", goal: { ...goal, target: 30 }, saved: 10, expectedSaved: 20 }, 100, operationId);
 assert.equal(edited.goals[0].saved, 10); assert.equal(edited.goals[0].target, 30); assert.equal(edited.goals[0].completed, false);
-assert.equal(api.saldoLibre(100, edited.reserved), 90); assert.equal(edited.upserts.length, 1); assert.equal(edited.upserts[0].type, "income");
-assert.deepEqual(api.totalsForMonth(edited.upserts, "2026-10"), { spent: 0, income: 0, transfersOut: 0, transfersIn: 0 });
-assert.equal(api.prepareSavingsAction(edited.goals, { kind: "edit", goal: edited.goals[0], saved: 20, expectedSaved: 10 }, 100, receipt).reserved, 20);
-for (const saved of [-1, NaN, Infinity, 101]) assert.throws(() => api.prepareSavingsAction([goal], { kind: "edit", goal, saved, expectedSaved: 20 }, 100, receipt));
-assert.throws(() => api.prepareSavingsAction([{ ...goal, saved: 30 }], { kind: "edit", goal, saved: 10, expectedSaved: 20 }, 100, receipt), /savings-invalid-action/,
+assert.equal(api.saldoLibre(100, edited.reserved), 90); assert.equal(edited.upserts.length, 0, "editar el apartado no agrega un movimiento de ingreso");
+assert.equal(api.prepareSavingsAction(edited.goals, { kind: "edit", goal: edited.goals[0], saved: 20, expectedSaved: 10 }, 100, operationId).reserved, 20);
+for (const saved of [-1, NaN, Infinity, 101]) assert.throws(() => api.prepareSavingsAction([goal], { kind: "edit", goal, saved, expectedSaved: 20 }, 100, operationId));
+assert.throws(() => api.prepareSavingsAction([{ ...goal, saved: 30 }], { kind: "edit", goal, saved: 10, expectedSaved: 20 }, 100, operationId), /savings-invalid-action/,
   "un formulario atrasado no retira el aporte que acaba de llegar");
 const expense = { id: 30, creationId: "expense-one", amount: 20, type: "expense", category: "otros", description: "Compra", method: "cash", notes: "", date: "2026-10-17" };
-const used = api.prepareSavingsAction([goal], { kind: "use", goalId: 1, transaction: expense }, 100, receipt);
+const used = api.prepareSavingsAction([goal], { kind: "use", goalId: 1, transaction: expense }, 100, operationId);
 assert.equal(used.goals[0].saved, 0); assert.equal(used.upserts.length, 1, "una compra, un único gasto; no una devolución visible más un gasto");
 assert.equal(used.upserts[0].internalTransfer, undefined); assert.equal(used.upserts[0].amount, 20);
 const allocation = used.upserts[0].goalFundingAllocations[0];
@@ -44,10 +44,10 @@ assert.equal(totalAfter, 80); assert.equal(api.saldoLibre(totalAfter, used.reser
 assert.equal(api.totalsForMonth(used.upserts, "2026-10").spent, 20); assert.equal(api.totalsForMonth(used.upserts, "2026-10").income, 0);
 assert.equal(api.matchesPersonalMovementFilter(used.upserts[0], "savings"), true);
 for (const transaction of [{ ...expense, amount: 21 }, { ...expense, type: "income" }, { ...expense, internalTransfer: "family" }]) {
-  assert.throws(() => api.prepareSavingsAction([goal], { kind: "use", goalId: 1, transaction }, 100, receipt));
+  assert.throws(() => api.prepareSavingsAction([goal], { kind: "use", goalId: 1, transaction }, 100, operationId));
 }
 assert.equal(JSON.stringify(goal), before);
-assert.equal(api.transferidoPendienteDelMes([edited.upserts[0]], "2026-10"), 0, "los recibos de ahorro no bloquean cambios de presupuesto como si fueran Cajas");
+assert.equal(api.transferidoPendienteDelMes([receipt(goal, 10)], "2026-10"), 0, "los recibos antiguos de ahorro no bloquean cambios como si fueran Cajas");
 
 const sent = { ...expense, id: 40, creationId: "sent-one", amount: 100, date: "2026-09-20", internalTransfer: "family", internalTransferSpaceId: "family-one", internalTransferLink: "sent-remote" };
 const returned = { ...sent, id: 41, creationId: "return-one", type: "income", date: "2026-10-17", internalTransferLink: "return-remote", internalTransferAllocations: [{ transactionId: 40, amount: 100 }] };
@@ -112,4 +112,4 @@ const initializedType = { current: "expense" }, categories = [];
 const effect = type => new Function("initializedType", "type", "transaction", "setCategory", "setIcono", effectCode)(initializedType, type, undefined, value => categories.push(value), () => {});
 effect("expense")(); effect("expense")(); assert.deepEqual(categories, [], "ni montar ni repetir el efecto pisa Otros o una categoría recuperada");
 effect("income")(); assert.deepEqual(categories, ["salario"]); effect("expense")(); assert.deepEqual(categories, ["salario", "comida"]);
-console.log("Metas originales: editar objetivo/ahorrado juntos, usar ahorro sin ingreso ni devolución ficticia, recibos quitables, transferencias solo devueltas, meses/10.000 filas/copia antigua protegidos. React/IO adaptados; sin modificar dinero real.");
+console.log("Metas originales: aportar/devolver/editar sin movimientos ficticios, usar ahorro como un solo gasto real, recibos antiguos preservados, meses/10.000 filas/copia antigua protegidos. React/IO adaptados; sin modificar dinero real.");

@@ -183,9 +183,11 @@ try {
       const saved = await h.ctx.commitSavingsAction(action);
       assert.equal(saved, failure !== "rollback");
       assert.equal(h.ctx.goalsLive.current[0].saved, saved ? kind === "edit" ? 10 : 0 : 20);
-      assert.equal(h.ctx.transactionsLive.current.length, saved ? 1 : 0, "no se publica gasto sin bajar meta ni meta sin su registro");
+      const expectedTransactions = saved && kind === "use" ? 1 : 0;
+      assert.equal(h.ctx.transactionsLive.current.length, expectedTransactions,
+        kind === "use" ? "se publica un solo gasto junto con la baja de la meta" : "editar el apartado no crea un movimiento artificial");
       const restored = await h.restartLists(); assert.equal(restored.goals.goals[0].saved, h.ctx.goalsLive.current[0].saved);
-      assert.equal(restored.records.transactions.length, saved ? 1 : 0);
+      assert.equal(restored.records.transactions.length, expectedTransactions);
       if (saved && kind === "use") {
         assert.equal(restored.records.transactions[0].internalTransfer, undefined);
         assert.equal(restored.records.transactions[0].goalFundingAllocations[0].amount, 20);
@@ -211,15 +213,14 @@ try {
       const result = await h.ctx.commitSavingsAction({ kind: "add", goalId: goal.id, amount: 200 });
       assert.equal(result, failure !== "rollback", "el aporte solo confirma el lote comprobado, incluso con ACK perdido");
       assert.equal(h.ctx.goalsLive.current[0].saved, result ? 200 : 0);
-      assert.equal(h.ctx.transactionsLive.current.length, result ? 1 : 0, "meta y recibo se publican juntos o ninguno");
+      assert.equal(h.ctx.transactionsLive.current.length, 0, "aportar solo cambia la meta, no agrega un movimiento artificial");
       assert.equal(h.ctx.goalWriteReserved.current, false);
       const restarted = await h.restartLists();
-      assert.equal(restarted.goals.goals[0].saved, result ? 200 : 0); assert.equal(restarted.records.transactions.length, result ? 1 : 0);
+      assert.equal(restarted.goals.goals[0].saved, result ? 200 : 0); assert.equal(restarted.records.transactions.length, 0);
       if (result) {
         h.failure = null;
         assert.equal(await h.ctx.commitSavingsAction({ kind: "delete", goalId: goal.id }), true);
-        assert.equal(h.ctx.goalsLive.current.length, 0); assert.equal(h.ctx.transactionsLive.current.length, 2);
-        assert.equal(h.ctx.transactionsLive.current[1].internalTransfer, "goal");
+        assert.equal(h.ctx.goalsLive.current.length, 0); assert.equal(h.ctx.transactionsLive.current.length, 0);
         assert.equal(h.ctx.deletedGoalIdsRef.current.includes(goal.id), true);
       }
     }
@@ -231,14 +232,14 @@ try {
       assert.throws(() => h.ctx.setTransactions([] .concat(row)), /private-box-source-changed/);
       h.gate.resolve(); assert.equal(await pending, true); assert.equal(h.ctx.goalsLive.current[0].saved, 200);
       assert.equal(await h.ctx.commitSavingsAction({ kind: "add", goalId: goal.id, amount: 301 }), false);
-      assert.equal(h.ctx.transactionsLive.current.length, 1, "rechazar sobregiro no crea recibo");
+      assert.equal(h.ctx.transactionsLive.current.length, 0, "rechazar sobregiro no crea movimientos");
     }
     {
       const h = harness(":memory:", [], []); await h.seed();
       assert.equal(await h.ctx.commitSavingsAction({ kind: "create", goal: { ...goal, creationId: "created-goal" }, initial: 200 }), true);
       const expense = { ...row, amount: 400, date: "2026-10-16" };
       assert.equal(await h.ctx.commitSavingsAction({ kind: "expense", transaction: expense, allocations: [{ goalId: goal.id, amount: 100 }] }), true);
-      assert.equal(h.ctx.goalsLive.current[0].saved, 100); assert.equal(h.ctx.transactionsLive.current.length, 2);
+      assert.equal(h.ctx.goalsLive.current[0].saved, 100); assert.equal(h.ctx.transactionsLive.current.length, 1, "solo queda el gasto real pagado parcialmente con la meta");
       assert.equal(balances.disponiblePersonalEnFecha("2026-10-16", h.ctx.budgets, h.ctx.transactionsLive.current, []), 100);
     }
   }

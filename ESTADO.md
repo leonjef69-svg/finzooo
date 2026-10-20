@@ -1,5 +1,27 @@
 # Estado actual de Fino
 
+## Ahorro — 20/10/2026 — sin movimientos artificiales
+
+Marca `20oct-ahorro-sin-filas-artificiales`, basada en `c6f6a407`. Se corrigió
+el origen de la cantidad de filas: aportar, liberar dinero, editar el apartado
+o borrar una meta ya no agrega un supuesto ingreso/gasto a Personal. La meta
+y el saldo disponible se actualizan juntos; como el dinero no sale de Personal,
+no se crea un movimiento ficticio. Si el usuario registra una compra con dinero
+de una meta, queda un solo movimiento: el gasto real enlazado a esa meta.
+
+Los movimientos antiguos se conservan tal cual; no se borran ni se reescriben.
+La ayuda explica la diferencia y `verificar-ahorro-unificado-real.mjs` compara
+contra `c6f6a407`, donde un aporte sí creaba la fila artificial. También se
+actualizó la regresión de edición/historial y el lote con SQLite para exigir
+que aporte/liberación no guarden filas, y que una compra sí guarde un solo
+gasto. TypeScript, ESLint y el conjunto completo aprobados: 254 pruebas y 8
+auditores.
+
+**Sigue/falta:** comprobar la pantalla actualizada visualmente en el emulador;
+la captura de Windows agotó el tiempo y no se hicieron toques ni operaciones.
+Los movimientos artificiales históricos siguen preservados y visibles en el
+filtro antiguo de Historial. No hay APK ni publicación.
+
 ## Ahorro — 20/10/2026 — metas separadas del historial
 
 Marca `20oct-ahorro-sin-duplicados`. La pantalla Ahorro queda para el resumen
