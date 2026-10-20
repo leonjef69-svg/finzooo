@@ -16,3 +16,8 @@ export function availableRecentMovementTypes(movements: readonly RecentMovement[
       && (movement.type === "expense" || movement.tipo === "gasto")),
   };
 }
+
+/** Apartados y devoluciones se consultan desde el filtro Ahorro del Historial. */
+export function showInPersonalRecent(movement: RecentMovement): boolean {
+  return movement.internalTransfer !== "goal";
+}

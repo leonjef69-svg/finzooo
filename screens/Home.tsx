@@ -1,5 +1,4 @@
 import ConfirmDialog from "@/components/ConfirmDialog";
-import SavingsMovementRow from "@/components/SavingsMovementRow";
 import { saldoLibre } from "@/utils/ahorro";
 import { removablePersonalHistoryIds, removableLegacyReturnIds, visiblePersonalMovement } from "@/utils/personalHistory";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
@@ -33,7 +32,7 @@ import { monthKey } from "@/utils/format";
 import { movementRowsByDay, startsMovementDay, personalMovementRowTime } from "@/utils/movementDates";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
-import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
+import { availableRecentMovementTypes, showInPersonalRecent } from "@/utils/recentMovementFilters";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -132,7 +131,6 @@ const FilaMovimiento = memo(function FilaMovimiento({
   transferGroup?: TransferGroupSummary;
   timeLabel?: string;
 }) {
-  if (tx.internalTransfer === "goal") return <View className="px-5"><SavingsMovementRow transaction={tx} fmt={fmt} t={t} onPress={() => onPress(tx.id, false)} timeLabel={timeLabel} selectMode={selectMode} selected={marcada} /></View>;
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
@@ -434,8 +432,9 @@ export default function Home({
     [monthTx, mk],
   );
   // Una transferencia resumida nunca incluye otros días bajo esta fecha.
-  const compactMonthRows = useMemo(() => movementRowsByDay(monthTx.filter(visiblePersonalMovement), item => item.date,
+  const compactMonthRows = useMemo(() => movementRowsByDay(monthTx.filter(row => showInPersonalRecent(row) && visiblePersonalMovement(row)), item => item.date,
     dayItems => compactPersonalTransferRows(dayItems)), [monthTx]);
+  const hasSavingsHistoryOnly = compactMonthRows.length === 0 && monthTx.some(row => row.internalTransfer === "goal" && visiblePersonalMovement(row));
   const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
   const recentMovementTypes = useMemo(() => availableRecentMovementTypes(monthTx), [monthTx]);
   useEffect(() => {
@@ -553,7 +552,7 @@ export default function Home({
   const [selected, setSelected] = useState<number[]>([]);
   const historyRemovable = useMemo(() => removablePersonalHistoryIds(transactions, deletedTransactionIds), [transactions, deletedTransactionIds]);
   const legacyReturns = useMemo(() => removableLegacyReturnIds(transactions, deletedTransactionIds), [transactions, deletedTransactionIds]);
-  const movimientosBorrablesDelMes = useMemo(() => monthTx.filter(m => historyRemovable.has(m.id)), [monthTx, historyRemovable]);
+  const movimientosBorrablesDelMes = useMemo(() => monthTx.filter(m => showInPersonalRecent(m) && historyRemovable.has(m.id)), [monthTx, historyRemovable]);
   const seleccionadosBorrables = useMemo(() => selected.filter((id) =>
     movimientosBorrablesDelMes.some((tx) => tx.id === id)
   ), [selected, movimientosBorrablesDelMes]);
@@ -1013,7 +1012,7 @@ export default function Home({
                 {recentMovementTypes.income ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterIncome")} accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><ArrowUp size={19} color="#047857" strokeWidth={2.6} /></TouchableOpacity> : null}
                 {recentMovementTypes.expense ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterExpense")} accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><ArrowDown size={19} color="#be123c" strokeWidth={2.6} /></TouchableOpacity> : null}
               </View>
-              {monthTx.length > 0 && (
+              {compactMonthRows.length > 0 && (
                 <TouchableOpacity onPress={toggleSelectMode} className="min-h-10 flex-row items-center gap-1.5">
                   <ListChecks size={18} color="#059669" />
                   <Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text>
@@ -1041,7 +1040,10 @@ export default function Home({
         ListEmptyComponent={
           <View className="px-5">
             <View className="items-center py-10 bg-white dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
-              <Text className="text-slate-500 dark:text-slate-300 text-sm">{t("home.noTransactions")}</Text>
+              <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t(hasSavingsHistoryOnly ? "savings.personalHistoryHint" : "home.noTransactions")}</Text>
+              {hasSavingsHistoryOnly && <TouchableOpacity accessibilityRole="button" onPress={() => irUnaVez({ pathname: "/(tabs)/history", params: { savings: "1" } })} className="mt-3 rounded-xl bg-violet-50 px-3 py-2 dark:bg-violet-950">
+                <Text className="text-xs font-bold text-violet-700 dark:text-violet-200">{t("savings.historyLink")}</Text>
+              </TouchableOpacity>}
             </View>
           </View>
         }

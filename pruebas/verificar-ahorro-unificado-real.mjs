@@ -61,33 +61,47 @@ for (const row of [receipt, withdraw.upserts[0]]) {
 }
 assert.equal(api.matchesPersonalMovementFilter({ ...receipt, internalTransfer: "family" }, "transfer"), true);
 assert.equal(api.matchesPersonalMovementFilter(expense, "expense"), true);
+const recentApi = await bundle(["utils/recentMovementFilters.ts"]);
+assert.equal(recentApi.showInPersonalRecent(receipt), false, "los aportes no llenan Movimientos recientes de Personal");
+assert.equal(recentApi.showInPersonalRecent(withdraw.upserts[0]), false, "las devoluciones se consultan desde el historial de ahorro");
+assert.equal(recentApi.showInPersonalRecent(expense), true, "un gasto real pagado desde una meta sí queda entre los movimientos recientes");
 assert.equal(old.totalApartado([{ ...base, saved: 0.1 }, { ...base, id: 2, saved: 0.2 }]), 0.3);
 assert.equal(JSON.stringify([base]), source, "ni rechazos ni operaciones modifican la fuente");
 const home = fs.readFileSync("screens/Home.tsx", "utf8"), history = fs.readFileSync("screens/History.tsx", "utf8");
 assert.match(home, /saldoLibre\(personalTotal, apartado\)/); assert.match(history, /id: "savings"/);
-for (const code of [home, history]) assert.match(code, /internalTransfer === "goal"\) return[\s\S]*?<SavingsMovementRow/);
+assert.match(home, /showInPersonalRecent\(row\)/);
+assert.match(history, /if \(tx\.internalTransfer === "goal"\) return[\s\S]*?<SavingsMovementRow/);
+const savingsListSource = read("screens/SavingsList.tsx"), historySource = read("screens/History.tsx");
+assert.doesNotMatch(savingsListSource, /recent\.map\(tx/, "Ahorro muestra las metas sin repetir los movimientos");
+assert.match(savingsListSource, /params: \{ savings: "1" \}/, "el acceso abre el historial filtrado en Ahorro");
+assert.match(historySource, /if \(savings === "1"\)[\s\S]*?setFilter\("savings"\)/, "Historial aplica el filtro al abrirse desde Ahorro");
 for (const language of ["es", "en", "pt"]) assert.ok(fs.readFileSync("constants/i18n.ts", "utf8").includes(`  ${language}: {`));
 assert.ok(fs.readFileSync("constants/i18n.ts", "utf8").includes('"savings.total": "Saldo Total en Personal"'));
 // JSX original y pulsaciones reales de sus callbacks, con React/IO adaptados.
-let hooks = [], cursor = 0, calls = [], outcome = false;
+let hooks = [], cursor = 0, calls = [], routes = [], outcome = false;
 const React = { createElement: (type, props, ...children) => ({ type, props: props || {}, children }) };
 const t = (key, values = {}) => `${key}${Object.keys(values).length ? JSON.stringify(values) : ""}`;
 const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
   React, useState: initial => { const index = cursor++; if (!(index in hooks)) hooks[index] = typeof initial === "function" ? initial() : initial;
     return [hooks[index], value => { hooks[index] = typeof value === "function" ? value(hooks[index]) : value; }]; },
   useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {},
-  useAppData: () => ({ fmt: value => `S/${value}`, t, transactions: [], visualStyle: "peachOlive", commitSavingsAction: async action => { calls.push(action); return outcome; } }),
+  useAppData: () => ({ fmt: value => `S/${value}`, t, visualStyle: "peachOlive", commitSavingsAction: async action => { calls.push(action); return outcome; } }),
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), useColorScheme: () => ({ colorScheme: "light" }),
-  compararMovimientos: () => 0, irUnaVez() {}, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
+  irUnaVez(route) { routes.push(route); }, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
   PiggyBank: "Pig", Plus: "Plus", MoreHorizontal: "More", CheckCircle2: "Check", CircleHelp: "Help", ArrowUpRight: "Arrow", LinearGradient: "Gradient",
-  SavingsMovementRow: "Receipt", GoalFormSheet: "GoalForm", MoveMoneySheet: "Move", ConfirmDialog: "Confirm", AvisoSoloLectura: "ReadOnly",
-  UseSavingsSheet: "Use", visiblePersonalMovement: api.visiblePersonalMovement,
+  GoalFormSheet: "GoalForm", MoveMoneySheet: "Move", ConfirmDialog: "Confirm", AvisoSoloLectura: "ReadOnly",
+  UseSavingsSheet: "Use",
 });
 const props = { goals: [goal], disponible: 500, apartado: 200, libre: 300, monthLabel: "Octubre", onBack() {} };
 const render = (extra = {}) => { cursor = 0; return screen({ ...props, ...extra }); };
 function all(node) { if (!node || typeof node !== "object") return []; if (Array.isArray(node)) return node.flatMap(all); return [node, ...node.children.flatMap(all)]; }
 const find = (root, predicate) => all(root).find(predicate);
 let root = render();
+assert.equal(find(root, node => node.type === "Receipt"), undefined, "Ahorro no duplica filas del historial");
+const historyButton = find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.historyLink")));
+assert.ok(historyButton, "el historial queda visible desde Ahorro");
+historyButton.props.onPress();
+assert.deepEqual(routes.at(-1), { pathname: "/(tabs)/history", params: { savings: "1" } });
 const header = root.children[0];
 assert.equal(find(header, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.newGoal")))?.type, "Button", "Nueva meta está en el encabezado, antes del resumen/lista");
 const createButton = find(header, node => node.type === "Button"); createButton.props.onPress();
@@ -99,6 +113,9 @@ const saveButton = find(root, node => node.type === "Button" && node.children.so
 saveButton.props.onPress(); root = render(); const move = find(root, node => node.type === "Move"); assert.equal(move.props.mode, "add");
 outcome = true; assert.equal(await move.props.onConfirm(20), true); assert.equal(calls.at(-1).goalId, 1);
 assert.equal(find(render(), node => node.type === "Move"), undefined, "confirmar cierra una sola hoja sin otra pantalla de meta");
+const emptyGoal = { ...goal, saved: 0, completed: false };
+assert.equal(find(render({ goals: [emptyGoal], apartado: 0, libre: 500 }), node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.use"))), undefined,
+  "Registrar gasto solo aparece cuando la meta tiene dinero");
 const readonly = render({ soloLectura: true });
 assert.equal(find(readonly.children[0], node => node.type === "Button"), undefined, "sin Premium conserva consulta, no ofrece crear");
 assert.equal(find(readonly, node => node.type === "ReadOnly")?.type, "ReadOnly");

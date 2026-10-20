@@ -146,7 +146,7 @@ export default function MoveMoneySheet({
             isAdd ? "bg-emerald-600" : "bg-rose-500"
           } ${!valid || saving ? "opacity-40" : ""}`}
         >
-          <Text className="text-white font-bold">{t("savings.confirmAmount", { amount: fmt(amt) })}</Text>
+          <Text className="text-white font-bold">{t(isAdd ? "savings.confirmAdd" : "savings.confirmReturn", { amount: fmt(amt), name: goal.name })}</Text>
         </TouchableOpacity>
         </ScrollView>
       </View>

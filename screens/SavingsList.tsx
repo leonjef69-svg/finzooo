@@ -4,8 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PiggyBank, Plus, MoreHorizontal, CheckCircle2, CircleHelp, ArrowUpRight } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColorScheme } from "nativewind";
-import SavingsMovementRow from "@/components/SavingsMovementRow";
-import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { irUnaVez } from "@/utils/nav";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
@@ -15,18 +13,16 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import GoalFormSheet from "@/screens/GoalFormSheet";
 import MoveMoneySheet from "@/screens/MoveMoneySheet";
 import UseSavingsSheet from "@/screens/UseSavingsSheet";
-import { visiblePersonalMovement } from "@/utils/personalHistory";
 
 export default function SavingsList({ goals, onBack, disponible, apartado, libre, descuadre, monthLabel, soloLectura = false }: {
   goals: Goal[]; onBack: () => void; onAdd?: () => void; onOpen?: (id: number) => void;
   disponible: number; apartado: number; libre: number; descuadre: boolean; monthLabel: string;
   onAllocate?: () => void; soloLectura?: boolean;
 }) {
-  const { fmt, t, commitSavingsAction, transactions, visualStyle } = useAppData();
+  const { fmt, t, commitSavingsAction, visualStyle } = useAppData();
   const { colorScheme } = useColorScheme();
   const peach = visualStyle === "peachOlive" && colorScheme !== "dark";
   const [help, setHelp] = useState(false);
-  const recent = transactions.filter(row => (row.internalTransfer === "goal" || row.goalFundingAllocations?.length) && visiblePersonalMovement(row)).sort(compararMovimientos).slice(0, 3);
   const insets = useSafeAreaInsets();
   const [panel, setPanel] = useState<{ kind: "create" } | { kind: "edit" | "add" | "withdraw" | "use"; id: number } | null>(null);
   const [menu, setMenu] = useState<number | null>(null), [deleting, setDeleting] = useState<Goal | null>(null);
@@ -82,6 +78,10 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
         <Text className="text-xs font-bold text-amber-800 dark:text-amber-200">{t("savingsList.mismatchTitle")}</Text>
         <Text className="mt-1 text-xs text-amber-800 dark:text-amber-200">{t("savingsList.mismatchBody", { apartado: fmt(apartado), disponible: fmt(disponible) })}</Text>
       </View>}
+      <TouchableOpacity accessibilityRole="button" onPress={() => irUnaVez({ pathname: "/(tabs)/history", params: { savings: "1" } })}
+        className="mt-3 min-h-10 self-end justify-center rounded-xl bg-violet-50 px-3 dark:bg-violet-950">
+        <Text className="text-xs font-bold text-violet-700 dark:text-violet-200">{t("savings.historyLink")}</Text>
+      </TouchableOpacity>
       <View className="mt-5 mb-3 flex-row items-center justify-between">
         <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("savings.myGoals")}</Text>
         <Text className="text-xs text-slate-500 dark:text-slate-300">{goals.length === 1 ? t("savings.oneGoal") : t("savings.count", { count: goals.length })}</Text>
@@ -103,7 +103,7 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           </View>
           {!soloLectura && <View className="flex-row gap-2">
             <TouchableOpacity accessibilityRole="button" onPress={() => setPanel({ kind: "add", id: goal.id })} className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-emerald-600 py-2.5"><Plus size={15} color="white" /><Text className="text-sm font-bold text-white">{t("savings.save")}</Text></TouchableOpacity>
-            <TouchableOpacity accessibilityRole="button" disabled={goal.saved <= 0} onPress={() => setPanel({ kind: "use", id: goal.id })} className={`flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-slate-50 py-2.5 dark:bg-noche-3 ${goal.saved <= 0 ? "opacity-40" : ""}`}><ArrowUpRight size={15} color="#65764a" /><Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("savings.use")}</Text></TouchableOpacity>
+            {goal.saved > 0 && <TouchableOpacity accessibilityRole="button" onPress={() => setPanel({ kind: "use", id: goal.id })} className="flex-1 flex-row items-center justify-center gap-1 rounded-xl bg-slate-50 py-2.5 dark:bg-noche-3"><ArrowUpRight size={15} color="#65764a" /><Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("savings.use")}</Text></TouchableOpacity>}
           </View>}
           {menu === goal.id && !soloLectura && <View className="mt-2 flex-row gap-2 border-t border-slate-100 pt-2 dark:border-noche-borde">
             <TouchableOpacity onPress={() => { setPanel({ kind: "edit", id: goal.id }); setMenu(null); }} className="flex-1 items-center py-2"><Text className="text-sm font-bold text-slate-600 dark:text-slate-200">{t("common.edit")}</Text></TouchableOpacity>
@@ -112,7 +112,6 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           </View>}
         </View>;
       })}
-      {recent.map(tx => <SavingsMovementRow key={tx.id} transaction={tx} fmt={fmt} t={t} onPress={() => irUnaVez(`/transaction/${tx.id}`)} />)}
     </ScrollView>
     {panel?.kind === "create" || panel?.kind === "edit" && selected ? <GoalFormSheet goal={selected} onClose={closePanel} onSave={(goal, initial, expectedSaved) => commit({ kind: panel.kind === "edit" ? "edit" : "create", goal, initial, ...(panel.kind === "edit" ? { saved: goal.saved, expectedSaved } : {}) })} /> : null}
     {(panel?.kind === "add" || panel?.kind === "withdraw") && selected && <MoveMoneySheet mode={panel.kind} goal={selected} onClose={closePanel} onConfirm={amount => commit({ kind: panel.kind === "add" ? "add" : "withdraw", goalId: selected.id, amount })} />}

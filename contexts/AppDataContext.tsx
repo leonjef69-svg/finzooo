@@ -3367,7 +3367,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           };
         });
       });
-      if (task.current()) showToast(t(saved ? action.kind === "delete" ? "toast.goalDeleted" : "savings.saved" : "toast.localSaveFailed"));
+      const successMessage = action.kind === "delete" ? "toast.goalDeleted"
+        : action.kind === "create" ? action.initial ? "savings.goalWithContribution" : "savings.goalCreated"
+        : action.kind === "add" ? "savings.contributionDone"
+        : action.kind === "withdraw" ? "savings.returnDone"
+        : action.kind === "use" || action.kind === "expense" ? "savings.expenseDone"
+        : "savings.saved";
+      if (task.current()) showToast(t(saved ? successMessage : "toast.localSaveFailed"));
       return saved;
     } catch {
       if (task.current()) showToast(t("savings.changed"));

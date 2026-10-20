@@ -132,7 +132,7 @@ export default function History({
   onOpenDetail: (id: number) => void;
 }) {
   const { fmt, t, monthNames, userCurrency } = useAppData();
-  const { transfer } = useLocalSearchParams<{ transfer?: string }>();
+  const { transfer, savings } = useLocalSearchParams<{ transfer?: string; savings?: string }>();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
   const FILTERS = [
@@ -170,11 +170,18 @@ export default function History({
   const hasAdvancedFilters = Boolean(categoryFilter || minAmount || maxAmount);
   const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
   useEffect(() => {
-    if (transfer === "1") {
+    if (savings === "1") {
+      setFilter("savings");
+      setSearch("");
+      setCategoryFilter("");
+      setMinAmount("");
+      setMaxAmount("");
+      setShowFilters(false);
+    } else if (transfer === "1") {
       setFilter("transfer");
       setCategoryFilter("");
     }
-  }, [transfer]);
+  }, [transfer, savings]);
   useEffect(() => {
     if (categoryFilter && !categoriesForMonth.includes(categoryFilter)) setCategoryFilter("");
   }, [categoryFilter, categoriesForMonth]);

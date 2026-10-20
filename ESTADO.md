@@ -1,5 +1,27 @@
 # Estado actual de Fino
 
+## Ahorro — 20/10/2026 — metas separadas del historial
+
+Marca `20oct-ahorro-sin-duplicados`. La pantalla Ahorro queda para el resumen
+del dinero disponible/apartado y las metas; ya no repite debajo una segunda
+lista de aportes y devoluciones. El acceso «Ver historial de ahorro» abre el
+filtro Ahorro del Historial de Personal. En Inicio tampoco se repiten esos
+movimientos internos: si son lo único del mes, se ofrece el acceso al historial.
+Un gasto real pagado desde una meta sigue apareciendo una sola vez como gasto
+normal de Personal. Los botones y mensajes ahora explican si se aparta dinero,
+se devuelve a Personal o se registra un gasto; «Usar» solo aparece si la meta
+tiene dinero. No se cambió el cálculo financiero ni se migraron datos.
+
+Regresión nueva en `verificar-ahorro-unificado-real.mjs`: comprueba que aportes
+y devoluciones no ocupen Movimientos recientes, siguen en el filtro Ahorro y un
+gasto conserva su lugar normal. Prueba específica, TypeScript, ESLint y el
+conjunto completo aprobados: 254 pruebas y 8 auditores.
+
+**Sigue/falta:** revisar visualmente en el emulador habitual y cerrar las
+pruebas/auditores completos. El capturador de Windows agotó el tiempo dos veces;
+no se tocaron controles ni se guardó o borró dinero. No se generó APK ni se
+publicó una actualización.
+
 ## Negocio — 20/10/2026 — configuración inicial, cantidad y movimientos
 
 Marca `20oct-categoria-compacta`, base `3f822e32`. Después de crear
