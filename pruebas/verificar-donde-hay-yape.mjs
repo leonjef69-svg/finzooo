@@ -79,12 +79,12 @@ console.log("\n--- Y NO SE APAGA NADA DE LO QUE YA ESTABA ---");
 
 console.log("\n--- LA VENTA SOLO PROMETE FUNCIONES PREMIUM REALES ---");
 {
-  // Registro automático es una función de pago: no debe prometerse como gratis ni abrirse
-  // desde su ruta sin Premium. La ficha mantiene otros beneficios comprobados.
+  // La pantalla conserva las opciones de plan y sus acciones, sin volver a mostrar la
+  // lista de beneficios que el usuario pidió retirar.
   const premium = leerSinComentarios("screens/Premium.tsx");
-  ok(/perkYape/.test(premium) && /hayRegistroAutomatico/.test(premium), "muestra el registro automático como beneficio solo donde está disponible");
-  ok(premium.includes("premium.perkFamilyBoxes"), "muestra familias y cajas compartidas en la lista compacta");
-  ok(/TELEGRAM_ENABLED \? \[\{ Icon: MessageSquare, label: t\("premium\.perkTelegram"\) \}\] : \[\]/.test(premium), "Telegram solo se anuncia con servidor habilitado");
+  ok(!/premium\.allBenefits|premium\.perk|Crown|beneficios/.test(premium), "no vuelve a mostrar la lista ni la corona de beneficios");
+  ok(/premium\.plusName[\s\S]*premium\.proName/.test(premium), "conserva la selección entre Plus y Pro");
+  ok(/confirmarPrueba|comprar\(periodo\)/.test(premium), "conserva las acciones de prueba y compra");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: la funcion solo se ve donde tiene sentido" : `\n${fallos} fallas`);

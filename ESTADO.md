@@ -1,5 +1,17 @@
 # Estado actual de Fino
 
+## Premium — 20/10/2026 — ficha compacta sin lista de beneficios
+
+Se retiraron la lista «Todos los beneficios», su corona y el bloque informativo
+de registro automático de la pantalla Premium. El espacio ahora se usa para
+mostrar con claridad los precios de Plus y Pro, el periodo elegido y las
+acciones disponibles; no se alteraron las funciones, la prueba, los precios ni
+los datos. Se corrigió «Finzo Pro» por «Fino Pro» y el acceso desde Ajustes ya
+dice «Ver planes disponibles».
+
+**Sigue/falta:** ejecutar las comprobaciones del proyecto y revisar la pantalla
+en el emulador. No se genera APK ni se publica por este cambio.
+
 ## Ahorro — 20/10/2026 — retirado el acceso directo al historial
 
 Se quitó «Ver historial de ahorro» de Ahorro y del aviso vacío de Inicio. No

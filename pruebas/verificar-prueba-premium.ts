@@ -187,9 +187,9 @@ console.log("\n--- LA PANTALLA DISTINGUE PRECIOS PROPUESTOS Y COBROS REALES ---"
   ok(/activarPruebaPremium/.test(pant), "la prueba de 24 horas se queda");
   ok(/premium\.llegaPronto/.test(sinComentarios), "y se dice que el pago llega pronto");
 
-  // Plus/Pro anuncian el beneficio futuro, pero la pantalla debe aclarar que Fino no muestra
-  // anuncios en esta versión mientras AdMob siga apagado.
-  ok(pant.includes("premium.plusNoAds") && /!sinAnuncios/.test(sinComentarios) && pant.includes("premium.noAdsCurrentNote"), "el beneficio no oculta que hoy Fino no muestra anuncios");
+  // La ficha ya no promete beneficios; el aviso neutral de anuncios sigue siendo claro mientras
+  // AdMob esté apagado.
+  ok(!pant.includes("premium.plusNoAds") && /!sinAnuncios/.test(sinComentarios) && pant.includes("premium.noAdsCurrentNote"), "no promete quitar anuncios y aclara que Fino aún no muestra anuncios");
 }
 
 console.log("\n--- CUÁNDO TERMINA, NO CUÁNTO QUEDA (13/08/2026) ---");
