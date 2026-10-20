@@ -76,14 +76,15 @@ const home = fs.readFileSync("screens/Home.tsx", "utf8"), history = fs.readFileS
 assert.match(home, /saldoLibre\(personalTotal, apartado\)/); assert.match(history, /id: "savings"/);
 assert.match(home, /showInPersonalRecent\(row\)/);
 assert.match(history, /if \(tx\.internalTransfer === "goal"\) return[\s\S]*?<SavingsMovementRow/);
-const savingsListSource = read("screens/SavingsList.tsx"), historySource = read("screens/History.tsx");
+const savingsListSource = fs.readFileSync("screens/SavingsList.tsx", "utf8"), historySource = fs.readFileSync("screens/History.tsx", "utf8");
 assert.doesNotMatch(savingsListSource, /recent\.map\(tx/, "Ahorro muestra las metas sin repetir los movimientos");
-assert.match(savingsListSource, /params: \{ savings: "1" \}/, "el acceso abre el historial filtrado en Ahorro");
-assert.match(historySource, /if \(savings === "1"\)[\s\S]*?setFilter\("savings"\)/, "Historial aplica el filtro al abrirse desde Ahorro");
+assert.doesNotMatch(savingsListSource, /savings\.historyLink|params: \{ savings: "1" \}/, "Ahorro no muestra un acceso separado al historial");
+assert.doesNotMatch(home, /savings\.historyLink|personalHistoryHint|params: \{ savings: "1" \}/, "Inicio tampoco muestra el acceso separado al historial de ahorro");
+assert.match(historySource, /id: "savings"/, "los registros antiguos siguen disponibles en el filtro general de Historial");
 for (const language of ["es", "en", "pt"]) assert.ok(fs.readFileSync("constants/i18n.ts", "utf8").includes(`  ${language}: {`));
 assert.ok(fs.readFileSync("constants/i18n.ts", "utf8").includes('"savings.total": "Saldo Total en Personal"'));
 // JSX original y pulsaciones reales de sus callbacks, con React/IO adaptados.
-let hooks = [], cursor = 0, calls = [], routes = [], outcome = false;
+let hooks = [], cursor = 0, calls = [], outcome = false;
 const React = { createElement: (type, props, ...children) => ({ type, props: props || {}, children }) };
 const t = (key, values = {}) => `${key}${Object.keys(values).length ? JSON.stringify(values) : ""}`;
 const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
@@ -92,7 +93,7 @@ const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
   useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {},
   useAppData: () => ({ fmt: value => `S/${value}`, t, visualStyle: "peachOlive", commitSavingsAction: async action => { calls.push(action); return outcome; } }),
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), useColorScheme: () => ({ colorScheme: "light" }),
-  irUnaVez(route) { routes.push(route); }, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
+  irUnaVez() {}, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
   PiggyBank: "Pig", Plus: "Plus", MoreHorizontal: "More", CheckCircle2: "Check", CircleHelp: "Help", ArrowUpRight: "Arrow", LinearGradient: "Gradient",
   GoalFormSheet: "GoalForm", MoveMoneySheet: "Move", ConfirmDialog: "Confirm", AvisoSoloLectura: "ReadOnly",
   UseSavingsSheet: "Use",
@@ -103,10 +104,8 @@ function all(node) { if (!node || typeof node !== "object") return []; if (Array
 const find = (root, predicate) => all(root).find(predicate);
 let root = render();
 assert.equal(find(root, node => node.type === "Receipt"), undefined, "Ahorro no duplica filas del historial");
-const historyButton = find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.historyLink")));
-assert.ok(historyButton, "el historial queda visible desde Ahorro");
-historyButton.props.onPress();
-assert.deepEqual(routes.at(-1), { pathname: "/(tabs)/history", params: { savings: "1" } });
+assert.equal(find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.historyLink"))), undefined,
+  "Ahorro no muestra un botón separado para el historial");
 const header = root.children[0];
 assert.equal(find(header, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.newGoal")))?.type, "Button", "Nueva meta está en el encabezado, antes del resumen/lista");
 const createButton = find(header, node => node.type === "Button"); createButton.props.onPress();

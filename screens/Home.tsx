@@ -434,7 +434,6 @@ export default function Home({
   // Una transferencia resumida nunca incluye otros días bajo esta fecha.
   const compactMonthRows = useMemo(() => movementRowsByDay(monthTx.filter(row => showInPersonalRecent(row) && visiblePersonalMovement(row)), item => item.date,
     dayItems => compactPersonalTransferRows(dayItems)), [monthTx]);
-  const hasSavingsHistoryOnly = compactMonthRows.length === 0 && monthTx.some(row => row.internalTransfer === "goal" && visiblePersonalMovement(row));
   const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
   const recentMovementTypes = useMemo(() => availableRecentMovementTypes(monthTx), [monthTx]);
   useEffect(() => {
@@ -1040,10 +1039,7 @@ export default function Home({
         ListEmptyComponent={
           <View className="px-5">
             <View className="items-center py-10 bg-white dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
-              <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t(hasSavingsHistoryOnly ? "savings.personalHistoryHint" : "home.noTransactions")}</Text>
-              {hasSavingsHistoryOnly && <TouchableOpacity accessibilityRole="button" onPress={() => irUnaVez({ pathname: "/(tabs)/history", params: { savings: "1" } })} className="mt-3 rounded-xl bg-violet-50 px-3 py-2 dark:bg-violet-950">
-                <Text className="text-xs font-bold text-violet-700 dark:text-violet-200">{t("savings.historyLink")}</Text>
-              </TouchableOpacity>}
+              <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t("home.noTransactions")}</Text>
             </View>
           </View>
         }

@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PiggyBank, Plus, MoreHorizontal, CheckCircle2, CircleHelp, ArrowUpRight } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColorScheme } from "nativewind";
-import { irUnaVez } from "@/utils/nav";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
@@ -78,10 +77,6 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
         <Text className="text-xs font-bold text-amber-800 dark:text-amber-200">{t("savingsList.mismatchTitle")}</Text>
         <Text className="mt-1 text-xs text-amber-800 dark:text-amber-200">{t("savingsList.mismatchBody", { apartado: fmt(apartado), disponible: fmt(disponible) })}</Text>
       </View>}
-      <TouchableOpacity accessibilityRole="button" onPress={() => irUnaVez({ pathname: "/(tabs)/history", params: { savings: "1" } })}
-        className="mt-3 min-h-10 self-end justify-center rounded-xl bg-violet-50 px-3 dark:bg-violet-950">
-        <Text className="text-xs font-bold text-violet-700 dark:text-violet-200">{t("savings.historyLink")}</Text>
-      </TouchableOpacity>
       <View className="mt-5 mb-3 flex-row items-center justify-between">
         <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("savings.myGoals")}</Text>
         <Text className="text-xs text-slate-500 dark:text-slate-300">{goals.length === 1 ? t("savings.oneGoal") : t("savings.count", { count: goals.length })}</Text>

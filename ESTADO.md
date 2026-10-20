@@ -1,5 +1,18 @@
 # Estado actual de Fino
 
+## Ahorro — 20/10/2026 — retirado el acceso directo al historial
+
+Se quitó «Ver historial de ahorro» de Ahorro y del aviso vacío de Inicio. No
+se borran movimientos anteriores ni se cambia el saldo; los registros antiguos
+siguen disponibles desde el Historial general, usando su filtro existente.
+Los aportes/devoluciones nuevos no generan filas artificiales y las compras
+reales desde una meta siguen siendo un único gasto.
+
+Verificación aprobada: TypeScript, ESLint y las 254 pruebas con 8 auditores.
+
+**Sigue/falta:** revisión visual en el emulador habitual; no se genera APK ni
+se publica por este ajuste.
+
 ## Ahorro — 20/10/2026 — sin movimientos artificiales
 
 Marca `20oct-ahorro-sin-filas-artificiales`, basada en `c6f6a407`. Se corrigió
