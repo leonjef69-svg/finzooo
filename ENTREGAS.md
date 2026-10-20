@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 20/10/2026 — ajustes de flujo de Negocio (desarrollo)
+
+Marca `20oct-negocio-configuracion-rapida`, base `4cf65643`. Al crear un negocio
+aparece una configuración inicial con el destino de Yape, el interruptor de
+combinaciones y el acceso a crear categorías; ambas preferencias se pueden
+ajustar después desde Opciones. El registro abre categorías desde una tarjeta
+clara y «Nueva categoría» resalta como acción. Cantidad permite flechas y
+escritura directa (1–50). Movimientos muestran hora y origen bajo el nombre,
+importe verde/rojo sin tarjeta de fondo y método de pago en su propia etiqueta.
+
+No cambia datos guardados, saldos, permisos, reglas de captura ni categorías
+históricas. La regresión nueva pasó con tienda y categoría ficticias y fue roja
+contra la versión anterior. Sin APK/AAB/OTA ni publicación. En el emulador
+habitual se revisaron el importe sin recuadro, los movimientos y las flechas;
+se canceló el formulario. No se creó una tienda real: el paso posterior se probó con estado
+ficticio. La lectura financiera quedó idéntica antes/después. TypeScript,
+ESLint general y pruebas/auditores sin tarjetas: resultado final anotado en
+ESTADO.md.
+
+**Sigue/falta:** probar un Yape real abierto/cerrado y en un segundo dispositivo,
+y preparar la entrega instalada en teléfonos cuando se solicite. Metas continúa
+en pausa; tarjetas fuera.
+
 ## 19/10/2026 — Negocio compacto integrado (desarrollo)
 
 Marca `19oct-negocio-compacto-real`, base 77f7486f. La maqueta pasa a componentes

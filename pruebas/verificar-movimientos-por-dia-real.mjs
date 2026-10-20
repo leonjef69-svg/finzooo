@@ -42,6 +42,7 @@ const ui = { React, memo: fn => fn, View: "View", Text: "Text", PressableScale: 
   Animated: { View: "View" }, FadeInDown: animation, softShadow: {}, CARD_SHADOW: {},
   catInfo: () => ({ label: "category", icon: "Icon", color: "green" }), iconoDe: () => "Icon", esFoto: () => false,
   fmtDate: () => "14 oct.", monthNames: months, t, fmt, fmtFamilia: fmt, oscuro: false,
+  METHOD_TONE: { efectivo: { background: "bg-slate-100", foreground: "text-slate-700" }, yape: { background: "bg-violet-50", foreground: "text-violet-700" }, plin: { background: "bg-sky-50", foreground: "text-sky-700" }, transferencia: { background: "bg-blue-50", foreground: "text-blue-700" }, tarjeta: { background: "bg-indigo-50", foreground: "text-indigo-700" }, otro: { background: "bg-amber-50", foreground: "text-amber-800" } },
   useCallback: fn => fn, useMemo: fn => fn(),
 };
 const tx = { id: 1, type: "expense", amount: 10, category: "comida", date: "2026-10-14", time: "5:53 a.m.", method: "cash", description: "Prueba", notes: "" };
@@ -126,7 +127,7 @@ function mapExpression(file, expression, env) {
 const archivedRows = dates.movementRowsByDay(space, item => item.fecha, items => items.map(item => ({ key: item.id, item })));
 const archived = mapExpression("screens/Cajas.tsx", "filasArchivadas.slice(0, movementLimit).map", { ...ui, filasArchivadas: archivedRows, movementLimit: 60 });
 assert.equal(expand(archived).filter(node => node.props.accessibilityRole === "header").length, 2, "archivo solo lectura también agrupado");
-const businessItems = [{ id: "new", fecha: "2026-10-14", hora: "06:30", clase: "ingreso", monto: 5, metodo: "cash" }, { id: "old", fecha: "2026-10-13", hora: "03:20", clase: "gasto", monto: 2, metodo: "cash" }];
+const businessItems = [{ id: "new", fecha: "2026-10-14", hora: "06:30", clase: "ingreso", monto: 5, metodo: "efectivo" }, { id: "old", fecha: "2026-10-13", hora: "03:20", clase: "gasto", monto: 2, metodo: "efectivo" }];
 const businessSource=ts.createSourceFile("screens/BusinessWorkspace.tsx",read("screens/BusinessWorkspace.tsx"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 let businessRender;
 function findBusinessRender(node){if(ts.isJsxAttribute(node)&&node.name.getText(businessSource)==="renderItem")businessRender=node.initializer.expression;ts.forEachChild(node,findBusinessRender);}

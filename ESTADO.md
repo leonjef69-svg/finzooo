@@ -1,5 +1,46 @@
 # Estado actual de Fino
 
+## Negocio — 20/10/2026 — configuración inicial, cantidad y movimientos
+
+Marca `20oct-negocio-configuracion-rapida`, base `4cf65643`. Después de crear
+un negocio se abre una hoja breve con el destino automático de Yape, el
+reconocimiento de combinaciones y un botón para crear categorías y precios.
+Se puede terminar sin crear categorías; en modo simple no se muestra esa
+opción. La combinación queda accesible más adelante desde Opciones y las
+categorías desde el registro. El acceso a categorías ahora es una tarjeta
+táctil; «Nueva categoría» destaca en verde.
+
+La cantidad mantiene la escritura manual y añade flechas grandes, con el mismo
+límite válido de 1 a 50. Las filas del historial son tarjetas; debajo del nombre
+se ve primero la hora y después «Ingreso/Gasto manual/automático». El importe
+distingue ingresos y gastos solo con el color del texto, sin una tarjeta verde
+o roja detrás; el método de pago conserva su etiqueta de color. No cambia el
+formato guardado, los montos, las reglas de Yape ni los totales. Textos nuevos
+cubren español, inglés y portugués.
+
+Regresión nueva en `verificar-negocio-interfaz-real.mjs`: configuración al crear,
+ambos interruptores, continuación al catálogo, guardado de categoría en negocio
+de prueba, botones/color y límites del contador. También comprueba orden y
+color de texto sin fondo de Ingreso/Gasto y etiquetas de Yape/Efectivo. Falla
+contra `4cf65643`: la hora quedaba después del tipo de ingreso. Prueba normal
+aprobada con datos sintéticos, sin escribir la cuenta del emulador.
+
+Emulador Android habitual, código de Metro vigente: se vio el panel con el
+importe verde sin recuadro y el método de pago en su propia etiqueta, además de
+la tarjeta de categorías y la hoja de registro. Las flechas cambiaron 1→2→1 y
+el total visible S/1→S/2→S/1; se cerró sin guardar. No se creó una tienda real:
+su paso posterior se verificó con el controlador original y registros
+sintéticos. La lectura local antes/después de navegar y probar quedó
+exactamente igual.
+
+Verificación final: `npx tsc --noEmit`, ESLint general y `node
+pruebas/correr.mjs --sin-tarjetas` aprobados: 252 pruebas y 8 auditores; las
+tarjetas se excluyeron según la decisión previa.
+
+**Sigue/falta:** comprobar el lector Yape con recibos reales, con Fino abierto y
+cerrado y en otro dispositivo. No se publicó APK/OTA/Firebase; Metas sigue en
+pausa y tarjetas fuera de alcance.
+
 ## Negocio — 19/10/2026 — maqueta integrada en la app
 
 Marca `19oct-negocio-compacto-real`, base 77f7486f. Panel único compacto con

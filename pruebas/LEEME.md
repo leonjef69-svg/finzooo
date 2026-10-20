@@ -1,5 +1,13 @@
 # Pruebas y auditores
 
+20/10 Negocio: la regresión existente `verificar-negocio-interfaz-real.mjs`
+comprueba que crear un negocio abra la configuración de Yape/combinaciones y
+permita seguir a las categorías; interruptores editan solo la tienda sintética.
+Comprueba también tarjeta/CTA de categoría, flechas y escritura manual con
+límite 1–50, orden hora-origen, importe verde/rojo solo en el texto (sin fondo)
+y etiquetas Yape/Efectivo. Falla en 4cf65643 porque la hora aparecía después
+del tipo de ingreso. No hace escrituras en los datos del emulador.
+
 19/10 Negocio compacto: verificar-negocio-maqueta-real ejecuta captura y modelo
 originales (no HTML): exactos/combinaciones/ambiguos, duplicados por aviso frente
 a pagos distintos de igual monto, simple, fechas/filtros, vinculación explícita,
