@@ -39,7 +39,7 @@ export function prepareSavingsAction(goals: Goal[], action: SavingsAction, perso
     && (!isSafeMoneyAmount(action.initial) || action.initial < 0)) return fail();
   const upserts: Transaction[] = [], removed: Goal[] = [];
   const operations = new Set<string>();
-  const change = (id: number, delta: number) => {
+  const change = (id: number, delta: number, changeType: "contribution" | "return" | "expense") => {
     const goal = next.find(item => item.id === id);
     if (!goal || !validAmount(Math.abs(delta))) return fail();
     const cap = delta > 0 ? personalTotal - totalApartado(next) : goal.saved;
@@ -47,7 +47,7 @@ export function prepareSavingsAction(goals: Goal[], action: SavingsAction, perso
     const idForOperation = operationId();
     if (!idForOperation || operations.has(idForOperation)) return fail();
     operations.add(idForOperation);
-    const updated = goalWithFundingChange(goal, delta, idForOperation);
+    const updated = goalWithFundingChange(goal, delta, idForOperation, changeType);
     next = next.map(item => item.id === id ? updated : item);
     return { goalId: id, name: goal.name, amount: Math.abs(delta), operationId: idForOperation };
   };
@@ -60,16 +60,17 @@ export function prepareSavingsAction(goals: Goal[], action: SavingsAction, perso
       if (action.saved !== undefined) {
         if (!isSafeMoneyAmount(action.saved) || action.saved < 0 || action.expectedSaved !== existing.saved) return fail();
         const delta = moneyFromUnits(moneyUnits(action.saved) - moneyUnits(existing.saved));
-        if (delta) change(source.id, delta);
+        if (delta) change(source.id, delta, delta > 0 ? "contribution" : "return");
       }
     } else {
       if (!source.creationId) return fail();
       next.unshift(metaConEstadoActual({ ...source, name: source.name.trim(), saved: 0, funding: { format: 1, base: 0, changes: {} } }));
-      if (action.initial) change(source.id, action.initial);
+      if (action.initial) change(source.id, action.initial, "contribution");
     }
   } else if (action.kind === "add" || action.kind === "withdraw") {
     if (!validAmount(action.amount)) return fail();
-    change(action.goalId, action.kind === "add" ? action.amount : -action.amount);
+    change(action.goalId, action.kind === "add" ? action.amount : -action.amount,
+      action.kind === "add" ? "contribution" : "return");
   } else if (action.kind === "delete") {
     const goal = next.find(item => item.id === action.goalId); if (!goal) return fail();
     // Borrar una meta libera su reserva; no es un ingreso ni crea un movimiento.
@@ -84,7 +85,7 @@ export function prepareSavingsAction(goals: Goal[], action: SavingsAction, perso
     const needed = action.kind === "use" ? expense.amount : expenseSavingsNeeded(expense.amount, personalTotal, next);
     const released = allocations.reduce((sum, item) => sum + moneyUnits(item.amount), 0n);
     if (released !== moneyUnits(needed)) return fail();
-    const funding = allocations.map(item => change(item.goalId, -item.amount));
+    const funding = allocations.map(item => change(item.goalId, -item.amount, "expense"));
     upserts.push({ ...expense, goalFundingAllocations: funding });
   }
   return { goals: next, upserts, removed, reserved: moneyFromUnits(next.reduce((sum, goal) => sum + moneyUnits(goal.saved), 0n)) };

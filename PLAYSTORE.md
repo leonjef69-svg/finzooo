@@ -134,6 +134,10 @@ entregada: origen/versión y cadenas de borrado/recuperación viajan en la copia
 Pro de la cuenta; el teléfono conserva metadatos cifrados/separados por cuenta.
 Las metas guardan base y operaciones de aporte/retiro con ID y cantidad para
 reconocer reintentos y unir aportes distintos, en el mismo registro financiero.
+Cada operación también conserva si fue aporte, devolución a Personal o gasto
+pagado desde una meta, para resumir correctamente esos importes sin crear
+movimientos artificiales. Sigue dentro de la información financiera ya declarada
+y de la misma meta; no añade permisos ni un destinatario externo.
 Las marcas de sincronización incluyen huellas e IDs de generación; algunas
 filas borradas conservan recordIdentity (UUID, captureId y referencias de
 aportes) para demostrar cuál se recupera. captureId puede contener título/texto

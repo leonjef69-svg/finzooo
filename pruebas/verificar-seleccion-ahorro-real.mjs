@@ -49,7 +49,8 @@ const ui = { React, View: "View", Text: "Text", TouchableOpacity: "Button", Scro
   AvisoSoloLectura: "Readonly", ConfirmDialog: "Confirm", GoalFormSheet: "Form", MoveMoneySheet: "Move", UseSavingsSheet: "Use", SavingsMovementRow: "Receipt",
   useState: initial => { const index = cursor++; if (!(index in hooks)) hooks[index] = typeof initial === "function" ? initial() : initial;
     return [hooks[index], value => { hooks[index] = typeof value === "function" ? value(hooks[index]) : value; }]; },
-  useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {},
+  useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {}, useMemo: fn => fn(),
+  summarizeGoalFunding: () => new Map(),
   useAppData: () => ({ t, fmt: n => `S/${n}`, transactions: [], commitSavingsAction: async () => false }), useColorScheme: () => ({ colorScheme: "light" }),
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), compararMovimientos: () => 0, visiblePersonalMovement: () => true };
 const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", ui, read("screens/SavingsList.tsx"));

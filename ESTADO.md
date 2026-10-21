@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Ahorro — 21/10/2026 — resumen único en Personal y Ahorro
+
+La vista «Movimientos» de Ahorro y la lista de Personal muestran una sola
+tarjeta acumulada por meta. Ahorro identifica «Recibido de Personal», «Objetivo»,
+«Devuelto a Personal» y «Ahorro actual». Personal resume «Enviado a Ahorro» y
+«Devuelto a Personal». Los importes usan colores distintos y las etiquetas
+explican su sentido. Aportar o devolver actualiza la misma tarjeta; no crea filas
+de movimientos. Una compra desde la meta sigue siendo un gasto real único.
+
+La meta ahora conserva el tipo de cada cambio dentro de su registro existente
+para distinguir aportes, devoluciones y gastos al sincronizar. Los registros
+anteriores se leen desde sus recibos y operaciones guardadas; no se borran ni
+recalculan saldos. Añadida regresión con montos sintéticos para aportes,
+devoluciones, compras y mezcla con copia de nube anterior.
+
+**Sigue/falta:** revisión visual del emulador habitual. Computer Use no pudo
+conectarse: «Trusted RPC service is not configured: sky». No se abrió la app ni
+se tocaron datos del emulador. TypeScript, ESLint, regresión específica y el
+conjunto completo (254 pruebas y 8 auditores) aprobados. No se genera APK ni se
+publica por este ajuste.
+
 ## Ahorro — 20/10/2026 — vistas separadas de metas y movimientos
 
 Se añadieron dos botones compactos, «Metas» y «Movimientos». Metas conserva las

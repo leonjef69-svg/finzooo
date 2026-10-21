@@ -1,5 +1,21 @@
 # Entregas de Fino
 
+## 21/10/2026 — resumen de ahorro en Personal y Ahorro (desarrollo)
+
+Cada meta tiene una tarjeta acumulada en Ahorro y una en Personal. Ahorro muestra
+lo recibido desde Personal, el objetivo, las devoluciones y lo que queda en la
+meta; Personal muestra lo enviado y lo que volvió. Cada cifra tiene etiqueta y
+color. Aportar/devolver actualiza la misma tarjeta y no genera nuevos
+movimientos. Las compras reales conservan su gasto único. El tipo de cada cambio
+se guarda en el registro existente de la meta para separar devolución de gasto
+y conservarlo al unir copias viejas de nube.
+
+Regresión específica, TypeScript, ESLint y lote completo (254 pruebas y 8
+auditores) aprobados. **Sigue pendiente** la revisión visual en el emulador
+habitual: la herramienta de pantalla no pudo conectarse («Trusted RPC service
+is not configured: sky»); no se abrió ni alteró el emulador. Sin APK/AAB/OTA ni
+publicación.
+
 ## 20/10/2026 — Ahorro separado en Metas y Movimientos (desarrollo)
 
 La pantalla ahora alterna entre «Metas» y «Movimientos» con dos botones

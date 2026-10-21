@@ -1,10 +1,10 @@
 # Pruebas y auditores
 
-20/10 Ahorro: `verificar-ahorro-unificado-real.mjs` cubre el selector Metas /
-Movimientos, los botones para alternar, una fila resumen por meta y sus importes
-de ahorro/objetivo, además de traducciones. La prueba UI fallaba antes de añadir
-las vistas; las regresiones financieras siguen asegurando que aportar/devolver
-no cree movimientos artificiales y que una compra sea un único gasto.
+21/10 Ahorro: `verificar-ahorro-unificado-real.mjs` cubre una tarjeta compacta
+por meta en Ahorro y Personal, los importes recibidos, devueltos, ahorrados y el
+objetivo, con colores distintos. Comprueba gastos contra devoluciones, recibos
+antiguos, unión de copias antiguas de nube y que aportar/devolver no cree
+movimientos artificiales.
 
 20/10 Negocio: la regresión existente `verificar-negocio-interfaz-real.mjs`
 comprueba que crear un negocio abra la configuración de Yape/combinaciones y

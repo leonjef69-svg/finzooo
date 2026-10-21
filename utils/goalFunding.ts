@@ -1,6 +1,9 @@
 import type { Goal } from "@/types";
 import { identityForExplicitEdit } from "@/utils/recordOrigin";
 
+export type GoalFundingChangeType = "contribution" | "return" | "expense";
+type FundingLedger = { format: 1; base: number; changes: Record<string, number>; changeTypes: Record<string, GoalFundingChangeType> };
+
 const failure = () => new Error("record-origin-conflict");
 function units(value: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) throw failure();
@@ -8,15 +11,22 @@ function units(value: number): number {
   if (!Number.isSafeInteger(result) || Math.abs(result / 1000 - value) > 0.0000001) throw failure();
   return result;
 }
-function ledger(goal: Goal): NonNullable<Goal["funding"]> {
+function ledger(goal: Goal): FundingLedger {
   if (units(goal.saved) < 0) throw failure();
-  if (goal.funding === undefined) return { format: 1, base: goal.saved, changes: {} };
+  if (goal.funding === undefined) return { format: 1, base: goal.saved, changes: {}, changeTypes: {} };
   const source = goal.funding;
   if (!source || source.format !== 1 || !source.changes || typeof source.changes !== "object" || Array.isArray(source.changes)
     || units(source.base) < 0) throw failure();
   const changes = { ...source.changes };
   for (const [id, delta] of Object.entries(changes)) if (!id || units(delta) === 0) throw failure();
-  const next = { format: 1 as const, base: source.base, changes };
+  const changeTypes = source.changeTypes ?? {};
+  if (!changeTypes || typeof changeTypes !== "object" || Array.isArray(changeTypes)) throw failure();
+  for (const [id, type] of Object.entries(changeTypes)) {
+    const delta = changes[id];
+    if (!(id in changes) || !["contribution", "return", "expense"].includes(type)
+      || type === "contribution" && delta <= 0 || type !== "contribution" && delta >= 0) throw failure();
+  }
+  const next = { format: 1 as const, base: source.base, changes, changeTypes: { ...changeTypes } };
   if (units(total(next)) !== units(goal.saved)) throw failure();
   return next;
 }
@@ -34,11 +44,13 @@ function total(source: NonNullable<Goal["funding"]>): number {
 }
 
 /** Operación intencional sobre la meta vigente, no una inferencia al leer. */
-export function goalWithFundingChange(goal: Goal, delta: number, operationId: string): Goal {
+export function goalWithFundingChange(goal: Goal, delta: number, operationId: string,
+  changeType: GoalFundingChangeType = delta > 0 ? "contribution" : "return"): Goal {
   if (!operationId || typeof operationId !== "string" || !units(delta)) throw failure();
   const previous = ledger(goal);
   if (operationId in previous.changes) throw failure();
-  const funding = { ...previous, changes: { ...previous.changes, [operationId]: delta } };
+  const funding: FundingLedger = { ...previous, changes: { ...previous.changes, [operationId]: delta } };
+  funding.changeTypes[operationId] = changeType;
   const saved = total(funding);
   return identityForExplicitEdit(goal, { ...goal, funding, saved, completed: saved >= goal.target });
 }
@@ -58,7 +70,12 @@ export function mergeGoalFunding(local: Goal, remote: Goal): Goal {
     if (id in changes && units(changes[id]) !== units(delta)) throw failure();
     changes[id] = delta;
   }
-  const funding = { format: 1 as const, base: a.base, changes };
+  const changeTypes = { ...b.changeTypes };
+  for (const [id, type] of Object.entries(a.changeTypes)) {
+    if (id in changeTypes && changeTypes[id] !== type) throw failure();
+    changeTypes[id] = type;
+  }
+  const funding = { format: 1 as const, base: a.base, changes, changeTypes };
   const saved = total(funding);
   return { ...local, funding, saved, completed: saved >= local.target };
 }

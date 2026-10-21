@@ -109,7 +109,13 @@ export type Goal = {
   /** Se conserva al editar; no se inventa para metas antiguas. */
   creationId?: string;
   /** Aportes/retiros identificados: no sustituir el ahorro de otro equipo. */
-  funding?: { format: 1; base: number; changes: Record<string, number> };
+  funding?: {
+    format: 1;
+    base: number;
+    changes: Record<string, number>;
+    /** Tipo de cada cambio, para separar devoluciones de gastos pagados con la meta. */
+    changeTypes?: Record<string, "contribution" | "return" | "expense">;
+  };
   name: string;
   target: number;
   saved: number;

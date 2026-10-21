@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PiggyBank, Plus, MoreHorizontal, CheckCircle2, CircleHelp, ArrowUpRight } from "lucide-react-native";
@@ -12,13 +12,15 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import GoalFormSheet from "@/screens/GoalFormSheet";
 import MoveMoneySheet from "@/screens/MoveMoneySheet";
 import UseSavingsSheet from "@/screens/UseSavingsSheet";
+import SavingsFlowSummaryCard from "@/components/SavingsFlowSummaryCard";
+import { summarizeGoalFunding } from "@/utils/savingsSummary";
 
 export default function SavingsList({ goals, onBack, disponible, apartado, libre, descuadre, monthLabel, soloLectura = false }: {
   goals: Goal[]; onBack: () => void; onAdd?: () => void; onOpen?: (id: number) => void;
   disponible: number; apartado: number; libre: number; descuadre: boolean; monthLabel: string;
   onAllocate?: () => void; soloLectura?: boolean;
 }) {
-  const { fmt, t, commitSavingsAction, visualStyle } = useAppData();
+  const { fmt, t, commitSavingsAction, visualStyle, transactions } = useAppData();
   const { colorScheme } = useColorScheme();
   const peach = visualStyle === "peachOlive" && colorScheme !== "dark";
   const [help, setHelp] = useState(false);
@@ -27,6 +29,7 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
   const [panel, setPanel] = useState<{ kind: "create" } | { kind: "edit" | "add" | "withdraw" | "use"; id: number } | null>(null);
   const [menu, setMenu] = useState<number | null>(null), [deleting, setDeleting] = useState<Goal | null>(null);
   const [goalLimit, setGoalLimit] = useState(40);
+  const fundingSummaries = useMemo(() => summarizeGoalFunding(goals, transactions), [goals, transactions]);
   const lock = useRef(false);
   const closePanel = () => { if (!lock.current) setPanel(null); };
   useEffect(() => {
@@ -125,13 +128,8 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.movementSummary")}</Text>
         </View>
         {goals.length === 0 && <View className="items-center rounded-2xl bg-slate-50 p-6 dark:bg-noche-2"><PiggyBank size={30} color="#7c3aed" /><Text className="mt-3 text-center text-sm text-slate-500 dark:text-slate-300">{t("savingsList.noGoals")}</Text></View>}
-        {goals.slice(0, goalLimit).map(goal => <View key={`movement-${goal.id}`} testID={`savings-movement-summary-${goal.id}`} className="mb-2.5 rounded-xl border border-slate-200 bg-white p-3 dark:border-noche-borde dark:bg-noche-2">
-          <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>{goal.name}</Text>
-          <View className="mt-2 flex-row items-start justify-between gap-3">
-            <View className="min-w-0 flex-1"><Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("savingsDetail.saved")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{fmt(goal.saved)}</Text></View>
-            <View className="min-w-0 flex-1 items-end"><Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("goalForm.targetLabel")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{fmt(goal.target)}</Text></View>
-          </View>
-        </View>)}
+        {goals.slice(0, goalLimit).map(goal => <SavingsFlowSummaryCard key={`movement-${goal.id}`} testID={`savings-movement-summary-${goal.id}`}
+          goal={goal} summary={fundingSummaries.get(goal.id) ?? { received: 0, returned: 0 }} view="savings" fmt={fmt} t={t} />)}
       </>}
     </ScrollView>
     {panel?.kind === "create" || panel?.kind === "edit" && selected ? <GoalFormSheet goal={selected} onClose={closePanel} onSave={(goal, initial, expectedSaved) => commit({ kind: panel.kind === "edit" ? "edit" : "create", goal, initial, ...(panel.kind === "edit" ? { saved: goal.saved, expectedSaved } : {}) })} /> : null}

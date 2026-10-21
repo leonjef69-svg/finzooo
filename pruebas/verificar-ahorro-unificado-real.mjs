@@ -25,6 +25,8 @@ assert.deepEqual(old.totalsForMonth([receipt], "2026-10"), { spent: 0, income: 0
 assert.equal(old.saldoAnteriorDe("2026-11", { "2026-10": 500 }, [receipt], []), 500, "el mes siguiente no resta de nuevo el recibo");
 assert.equal(old.compactPersonalTransferRows([receipt, { ...receipt, id: 11, internalTransferLink: "b" }]).length, 2, "dos aportes no se agrupan en un supuesto envío a Caja");
 const api = await bundle(["utils/savingsActions.ts", "utils/personalHistory.ts"]);
+const summaryApi = await bundle(["utils/savingsSummary.ts"]);
+const fundingApi = await bundle(["utils/goalFunding.ts"]);
 let seq = 10;
 const operationId = () => `operation-${++seq}`;
 const base = { ...goal, saved: 0, completed: false };
@@ -36,9 +38,11 @@ const source = JSON.stringify([base]);
 const add = api.prepareSavingsAction([base], { kind: "add", goalId: 1, amount: 200 }, 500, operationId);
 assert.equal(add.reserved, 200); assert.equal(old.saldoLibre(500, add.reserved), 300); assert.equal(JSON.stringify([base]), source);
 assert.equal(add.goals[0].completed, true); assert.equal(Object.values(add.goals[0].funding.changes).at(-1), 200);
+assert.equal(Object.values(add.goals[0].funding.changeTypes).at(-1), "contribution", "el aporte queda identificado dentro de la misma meta");
 assert.equal(add.upserts.length, 0, "apartar dinero actualiza la meta y no crea un movimiento de gasto");
 const withdraw = api.prepareSavingsAction(add.goals, { kind: "withdraw", goalId: 1, amount: 50 }, 300, operationId);
 assert.equal(withdraw.reserved, 150); assert.equal(old.saldoLibre(300, withdraw.reserved), 150); assert.equal(withdraw.upserts.length, 0, "liberar dinero no crea un ingreso falso");
+assert.equal(Object.values(withdraw.goals[0].funding.changeTypes).at(-1), "return", "la devolución se distingue del aporte sin crear un movimiento");
 const edit = api.prepareSavingsAction(add.goals, { kind: "edit", goal: { ...base, name: "PC", target: 400 } }, 500, operationId);
 assert.equal(edit.goals[0].saved, 200); assert.equal(edit.goals[0].completed, false); assert.equal(edit.upserts.length, 0);
 const created = api.prepareSavingsAction([], { kind: "create", goal: base, initial: 200 }, 500, operationId);
@@ -50,6 +54,7 @@ assert.equal(api.expenseSavingsNeeded(400, 500, add.goals), 100);
 const funded = api.prepareSavingsAction(add.goals, { kind: "expense", transaction: expense, allocations: [{ goalId: 1, amount: 100 }] }, 500, operationId);
 assert.equal(funded.goals[0].saved, 100); assert.equal(funded.upserts.length, 1); assert.equal(funded.upserts[0].id, expense.id);
 assert.equal(funded.upserts[0].goalFundingAllocations[0].amount, 100);
+assert.equal(Object.values(funded.goals[0].funding.changeTypes).at(-1), "expense", "el gasto real no se confunde con una devolución");
 assert.equal(old.saldoLibre(100, funded.reserved), 0);
 assert.equal(old.totalsForMonth(funded.upserts, "2026-10").spent, 400);
 for (const kind of ["add", "withdraw"]) for (const amount of [NaN, Infinity, 0, -1, 501]) {
@@ -72,18 +77,41 @@ assert.equal(recentApi.showInPersonalRecent(legacyReturn), false, "las devolucio
 assert.equal(recentApi.showInPersonalRecent(expense), true, "un gasto real pagado desde una meta sí queda entre los movimientos recientes");
 assert.equal(old.totalApartado([{ ...base, saved: 0.1 }, { ...base, id: 2, saved: 0.2 }]), 0.3);
 assert.equal(JSON.stringify([base]), source, "ni rechazos ni operaciones modifican la fuente");
+const freshGoal = { ...base, saved: 175, target: 1000,
+  funding: { format: 1, base: 0, changes: { add: 200, back: -18, buy: -7 }, changeTypes: { add: "contribution", back: "return", buy: "expense" } } };
+const freshExpense = { ...expense, amount: 7, goalFundingAllocations: [{ goalId: 1, name: "Laptop", amount: 7, operationId: "buy" }] };
+assert.deepEqual(summaryApi.summarizeGoalFunding([freshGoal], [freshExpense]).get(1), { received: 200, returned: 18 },
+  "una sola tarjeta resume lo enviado y devuelto, y el gasto no se confunde con una devolución");
+const legacyGoal = { ...freshGoal, funding: { format: 1, base: 0, changes: { oldAdd: 200, oldBack: -18, oldBuy: -7 } } };
+const legacyRows = [
+  { ...receipt, id: 31, amount: 200, type: "expense", internalTransferSpaceId: "1", internalTransferLink: "oldAdd" },
+  { ...receipt, id: 32, amount: 18, type: "income", internalTransferSpaceId: "1", internalTransferLink: "oldBack" },
+  { ...freshExpense, id: 33, goalFundingAllocations: [{ goalId: 1, name: "Laptop", amount: 7, operationId: "oldBuy" }] },
+];
+assert.deepEqual(summaryApi.summarizeGoalFunding([legacyGoal], legacyRows).get(1), { received: 200, returned: 18 },
+  "el resumen entiende recibos antiguos de Personal y no cuenta una compra como devolución");
+const legacyCopy = { ...freshGoal, funding: { format: 1, base: 0, changes: { add: 200, back: -18, buy: -7 } } };
+assert.deepEqual(fundingApi.mergeGoalFunding(freshGoal, legacyCopy).funding.changeTypes, freshGoal.funding.changeTypes,
+  "al unir una copia antigua de nube no se pierden los tipos de aporte, devolución ni gasto");
 const home = fs.readFileSync("screens/Home.tsx", "utf8"), history = fs.readFileSync("screens/History.tsx", "utf8");
 assert.match(home, /saldoLibre\(personalTotal, apartado\)/); assert.match(history, /id: "savings"/);
 assert.match(home, /showInPersonalRecent\(row\)/);
+assert.match(home, /personalSavingsSummaries/); assert.match(home, /personal-savings-summary-/,
+  "Personal muestra una tarjeta acumulada por meta, fuera de la selección y borrado de movimientos reales");
 assert.match(history, /if \(tx\.internalTransfer === "goal"\) return[\s\S]*?<SavingsMovementRow/);
 const savingsListSource = fs.readFileSync("screens/SavingsList.tsx", "utf8"), historySource = fs.readFileSync("screens/History.tsx", "utf8");
+const summaryCardSource = fs.readFileSync("components/SavingsFlowSummaryCard.tsx", "utf8");
+assert.match(summaryCardSource, /savings\.receivedFromPersonal/); assert.match(summaryCardSource, /savings\.sentToSavings/);
+assert.match(summaryCardSource, /savings\.returnedToPersonal/); assert.match(summaryCardSource, /savings\.currentInGoal/);
+assert.match(summaryCardSource, /#7c3aed/); assert.match(summaryCardSource, /#059669/);
 assert.doesNotMatch(savingsListSource, /recent\.map\(tx/, "Ahorro muestra las metas sin repetir los movimientos");
 assert.doesNotMatch(savingsListSource, /savings\.historyLink|params: \{ savings: "1" \}/, "Ahorro no muestra un acceso separado al historial");
 assert.doesNotMatch(home, /savings\.historyLink|personalHistoryHint|params: \{ savings: "1" \}/, "Inicio tampoco muestra el acceso separado al historial de ahorro");
 assert.match(historySource, /id: "savings"/, "los registros antiguos siguen disponibles en el filtro general de Historial");
 const translations = fs.readFileSync("constants/i18n.ts", "utf8");
 for (const language of ["es", "en", "pt"]) assert.ok(translations.includes(`  ${language}: {`));
-for (const key of ["savings.tabGoals", "savings.tabMovements", "savings.movementSummary"])
+for (const key of ["savings.tabGoals", "savings.tabMovements", "savings.movementSummary", "savings.personalSavingsTitle",
+  "savings.receivedFromPersonal", "savings.sentToSavings", "savings.returnedToPersonal", "savings.currentInGoal"])
   assert.equal((translations.match(new RegExp(`"${key}":`, "g")) || []).length, 3, `${key} está traducido en los tres idiomas`);
 assert.ok(translations.includes('"savings.total": "Saldo Total en Personal"'));
 // JSX original y pulsaciones reales de sus callbacks, con React/IO adaptados.
@@ -93,13 +121,14 @@ const t = (key, values = {}) => `${key}${Object.keys(values).length ? JSON.strin
 const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
   React, useState: initial => { const index = cursor++; if (!(index in hooks)) hooks[index] = typeof initial === "function" ? initial() : initial;
     return [hooks[index], value => { hooks[index] = typeof value === "function" ? value(hooks[index]) : value; }]; },
-  useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {},
-  useAppData: () => ({ fmt: value => `S/${value}`, t, visualStyle: "peachOlive", commitSavingsAction: async action => { calls.push(action); return outcome; } }),
+  useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {}, useMemo: fn => fn(),
+  summarizeGoalFunding: goals => new Map(goals.map(item => [item.id, { received: item.saved, returned: 0 }])),
+  useAppData: () => ({ fmt: value => `S/${value}`, t, visualStyle: "peachOlive", transactions: [], commitSavingsAction: async action => { calls.push(action); return outcome; } }),
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), useColorScheme: () => ({ colorScheme: "light" }),
   irUnaVez() {}, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
   PiggyBank: "Pig", Plus: "Plus", MoreHorizontal: "More", CheckCircle2: "Check", CircleHelp: "Help", ArrowUpRight: "Arrow", LinearGradient: "Gradient",
   GoalFormSheet: "GoalForm", MoveMoneySheet: "Move", ConfirmDialog: "Confirm", AvisoSoloLectura: "ReadOnly",
-  UseSavingsSheet: "Use",
+  UseSavingsSheet: "Use", SavingsFlowSummaryCard: "SavingsFlowSummaryCard",
 });
 const screenGoal = { ...goal, target: 1000, completed: false };
 const props = { goals: [screenGoal], disponible: 500, apartado: 200, libre: 300, monthLabel: "Octubre", onBack() {} };
@@ -126,11 +155,11 @@ outcome = true; assert.equal(await move.props.onConfirm(20), true); assert.equal
 assert.equal(find(render(), node => node.type === "Move"), undefined, "confirmar cierra una sola hoja sin otra pantalla de meta");
 movementTab.props.onPress(); root = render();
 assert.ok(find(root, node => node.type === "Text" && node.children.includes("savings.movementSummary")), "Movimientos explica que presenta un resumen por meta");
-const summaryRow = find(root, node => node.type === "View" && node.props.testID === "savings-movement-summary-1");
-assert.equal(summaryRow?.type, "View", "la meta tiene una sola fila resumen en Movimientos");
-assert.ok(all(summaryRow).some(node => node.type === "Text" && node.children.includes("Laptop")), "el resumen identifica la meta");
-assert.ok(all(summaryRow).some(node => node.type === "Text" && node.children.includes("S/200")), "el resumen muestra cuánto hay ahorrado");
-assert.ok(all(summaryRow).some(node => node.type === "Text" && node.children.includes("S/1000")), "el resumen muestra el objetivo sin crear otro movimiento");
+const summaryRow = find(root, node => node.type === "SavingsFlowSummaryCard" && node.props.testID === "savings-movement-summary-1");
+assert.equal(summaryRow?.type, "SavingsFlowSummaryCard", "la meta tiene una sola tarjeta resumen en Movimientos");
+assert.equal(summaryRow?.props.goal.name, "Laptop", "el resumen identifica la meta");
+assert.equal(summaryRow?.props.goal.target, 1000, "el resumen muestra el objetivo");
+assert.deepEqual(summaryRow?.props.summary, { received: 200, returned: 0 });
 assert.equal(find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.save"))), undefined, "Movimientos no repite las acciones de las tarjetas de metas");
 const secondGoal = { ...goal, id: 2, creationId: "goal-b", name: "Viaje", saved: 50, target: 1000 };
 root = render({ goals: [goal, secondGoal] });
@@ -143,4 +172,4 @@ assert.equal(find(render({ goals: [emptyGoal], apartado: 0, libre: 500 }), node 
 const readonly = render({ soloLectura: true });
 assert.equal(find(readonly.children[0], node => node.type === "Button"), undefined, "sin Premium conserva consulta, no ofrece crear");
 assert.equal(find(readonly, node => node.type === "ReadOnly")?.type, "ReadOnly");
-console.log("Ahorro original: aportes, devoluciones, cambios y borrado sin movimientos ficticios; compra con meta = un solo gasto; saldo, filtros, precisión y mes siguiente. Sin datos reales ni prueba Android.");
+console.log("Ahorro: una tarjeta acumulada por meta en Personal y Ahorro, aporte/devolución/gasto diferenciados y sin movimientos ficticios; saldos, filtros y compras preservados. Datos sintéticos.");

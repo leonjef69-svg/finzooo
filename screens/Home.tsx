@@ -9,6 +9,7 @@ import MovementDateHeader from "@/components/MovementDateHeader";
 import PressableScale from "@/components/PressableScale";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
+import SavingsFlowSummaryCard from "@/components/SavingsFlowSummaryCard";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
@@ -29,6 +30,7 @@ import {
 import { availablePersonalBalance, budgetUsed, totalsForMonth } from "@/utils/finances";
 import { paymentForCalendarNotification } from "@/utils/calendarNotificationTap";
 import { monthKey } from "@/utils/format";
+import { summarizeGoalFunding } from "@/utils/savingsSummary";
 import { movementRowsByDay, startsMovementDay, personalMovementRowTime } from "@/utils/movementDates";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
@@ -250,6 +252,7 @@ export default function Home({
     marcarPagoDelMes,
     visualStyle,
     apartado,
+    goals,
     deletedTransactionIds,
   } = useAppData();
   const { avisoPagoId, avisoMes, avisoTap } = useLocalSearchParams<{
@@ -412,6 +415,9 @@ export default function Home({
         .sort(compararMovimientos),
     [transactions, mk]
   );
+  const savingsSummaries = useMemo(() => summarizeGoalFunding(goals, transactions), [goals, transactions]);
+  const personalSavingsSummaries = useMemo(() => goals.map(goal => ({ goal, summary: savingsSummaries.get(goal.id) }))
+    .filter(item => (item.summary?.received ?? 0) > 0 || (item.summary?.returned ?? 0) > 0), [goals, savingsSummaries]);
   const availableMonths = useMemo(
     () => Array.from(new Set(
       transactions
@@ -1036,7 +1042,18 @@ export default function Home({
         windowSize={7}
         renderItem={dibujarFila}
         extraData={marcadas}
-        ListEmptyComponent={
+        ListHeaderComponent={!selectMode && recentFilter === null && personalSavingsSummaries.length > 0 ? <View className="px-5 pt-1 pb-1">
+          <View className="mb-2 flex-row items-center justify-between">
+            <Text className="text-xs font-extrabold text-slate-700 dark:text-slate-200">{t("savings.personalSavingsTitle")}</Text>
+            <TouchableOpacity accessibilityRole="button" onPress={() => irUnaVez("/savings")} hitSlop={6}>
+              <Text className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{t("savings.viewGoals")}</Text>
+            </TouchableOpacity>
+          </View>
+          {personalSavingsSummaries.slice(0, 8).map(({ goal, summary }) => <SavingsFlowSummaryCard key={`personal-savings-${goal.id}`}
+            testID={`personal-savings-summary-${goal.id}`} goal={goal}
+            summary={summary ?? { received: 0, returned: 0 }} view="personal" fmt={fmt} t={t} />)}
+        </View> : null}
+        ListEmptyComponent={personalSavingsSummaries.length > 0 && recentFilter === null ? null :
           <View className="px-5">
             <View className="items-center py-10 bg-white dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
               <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t("home.noTransactions")}</Text>
