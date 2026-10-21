@@ -40,7 +40,7 @@ export default function GoalFormSheet({
   const initialError = amountInputError(initial, userCurrency);
   const stale = Boolean(goal && goal.saved !== originalSaved);
   const valid = !stale && name.trim().length > 0 && parseAmountInput(target, userCurrency) > 0
-    && (goal ? !savedError && desiredSaved >= 0 && desiredSaved <= originalSaved + maximoAApartar : !initialError && initialAmount <= maximoAApartar);
+    && (goal ? !savedError && desiredSaved >= 0 && desiredSaved <= originalSaved + maximoAApartar : !initialError && initialAmount >= 0 && initialAmount <= maximoAApartar);
   const createdDate = goal?.createdDate || fechaLocalISO();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -131,9 +131,10 @@ export default function GoalFormSheet({
           </View>
           {!goal && <View>
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("savings.initial")}</Text>
-            <TextInput disableFullscreenUI value={initial} keyboardType="decimal-pad" onChangeText={v => setInitial(sanitizeAmountInput(v, userCurrency))}
+            <TextInput disableFullscreenUI accessibilityLabel={t("savings.initial")} value={initial} keyboardType="decimal-pad" onChangeText={v => setInitial(sanitizeAmountInput(v, userCurrency))}
               onFocus={() => onFieldFocus("initial")} onBlur={() => onFieldBlur("initial")} placeholder="0.00" placeholderTextColor="#94a3b8"
               className="rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold text-slate-900 dark:border-noche-borde dark:bg-noche-2 dark:text-slate-100" />
+            <Text className="mt-1.5 text-xs text-slate-500 dark:text-slate-300">{t("savings.initialHelp")}</Text>
             <Text className={`mt-2 text-xs ${initialAmount > maximoAApartar ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>{t("savings.previewPersonal", { amount: fmt(libre - initialAmount) })}</Text>
             {initialError && <Text className="mt-1 text-xs text-rose-500">{t(initialError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
           </View>}

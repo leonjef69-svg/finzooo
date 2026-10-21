@@ -2,7 +2,7 @@ import type { Goal } from "@/types";
 import { identityForExplicitEdit } from "@/utils/recordOrigin";
 
 export type GoalFundingChangeType = "contribution" | "return" | "expense";
-type FundingLedger = { format: 1; base: number; changes: Record<string, number>; changeTypes: Record<string, GoalFundingChangeType> };
+type FundingLedger = { format: 1; base: number; changes: Record<string, number>; changeTypes: Record<string, GoalFundingChangeType>; cancelledExpenses: Record<string, true> };
 
 const failure = () => new Error("record-origin-conflict");
 function units(value: number): number {
@@ -13,7 +13,7 @@ function units(value: number): number {
 }
 function ledger(goal: Goal): FundingLedger {
   if (units(goal.saved) < 0) throw failure();
-  if (goal.funding === undefined) return { format: 1, base: goal.saved, changes: {}, changeTypes: {} };
+  if (goal.funding === undefined) return { format: 1, base: goal.saved, changes: {}, changeTypes: {}, cancelledExpenses: {} };
   const source = goal.funding;
   if (!source || source.format !== 1 || !source.changes || typeof source.changes !== "object" || Array.isArray(source.changes)
     || units(source.base) < 0) throw failure();
@@ -26,7 +26,12 @@ function ledger(goal: Goal): FundingLedger {
     if (!(id in changes) || !["contribution", "return", "expense"].includes(type)
       || type === "contribution" && delta <= 0 || type !== "contribution" && delta >= 0) throw failure();
   }
-  const next = { format: 1 as const, base: source.base, changes, changeTypes: { ...changeTypes } };
+  const cancelledExpenses = source.cancelledExpenses ?? {};
+  if (!cancelledExpenses || typeof cancelledExpenses !== "object" || Array.isArray(cancelledExpenses)) throw failure();
+  for (const [id, cancelled] of Object.entries(cancelledExpenses)) {
+    if (cancelled !== true || !(id in changes) || changes[id] >= 0 || changeTypes[id] && changeTypes[id] !== "expense") throw failure();
+  }
+  const next = { format: 1 as const, base: source.base, changes, changeTypes: { ...changeTypes }, cancelledExpenses: { ...cancelledExpenses } };
   if (units(total(next)) !== units(goal.saved)) throw failure();
   return next;
 }
@@ -55,6 +60,18 @@ export function goalWithFundingChange(goal: Goal, delta: number, operationId: st
   return identityForExplicitEdit(goal, { ...goal, funding, saved, completed: saved >= goal.target });
 }
 
+/** Anular una compra libera su importe a Personal; no es otro aporte ni cambia saved. */
+export function goalWithCancelledExpense(goal: Goal, operationId: string, amount: number): Goal {
+  const funding = ledger(goal);
+  if (!operationId || units(amount) <= 0 || !(operationId in funding.changes)
+    || units(funding.changes[operationId]) !== -units(amount)
+    || funding.changeTypes[operationId] && funding.changeTypes[operationId] !== "expense") throw failure();
+  if (funding.cancelledExpenses[operationId]) return goal;
+  funding.changeTypes[operationId] = "expense";
+  funding.cancelledExpenses[operationId] = true;
+  return identityForExplicitEdit(goal, { ...goal, funding });
+}
+
 /** Suma operaciones distintas y reconoce la misma operación en dos copias.
  * Una cifra antigua diferente no dice qué operaciones faltan: se conserva
  * la fuente interrumpiendo la unión, sin sumarla dos veces ni sobrescribirla. */
@@ -75,7 +92,8 @@ export function mergeGoalFunding(local: Goal, remote: Goal): Goal {
     if (id in changeTypes && changeTypes[id] !== type) throw failure();
     changeTypes[id] = type;
   }
-  const funding = { format: 1 as const, base: a.base, changes, changeTypes };
+  const funding = { format: 1 as const, base: a.base, changes, changeTypes,
+    cancelledExpenses: { ...b.cancelledExpenses, ...a.cancelledExpenses } };
   const saved = total(funding);
   return { ...local, funding, saved, completed: saved >= local.target };
 }

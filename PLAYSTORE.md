@@ -1,5 +1,12 @@
 # Lo que hay que rellenar en Play Console
 
+21/10/2026 — Una meta puede conservar una marca por operación de gasto anulada
+(`funding.cancelledExpenses`) dentro de su registro financiero existente. Permite
+identificar el importe que volvió a estar disponible en Personal al borrar el
+gasto, sin crear otra transacción ni aumentar el ahorro. Mismo cifrado, copia Pro,
+retención y destinatarios de las metas declaradas; sin permisos o servicios
+nuevos. No publica esta ficha ni cambia la política aceptada.
+
 19/10/2026 — Negocio compacto: los negocios pueden conservar `modo` y
 `reconocerCombinaciones`; sus ingresos añaden opcionalmente `clasificacion`
 (pendiente/confirmada y copia de producto, nombre, precio y cantidad) y

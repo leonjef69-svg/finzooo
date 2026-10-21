@@ -44,7 +44,7 @@ export function summarizeGoalFunding(goals: readonly Goal[], transactions: reado
         if (current.receiptOperations.has(operationId)) continue;
         const units = moneyUnits(Math.abs(delta));
         if (delta > 0) current.received += units;
-        else if (funding.changeTypes?.[operationId] === "return" ||
+        else if (funding.cancelledExpenses?.[operationId] === true && !spentOperations.has(operationId) || funding.changeTypes?.[operationId] === "return" ||
           (!funding.changeTypes?.[operationId] && !spentOperations.has(operationId))) current.returned += units;
       }
     } else if (!current.hasReceipts) {

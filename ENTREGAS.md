@@ -1,5 +1,20 @@
 # Entregas de Fino
 
+## 21/10/2026 — metas con S/0 y devolución al anular gasto (desarrollo)
+
+Marca `21oct-ahorro-gasto-anulado-meta-cero`. Primer aporte opcional explicado;
+meta con S/0 conservada y sin tarjeta financiera hasta aportar. El borrado de un
+gasto guarda también su anulación en la misma meta, sin cambiar la reserva ni
+crear filas: la tarjeta muestra lo devuelto a Personal. Copias anteriores,
+reintento y gasto restaurado protegidos. Regresión original/SQLite roja contra
+e2858044 y verde con el cambio, incluidos fallo y respuesta perdida.
+
+Emulador habitual: formulario real con nombre/objetivo y aporte vacío habilita
+Guardar; se canceló sin crear ni cambiar datos. El ciclo financiero se ejercita
+con datos sintéticos. TypeScript, ESLint, 254 pruebas y 8 auditores aprobados.
+Pendiente revisión de casos históricos borrados sin vínculo conservado; no se reconstruye dinero. Sin APK,
+AAB, OTA, publicación ni despliegue de Firebase.
+
 ## 21/10/2026 — resumen de ahorro en Personal y Ahorro (desarrollo)
 
 Cada meta tiene una tarjeta acumulada en Ahorro y una en Personal. Ahorro muestra

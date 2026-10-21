@@ -1,5 +1,30 @@
 # Estado actual de Fino
 
+## Ahorro — 21/10/2026 — meta sin aporte y gasto anulado
+
+Crear una meta admite primer aporte vacío o cero y explica que se puede ahorrar
+después. La meta permanece visible con «Sin ahorro»; Movimientos no dibuja una
+tarjeta sin operaciones. Al borrar un gasto enlazado a una meta, se guarda junto
+al borrado una marca de anulación dentro de la misma meta: no repone `saved`, no
+crea ingresos y el resumen acumula ese importe en «Devuelto a Personal». La marca
+se conserva al mezclar copias atrasadas; un gasto restaurado y activo no cuenta
+como devuelto. «Devuelto por completo» identifica las metas sin reserva cuyo
+aporte ya volvió. El aporte original sigue siendo una cifra histórica.
+
+La regresión SQLite ejecuta los borrados individual/múltiple originales con
+éxito, disco lleno, respuesta perdida, reinicio, reintento y copia atrasada. La
+prueba falla al usar `commitTransactionMutation` de e2858044. Datos sintéticos.
+En el emulador habitual, el formulario habilitó Guardar con nombre/objetivo y
+aporte vacío; se canceló. Siguen 1 meta, reserva S/10 y disponible S/140. No se
+guardaron ni borraron movimientos reales. Computer Use capturó solo el árbol de
+la ventana; Android ADB permitió revisar su imagen y los controles nativos.
+
+TypeScript, ESLint y el lote general aprobados: 254 pruebas y 8 auditores.
+**Sigue/falta:** el ciclo financiero de borrado se prueba con SQLite y datos sintéticos, no con
+el dinero del usuario en el emulador. Los gastos que ya se habían borrado sin
+conservar su vínculo no se reconstruyen ni se adjudican a ciegas. Sin APK,
+actualización remota, publicación ni cambios de servicios Firebase.
+
 ## Ahorro — 21/10/2026 — resumen único en Personal y Ahorro
 
 La vista «Movimientos» de Ahorro y la lista de Personal muestran una sola

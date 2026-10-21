@@ -66,7 +66,7 @@ import { nextId, reserveIdsAbove, issuedCreationId } from "@/utils/id";
 import { identityForExplicitEdit, recordOriginOf } from "@/utils/recordOrigin";
 import { mergeTransactionCopies, mergeGoalCopies, mergeMutationMetadata, prepareTransactionMutation, rememberDeletion } from "@/utils/recordMerge";
 import { goalWithFundingChange } from "@/utils/goalFunding";
-import { prepareSavingsAction, type SavingsAction } from "@/utils/savingsActions";
+import { prepareSavingsAction, goalsWithCancelledExpenses, type SavingsAction } from "@/utils/savingsActions";
 import { preparePersonalHistoryRemoval, removablePersonalHistoryIds, removableLegacyReturnIds } from "@/utils/personalHistory";
 import { fechaLocalISO } from "@/utils/date";
 import { randomUUID } from "expo-crypto";
@@ -3201,16 +3201,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
     const task = captureAccountTask(owner, () => version === localSessionVersion.current);
     if (!ready || !hasOnboarded || !task.current() || hasUnreadableLocalData() || Platform.OS !== "android") return false;
+    const deleting = new Set(ids);
+    const savingsRemoval = transactionsLive.current.some(row => deleting.has(row.id) && row.goalFundingAllocations?.length);
     try {
       return await withLocalAccountOperation(async () => {
         await task.wait(() => flushPendingSaves());
-        return saveJSONBatchNow([STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cloudSyncMeta], async () => {
+        return saveJSONBatchNow([STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cloudSyncMeta,
+          ...(savingsRemoval ? [STORAGE_KEYS.goals, STORAGE_KEYS.deletedGoalIds] : [])], async () => {
           const [diskRows, diskDeleted, diskMeta, diskBoxes] = await task.wait(() => Promise.all([
             loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []), loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []),
             loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}), loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS),
           ]));
           const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, metadata = cloudSyncMetaRef.current;
           const source = mergeTransactionCopies(base, diskRows, deleted, diskDeleted, metadata, diskMeta);
+          const removedExpenses = source.transactions.filter(row => deleting.has(row.id) && row.goalFundingAllocations?.length);
+          // Una edición que llegó durante la espera requiere recomponer el lote,
+          // nunca borrar solo el gasto dejando su resumen desactualizado.
+          if (!savingsRemoval && removedExpenses.length) throw new Error("savings-invalid-action");
+          const baseGoals = savingsRemoval ? goalsLive.current : undefined;
+          const baseDeletedGoals = savingsRemoval ? deletedGoalIdsRef.current : undefined;
+          let nextGoals: ReturnType<typeof mergeGoalCopies> | undefined;
+          if (savingsRemoval) {
+            const [diskGoals, diskDeletedGoals] = await task.wait(() => Promise.all([
+              loadJSON<Goal[]>(STORAGE_KEYS.goals, []), loadJSON<number[]>(STORAGE_KEYS.deletedGoalIds, []),
+            ]));
+            const merged = mergeGoalCopies(baseGoals!, diskGoals, baseDeletedGoals!, diskDeletedGoals, source.metadata, diskMeta);
+            nextGoals = { ...merged, goals: goalsWithCancelledExpenses(merged.goals, removedExpenses) };
+          }
           if (legacyReturnIds.length) {
             const legacyEligible = removableLegacyReturnIds(source.transactions, source.deletedIds);
             if (legacyReturnIds.some(id => !legacyEligible.has(id))) throw new Error("history-return-changed");
@@ -3218,20 +3235,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           const historyChanges = historyIds.length ? preparePersonalHistoryRemoval(source.transactions, historyIds) : [];
           const preserved = upserts.map(row => source.transactions.some(prior => prior.id === row.id && prior.internalTransfer && prior.hiddenFromHistory === true)
             ? { ...row, hiddenFromHistory: true } : row);
-          const next = prepareTransactionMutation(source.transactions, source.deletedIds, source.metadata, [...preserved, ...historyChanges], [...ids, ...legacyReturnIds], randomUUID, issuedCreationId);
+          const next = prepareTransactionMutation(source.transactions, source.deletedIds, nextGoals?.metadata ?? source.metadata, [...preserved, ...historyChanges], [...ids, ...legacyReturnIds], randomUUID, issuedCreationId);
           const currency = currencyForReturn.current, boxes = leerCajasEnMemoria() ?? diskBoxes;
           let reservation: PrivateBoxMoneyLocalWrite | undefined;
           return {
-            entries: [[STORAGE_KEYS.transactions, next.transactions], [STORAGE_KEYS.deletedTransactionIds, next.deletedIds], [STORAGE_KEYS.cloudSyncMeta, next.metadata]],
+            entries: [[STORAGE_KEYS.transactions, next.transactions], [STORAGE_KEYS.deletedTransactionIds, next.deletedIds], [STORAGE_KEYS.cloudSyncMeta, next.metadata],
+              ...(nextGoals ? [[STORAGE_KEYS.goals, nextGoals.goals], [STORAGE_KEYS.deletedGoalIds, nextGoals.deletedIds]] as [string, unknown][] : [])],
             stillValid: () => task.current() && transactionsLive.current === base && deletedTransactionIdsRef.current === deleted
-              && cloudSyncMetaRef.current === metadata && currencyForReturn.current === currency,
+              && cloudSyncMetaRef.current === metadata && currencyForReturn.current === currency
+              && (!savingsRemoval || (!goalWriteReserved.current || reservation !== undefined) && goalsLive.current === baseGoals && deletedGoalIdsRef.current === baseDeletedGoals),
             reserve: () => {
               reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: base, deletedIds: deleted, currency, boxes });
-              return reservation.release;
+              if (savingsRemoval) goalWriteReserved.current = true;
+              return () => { if (savingsRemoval) goalWriteReserved.current = false; reservation?.release(); };
             },
             committed: () => {
               if (!reservation) throw new Error("private-box-source-changed");
               reservation.publish(() => {
+                if (nextGoals) {
+                  goalWritePublishing.current = true;
+                  try { setGoals(nextGoals.goals); setDeletedGoalIds(nextGoals.deletedIds); }
+                  finally { goalWritePublishing.current = false; }
+                }
                 const latestMeta = mergeMutationMetadata(next.metadata, cloudSyncMetaRef.current);
                 setDeletedTransactionIds(next.deletedIds); setTransactions(next.transactions);
                 cloudSyncMetaRef.current = latestMeta; setCloudSyncMeta(latestMeta);

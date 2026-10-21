@@ -30,6 +30,10 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
   const [menu, setMenu] = useState<number | null>(null), [deleting, setDeleting] = useState<Goal | null>(null);
   const [goalLimit, setGoalLimit] = useState(40);
   const fundingSummaries = useMemo(() => summarizeGoalFunding(goals, transactions), [goals, transactions]);
+  const movementGoals = goals.filter(goal => {
+    const summary = fundingSummaries.get(goal.id);
+    return (summary?.received ?? 0) > 0 || (summary?.returned ?? 0) > 0;
+  });
   const lock = useRef(false);
   const closePanel = () => { if (!lock.current) setPanel(null); };
   useEffect(() => {
@@ -102,7 +106,7 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
         return <View key={goal.id} className="mb-3 rounded-2xl border-[1.5px] border-slate-200 bg-white p-3.5 dark:border-noche-borde dark:bg-noche-2">
           <View className="flex-row items-center gap-2">
             <View className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950"><PiggyBank size={19} color="#65764a" /></View>
-            <View className="min-w-0 flex-1"><Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={2}>{goal.name}</Text><Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{goal.completed ? t("savingsDetail.completed") : t("savings.goalSubtitle")}</Text></View>
+            <View className="min-w-0 flex-1"><Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={2}>{goal.name}</Text><Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{goal.completed ? t("savingsDetail.completed") : goal.saved === 0 ? t("savings.notStarted") : t("savings.goalSubtitle")}</Text></View>
             {goal.completed && <CheckCircle2 size={17} color="#059669" />}
             {!soloLectura && <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("savings.options", { name: goal.name })} onPress={() => setMenu(menu === goal.id ? null : goal.id)} className="h-10 w-10 items-center justify-center"><MoreHorizontal size={21} color="#64748b" /></TouchableOpacity>}
           </View>
@@ -127,8 +131,8 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("savings.tabMovements")}</Text>
           <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.movementSummary")}</Text>
         </View>
-        {goals.length === 0 && <View className="items-center rounded-2xl bg-slate-50 p-6 dark:bg-noche-2"><PiggyBank size={30} color="#7c3aed" /><Text className="mt-3 text-center text-sm text-slate-500 dark:text-slate-300">{t("savingsList.noGoals")}</Text></View>}
-        {goals.slice(0, goalLimit).map(goal => <SavingsFlowSummaryCard key={`movement-${goal.id}`} testID={`savings-movement-summary-${goal.id}`}
+        {movementGoals.length === 0 && <View className="items-center rounded-2xl bg-slate-50 p-6 dark:bg-noche-2"><PiggyBank size={30} color="#7c3aed" /><Text className="mt-3 text-center text-sm text-slate-500 dark:text-slate-300">{t("savings.noMovements")}</Text></View>}
+        {movementGoals.slice(0, goalLimit).map(goal => <SavingsFlowSummaryCard key={`movement-${goal.id}`} testID={`savings-movement-summary-${goal.id}`}
           goal={goal} summary={fundingSummaries.get(goal.id) ?? { received: 0, returned: 0 }} view="savings" fmt={fmt} t={t} />)}
       </>}
     </ScrollView>

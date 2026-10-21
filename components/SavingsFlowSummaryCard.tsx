@@ -23,6 +23,7 @@ export default function SavingsFlowSummaryCard({
 }) {
   return <View testID={testID} className="mb-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-noche-borde dark:bg-noche-2">
     <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>{goal.name}</Text>
+    {goal.saved === 0 && summary.received > 0 && summary.returned === summary.received && <Text className="mt-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{t("savings.fullyReturned")}</Text>}
     <View className="mt-2 flex-row items-center gap-3">
       <AmountCell label={t(view === "personal" ? "savings.sentToSavings" : "savings.receivedFromPersonal")}
         amount={summary.received} color="#7c3aed" fmt={fmt} />

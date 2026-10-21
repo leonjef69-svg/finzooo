@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+21/10 Ahorro: `verificar-lote-borrado-real.mjs` comprueba anulación de gastos
+enlazados con guardado SQLite conjunto, tarjeta acumulada sin filas nuevas,
+reintento/reinicio y copia atrasada. `FINO_SAVINGS_DELETE_BASELINE=e2858044`
+sustituye solo el manejador de borrado por el anterior y produce fallo real
+(devuelto 0 en vez de 10). Las pruebas de formularios/resumen verifican aporte
+inicial vacío, meta en cero sin tarjeta financiera y gasto restaurado.
+
 21/10 Ahorro: `verificar-ahorro-unificado-real.mjs` cubre una tarjeta compacta
 por meta en Ahorro y Personal, los importes recibidos, devueltos, ahorrados y el
 objetivo, con colores distintos. Comprueba gastos contra devoluciones, recibos

@@ -14,6 +14,8 @@ import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 // Ejecuta acciones y almacén originales. Solo React, Auth y el puente Android
 // se adaptan; multiSet usa una transacción SQLite real y datos ficticios.
 const baseline = process.env.FINO_TEST_BASELINE;
+const savingsDeleteBaseline = process.env.FINO_SAVINGS_DELETE_BASELINE;
+if (savingsDeleteBaseline && !/^[a-f0-9]{7,40}$/.test(savingsDeleteBaseline)) throw new Error("Hash de borrado inválido.");
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("Se requiere hash de Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 const js = source => ts.transpile(source, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS });
@@ -29,7 +31,9 @@ function load(file, dependencies) {
   return module.exports;
 }
 function declaration(file, name, required = true) {
-  const tree = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX); let found = "";
+  const contents = savingsDeleteBaseline && name === "commitTransactionMutation"
+    ? execFileSync("git", ["show", `${savingsDeleteBaseline}:${file}`], { encoding: "utf8" }) : read(file);
+  const tree = ts.createSourceFile(file, contents, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX); let found = "";
   function visit(node) {
     if (ts.isFunctionDeclaration(node) && node.name?.text === name) found = node.getText(tree);
     ts.forEachChild(node, visit);
@@ -49,6 +53,7 @@ const reservation = load("utils/privateBoxMoneyLocalWrite.ts");
 const savings = baseline ? {} : load("utils/savingsActions.ts", name => name.endsWith("recordOrigin") || name.endsWith("goalFunding") ? financial : undefined);
 const history = baseline ? {} : load("utils/personalHistory.ts", name => name.endsWith("recordOrigin") ? financial : undefined);
 const balances = load("utils/finances.ts");
+const summary = load("utils/savingsSummary.ts");
 const merges = load("utils/mergeTransactions.ts", name => name.endsWith("recordOrigin") || name.endsWith("goalFunding") ? financial : undefined);
 const originalQueue = declaration("utils/localAccountVault.ts", "withLocalAccountOperation").replace(/^export\s+/, "");
 const row = { id: 10, creationId: "movement-a", type: "expense", amount: 100, category: "otros", description: "Dato ficticio", date: "2026-10-10", updatedAt: 1 };
@@ -163,6 +168,68 @@ if (process.argv[2] === "--crash-worker") {
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "fino-delete-batch-"));
 try {
   if (!baseline) {
+    // Compra real desde una meta: anularla devuelve su dinero a Personal y
+    // actualiza la misma meta, sin crear filas. Se ejecutan SQLite y callbacks
+    // originales, con datos ficticios y sin cuenta ni emulador del usuario.
+    for (const method of ["deleteTransaction", "deleteTransactions"]) for (const failure of [null, "rollback", "lost-ack"]) {
+      const h = harness(":memory:", [], []); await h.seed();
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "create", goal: { ...goal, target: 50 }, initial: 10 }), true);
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "use", goalId: goal.id, transaction: { ...row, amount: 10, date: "2026-10-16" } }), true);
+      const beforeGoal = plain(h.ctx.goalsLive.current[0]);
+      h.failure = failure;
+      const saved = await h.ctx[method](method === "deleteTransactions" ? [row.id] : row.id);
+      assert.equal(saved, failure !== "rollback");
+      const current = h.ctx.goalsLive.current;
+      assert.equal(current.length, 1, "la meta sigue existiendo aunque quede en cero");
+      assert.equal(current[0].saved, 0, "anular el gasto no repone el apartado");
+      assert.deepEqual(plain(summary.summarizeGoalFunding(current, h.ctx.transactionsLive.current).get(goal.id)),
+        { received: 10, returned: saved ? 10 : 0 }, "la MISMA tarjeta identifica el dinero recuperado en Personal");
+      assert.equal(h.ctx.transactionsLive.current.length, saved ? 0 : 1, "no aparece un ingreso ni otra fila artificial");
+      assert.equal(balances.disponiblePersonalEnFecha("2026-10-16", h.ctx.budgets, h.ctx.transactionsLive.current, []), saved ? 500 : 490);
+      if (!saved) assert.deepEqual(plain(current[0]), beforeGoal, "el fallo conserva gasto y meta juntos");
+      const restored = await h.restartLists();
+      assert.deepEqual(plain(summary.summarizeGoalFunding(restored.goals.goals, restored.records.transactions).get(goal.id)), { received: 10, returned: saved ? 10 : 0 });
+      if (saved) {
+        const copy = financial.mergeGoalCopies(restored.goals.goals, [beforeGoal], [], [], restored.goals.metadata, {});
+        assert.deepEqual(plain(summary.summarizeGoalFunding(copy.goals, restored.records.transactions).get(goal.id)), { received: 10, returned: 10 }, "una copia atrasada no pierde la devolución");
+        h.failure = null;
+        assert.equal(await h.ctx.deleteTransaction(row.id), true);
+        assert.deepEqual(plain(summary.summarizeGoalFunding(h.ctx.goalsLive.current, []).get(goal.id)), { received: 10, returned: 10 }, "repetir el borrado no devuelve dos veces");
+      }
+      assert.equal(h.ctx.goalWriteReserved.current, false);
+    }
+    {
+      const h = harness(":memory:", [], []); await h.seed();
+      const otherGoal = { ...goal, id: 21, creationId: "other-goal", name: "Otra meta" };
+      for (const [item, amount] of [[goal, 10], [otherGoal, 20]]) {
+        assert.equal(await h.ctx.commitSavingsAction({ kind: "create", goal: item, initial: amount }), true);
+        assert.equal(await h.ctx.commitSavingsAction({ kind: "use", goalId: item.id,
+          transaction: { ...row, id: item.id, creationId: `expense-${item.id}`, amount, date: "2026-10-16" } }), true);
+      }
+      assert.equal(await h.ctx.deleteTransactions([goal.id, otherGoal.id]), true);
+      assert.equal(h.ctx.transactionsLive.current.length, 0);
+      const result = summary.summarizeGoalFunding(h.ctx.goalsLive.current, []);
+      assert.deepEqual(plain(result.get(goal.id)), { received: 10, returned: 10 });
+      assert.deepEqual(plain(result.get(otherGoal.id)), { received: 20, returned: 20 }, "el borrado múltiple devuelve a cada resumen su propio importe");
+      assert.ok(h.ctx.goalsLive.current.every(item => item.saved === 0));
+    }
+    {
+      const h = harness(":memory:", [], []); await h.seed();
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "create", goal, initial: 10 }), true);
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "use", goalId: goal.id, transaction: { ...row, amount: 10, date: "2026-10-16" } }), true);
+      h.encryptGate = deferred(); const pending = h.ctx.deleteTransaction(row.id); await tick();
+      h.ctx.localSessionVersion.current++; h.encryptGate.resolve();
+      assert.equal(await pending, false);
+      assert.equal(h.ctx.transactionsLive.current.length, 1);
+      assert.deepEqual(plain(summary.summarizeGoalFunding(h.ctx.goalsLive.current, h.ctx.transactionsLive.current).get(goal.id)), { received: 10, returned: 0 },
+        "cambiar de sesión no deja una devolución sin su borrado confirmado");
+    }
+    {
+      const h = harness(":memory:", [], []); await h.seed();
+      assert.equal(await h.ctx.commitSavingsAction({ kind: "create", goal: { ...goal, target: 50 } }), true);
+      assert.equal(h.ctx.goalsLive.current[0].saved, 0); assert.equal(h.ctx.transactionsLive.current.length, 0);
+      assert.equal((await h.restartLists()).goals.goals.length, 1, "la meta sin primer aporte se conserva al reiniciar");
+    }
     for (const failure of [null, "rollback", "lost-ack"]) {
       const returns = [50, 12].map((amount, index) => ({ ...row, id: 42 + index * 2, type: "income", amount, date: "2026-10-15",
         internalTransfer: index ? "box" : "family", internalTransferSpaceId: `closed-${index}`, internalTransferLink: `return-${index}`,

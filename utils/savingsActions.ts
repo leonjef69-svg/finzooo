@@ -1,5 +1,5 @@
 import type { Goal, Transaction } from "@/types";
-import { goalWithFundingChange } from "@/utils/goalFunding";
+import { goalWithFundingChange, goalWithCancelledExpense } from "@/utils/goalFunding";
 import { identityForExplicitEdit } from "@/utils/recordOrigin";
 import { metaConEstadoActual, totalApartado } from "@/utils/ahorro";
 import { isSafeMoneyAmount } from "@/utils/amount";
@@ -26,6 +26,23 @@ export function expenseSavingsNeeded(amount: number, total: number, goals: Goal[
 }
 const fail = () => { throw new Error("savings-invalid-action"); };
 const validAmount = (amount: number) => isSafeMoneyAmount(amount) && amount > 0;
+
+/** Solo cambia el resumen de metas enlazadas a gastos realmente borrados. */
+export function goalsWithCancelledExpenses(goals: Goal[], removed: Transaction[]): Goal[] {
+  const next = new Map(goals.map(goal => [goal.id, goal]));
+  for (const row of removed) {
+    if (!row.goalFundingAllocations?.length) continue;
+    if (row.type !== "expense" || row.internalTransfer || !validAmount(row.amount)) return fail();
+    const operations = new Set<string>();
+    for (const allocation of row.goalFundingAllocations) {
+      if (!validAmount(allocation.amount) || operations.has(allocation.operationId)) return fail();
+      operations.add(allocation.operationId);
+      const goal = next.get(allocation.goalId);
+      if (goal) next.set(goal.id, goalWithCancelledExpense(goal, allocation.operationId, allocation.amount));
+    }
+  }
+  return goals.map(goal => next.get(goal.id)!);
+}
 
 /** Un plan para el lote local: no escribe ni modifica sus fuentes.
  * Apartar/liberar dinero solo cambia la reserva de la meta: no es un gasto,

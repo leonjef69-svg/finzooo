@@ -94,10 +94,17 @@ const form = handlerOriginal("screens/GoalFormSheet.tsx", "GoalFormSheet", { Rea
   Animated: { View: "View" }, View: "View", Text: "Text", TextInput: "Input", TouchableOpacity: "Button", ScrollView: "Scroll", X: "X",
 });
 function flatten(node) { if (!node || typeof node !== "object") return []; if (Array.isArray(node)) return node.flatMap(flatten); return [node, ...node.children.flatMap(flatten)]; }
-const render = () => { cursor = 0; return form({ goal, onClose() {}, onSave: async (item, initial, expectedSaved) => { savedGoal = { item, initial, expectedSaved }; return true; } }); };
+const render = (selected = goal) => { cursor = 0; return form({ goal: selected, onClose() {}, onSave: async (item, initial, expectedSaved) => { savedGoal = { item, initial, expectedSaved }; return true; } }); };
 let tree = render(); flatten(tree).find(node => node.type === "Input" && node.props.accessibilityLabel === "savingsDetail.saved").props.onChangeText("10");
 tree = render(); const button = flatten(tree).filter(node => node.type === "Button").at(-1);
 assert.equal(button.props.disabled, false); await button.props.onPress(); assert.equal(savedGoal.item.saved, 10); assert.equal(savedGoal.item.target, 20); assert.equal(savedGoal.expectedSaved, 20);
+hooks = []; tree = render(null);
+let fields = flatten(tree).filter(node => node.type === "Input");
+fields[0].props.onChangeText("Laptop"); fields[1].props.onChangeText("50"); tree = render(null);
+const create = flatten(tree).filter(node => node.type === "Button").at(-1);
+assert.equal(create.props.disabled, false, "el primer aporte vacío permite guardar la meta");
+await create.props.onPress(); assert.equal(savedGoal.initial, 0); assert.equal(savedGoal.item.saved, 0); assert.equal(savedGoal.item.target, 50);
+assert.ok(flatten(tree).some(node => node.type === "Text" && node.children.includes("savings.initialHelp")), "se explica que se puede ahorrar después");
 const savingsUI = fs.readFileSync("screens/SavingsList.tsx", "utf8");
 assert.ok(!savingsUI.includes('t("savings.total")') && !savingsUI.includes('t("savingsDetail.remaining"'));
 assert.ok(savingsUI.includes('t("savings.personalAvailable")') && savingsUI.includes('t("savingsDetail.saved")') && savingsUI.includes('t("goalForm.targetLabel")'));

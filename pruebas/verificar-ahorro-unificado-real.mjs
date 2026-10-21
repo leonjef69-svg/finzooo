@@ -82,6 +82,21 @@ const freshGoal = { ...base, saved: 175, target: 1000,
 const freshExpense = { ...expense, amount: 7, goalFundingAllocations: [{ goalId: 1, name: "Laptop", amount: 7, operationId: "buy" }] };
 assert.deepEqual(summaryApi.summarizeGoalFunding([freshGoal], [freshExpense]).get(1), { received: 200, returned: 18 },
   "una sola tarjeta resume lo enviado y devuelto, y el gasto no se confunde con una devolución");
+const beforeCancel = JSON.stringify([freshGoal, freshExpense]);
+const cancelled = api.goalsWithCancelledExpenses([freshGoal], [freshExpense]);
+assert.equal(cancelled[0].saved, 175, "anular el gasto no vuelve a apartar dinero de Personal");
+assert.deepEqual(summaryApi.summarizeGoalFunding(cancelled, []).get(1), { received: 200, returned: 25 });
+assert.deepEqual(summaryApi.summarizeGoalFunding(cancelled, [freshExpense]).get(1), { received: 200, returned: 18 }, "un gasto restaurado deja de contarse como devolución");
+assert.deepEqual(api.goalsWithCancelledExpenses([freshGoal], [{ ...freshExpense, amount: 5 }]), cancelled,
+  "borrar un gasto cuyo importe se editó también conserva la reserva original liberada");
+assert.deepEqual(api.goalsWithCancelledExpenses(cancelled, [freshExpense]), cancelled, "el reintento no duplica la devolución");
+assert.equal(JSON.stringify([freshGoal, freshExpense]), beforeCancel, "las fuentes no cambian al preparar la anulación");
+for (const allocation of [{ goalId: 1, amount: 6, operationId: "buy" }, { goalId: 1, amount: 7, operationId: "unknown" }, { goalId: 1, amount: 7, operationId: "back" }])
+  assert.throws(() => api.goalsWithCancelledExpenses([freshGoal], [{ ...freshExpense, goalFundingAllocations: [allocation] }]));
+for (const pair of [[cancelled[0], freshGoal], [freshGoal, cancelled[0]]]) {
+  const merged = fundingApi.mergeGoalFunding(...pair);
+  assert.deepEqual(summaryApi.summarizeGoalFunding([merged], []).get(1), { received: 200, returned: 25 }, "la copia atrasada conserva la anulación");
+}
 const legacyGoal = { ...freshGoal, funding: { format: 1, base: 0, changes: { oldAdd: 200, oldBack: -18, oldBuy: -7 } } };
 const legacyRows = [
   { ...receipt, id: 31, amount: 200, type: "expense", internalTransferSpaceId: "1", internalTransferLink: "oldAdd" },
@@ -122,7 +137,7 @@ const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
   React, useState: initial => { const index = cursor++; if (!(index in hooks)) hooks[index] = typeof initial === "function" ? initial() : initial;
     return [hooks[index], value => { hooks[index] = typeof value === "function" ? value(hooks[index]) : value; }]; },
   useRef: value => { const index = cursor++; return hooks[index] ??= { current: value }; }, useEffect() {}, useMemo: fn => fn(),
-  summarizeGoalFunding: goals => new Map(goals.map(item => [item.id, { received: item.saved, returned: 0 }])),
+  summarizeGoalFunding: summaryApi.summarizeGoalFunding,
   useAppData: () => ({ fmt: value => `S/${value}`, t, visualStyle: "peachOlive", transactions: [], commitSavingsAction: async action => { calls.push(action); return outcome; } }),
   useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), useColorScheme: () => ({ colorScheme: "light" }),
   irUnaVez() {}, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
@@ -167,6 +182,11 @@ assert.equal(all(root).filter(node => node.props.testID?.startsWith("savings-mov
 find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.tabGoals"))).props.onPress(); root = render();
 assert.ok(find(root, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.save"))), "Metas vuelve a mostrar las metas y sus acciones");
 const emptyGoal = { ...goal, saved: 0, completed: false };
+movementTab.props.onPress();
+const untouched = render({ goals: [emptyGoal] });
+assert.equal(all(untouched).filter(node => node.type === "SavingsFlowSummaryCard").length, 0, "crear una meta sin ahorro no crea un supuesto registro de dinero");
+assert.ok(find(untouched, node => node.type === "Text" && node.children.includes("savings.noMovements")));
+find(untouched, node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.tabGoals"))).props.onPress();
 assert.equal(find(render({ goals: [emptyGoal], apartado: 0, libre: 500 }), node => node.type === "Button" && node.children.some(child => child?.children?.includes("savings.use"))), undefined,
   "Registrar gasto solo aparece cuando la meta tiene dinero");
 const readonly = render({ soloLectura: true });

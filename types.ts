@@ -115,6 +115,8 @@ export type Goal = {
     changes: Record<string, number>;
     /** Tipo de cada cambio, para separar devoluciones de gastos pagados con la meta. */
     changeTypes?: Record<string, "contribution" | "return" | "expense">;
+    /** Gastos anulados: su dinero queda disponible en Personal, sin reponer la reserva. */
+    cancelledExpenses?: Record<string, true>;
   };
   name: string;
   target: number;
