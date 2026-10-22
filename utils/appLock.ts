@@ -26,15 +26,16 @@ const KEY_SALT = "finzo.lock.salt";
 const KEY_LEGACY_ALTERNATE_PIN = "finzo.lock.alt";
 const KEY_FAILED_ATTEMPTS = "finzo.lock.failedAttempts";
 const KEY_LOCK_UNTIL = "finzo.lock.lockUntil";
-const configurationListeners = new Set<() => void>();
+type LockConfigurationChange = "changed" | "enabled";
+const configurationListeners = new Set<(change: LockConfigurationChange) => void>();
 
-export function subscribeLockConfiguration(listener: () => void): () => void {
+export function subscribeLockConfiguration(listener: (change: LockConfigurationChange) => void): () => void {
   configurationListeners.add(listener);
   return () => { configurationListeners.delete(listener); };
 }
 
-function notifyLockConfiguration(): void {
-  configurationListeners.forEach((listener) => listener());
+function notifyLockConfiguration(change: LockConfigurationChange = "changed"): void {
+  configurationListeners.forEach((listener) => listener(change));
 }
 
 export const PIN_LENGTH = 4;
@@ -244,7 +245,7 @@ export async function enableLock(pin: string): Promise<boolean> {
   // Se comprueba leyendo de vuelta: si algo del cajón cifrado falló, esto
   // devuelve false y la pantalla no dice que quedó activado.
   const enabled = (await lockEnabledState()) === "enabled" && (await hasPin());
-  if (enabled) notifyLockConfiguration();
+  if (enabled) notifyLockConfiguration("enabled");
   return enabled;
 }
 

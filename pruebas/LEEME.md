@@ -1,5 +1,13 @@
 # Pruebas y auditores
 
+22/10 Tercera petición del PIN: `verificar-bloqueo-alternativo-real.mjs` ejecuta
+el guardián y `enableLock` originales para activar en una sesión ya abierta sin
+volver a autenticar. Comprueba biometría disponible/no disponible, evento de
+guardado confirmado, reinicio, aviso estando bloqueado, vuelta tras dos minutos
+y salida durante privacidad pendiente. `FINO_LOCK_ALTERNATIVE_BASELINE=60f1f38a`
+reproduce la cubierta PIN extra y falla. Autorización de una sola lectura en
+memoria, nunca simula una salida guardada; IO/React adaptados, sin PIN real.
+
 22/10 Panel de bloqueo: `verificar-panel-bloqueo-real.mjs` ejecuta JSX, opciones
 de ruta, efectos y callbacks originales con React/Android/IO adaptados. Carga y
 errores sin escritura, cierre X/fondo/Atrás, borradores cancelables, PIN distintos

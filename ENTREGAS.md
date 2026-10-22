@@ -1,5 +1,21 @@
 # Entregas de Fino
 
+## 22/10/2026 — activación sin tercera petición de PIN (desarrollo)
+
+Marca `22oct-pin-sin-tercera-vez`. Crear y confirmar PIN ya no provoca otra
+autenticación inmediata: guardado confirmado se distingue de un cambio genérico,
+con autorización temporal en memoria solo para esa sesión abierta. Privacidad,
+lectura, reinicio, errores, cambio de configuración, salida y margen conservados.
+Sin cambiar PIN/datos reales ni escribir un margen ficticio en disco.
+
+Prueba original ampliada verde y roja contra 60f1f38a (antes reaparecía la
+cubierta PIN), panel/privacidad/margen aprobados. **Sigue/falta:** activación real
+personal en Android, sin automatizar ajustes de seguridad ni usar credenciales;
+sensor biométrico no disponible en el emulador. Sin código nativo, APK/AAB/OTA,
+publicación o despliegue. Calendario diario pendiente.
+TypeScript, ESLint y lote completo aprobados: 254 pruebas y 8 auditores con
+tarjetas excluidas. Servidor local de desarrollo activo.
+
 ## 22/10/2026 — configuración de bloqueo en panel inferior (desarrollo)
 
 Marca `22oct-bloqueo-panel-compacto`. Panel compacto sobre Ajustes con entrada

@@ -79,6 +79,46 @@ function mount(overrides = {}, ready = true) {
 
 let env;
 try {
+  // Activar desde una sesión ya abierta no exige una tercera entrada del PIN.
+  let enabled = false;
+  env = mount({ lockEnabledState: async () => enabled ? "enabled" : "disabled", usaHuella: async () => false });
+  await env.flush(); assert.equal(env.tree, null);
+  enabled = true; env.configuration("enabled"); await env.flush();
+  assert.equal(env.tree, null, "PIN recién creado/confirmado no vuelve a pedirlo para abrir la misma sesión");
+  assert.deepEqual(env.pins, []); assert.equal(env.requests.length, 0);
+  env.emit("background"); env.now += 121000; env.emit("active"); await env.flush();
+  assert.ok(env.pad(), "La activación no elimina el bloqueo al salir más de dos minutos");
+  env.configuration("enabled"); await env.flush(); assert.ok(env.pad(), "Un aviso de activación no abre una app que ya estaba bloqueada"); env.close();
+
+  enabled = false;
+  env = mount({ lockEnabledState: async () => enabled ? "enabled" : "disabled" }); await env.flush();
+  enabled = true; env.configuration("enabled"); await env.flush();
+  assert.equal(env.tree, null); assert.equal(env.requests.length, 0, "Activar con huella disponible tampoco pide otra autenticación inmediata"); env.close();
+
+  let enabledAfterRestart = true;
+  env = mount({ lockEnabledState: async () => enabledAfterRestart ? "enabled" : "disabled", usaHuella: async () => false });
+  await env.flush(); assert.ok(env.pad(), "Arranque frío no hereda la confirmación de activación en memoria"); env.close();
+
+  let status = "disabled", privacyReply;
+  env = mount({ lockEnabledState: async () => status, usaHuella: async () => false }); await env.flush();
+  status = "enabled"; privacyReply = deferred(); env.io.applyLockScreenPrivacy = () => privacyReply.promise;
+  env.configuration("enabled"); await env.flush(); env.emit("background"); env.emit("active");
+  privacyReply.resolve("confirmed"); await env.flush();
+  assert.ok(env.pad(), "Salir durante la activación invalida la exención, aunque se vuelva antes de la respuesta"); env.close();
+
+  const lockFileForEnable = "utils/appLock.ts", lockSourceForEnable = read(lockFileForEnable);
+  const storage = new Map(), events = [];
+  const enableOriginal = handlerOriginal(lockFileForEnable, "enableLock", {
+    PIN_LENGTH: 4, KEY_SALT: "salt", KEY_HASH: "hash", KEY_ENABLED: "enabled",
+    Crypto: { randomUUID: () => "fixture-salt" }, hashPin: async () => "fixture-hash",
+    write: async (key, value) => { storage.set(key, value); },
+    SecureStore: { getItemAsync: async key => storage.get(key) },
+    lockEnabledState: async () => storage.get("enabled") === "1" ? "enabled" : "disabled",
+    hasPin: async () => storage.has("hash"), notifyLockConfiguration: change => events.push(change),
+  }, lockSourceForEnable);
+  assert.equal(await enableOriginal("2468"), true);
+  assert.deepEqual(events, ["enabled"], "Solo el guardado confirmado emite la activación, no una preferencia genérica");
+
   env = mount({}, false); await env.flush();
   assert.equal(env.requests.length, 0, "No pedir huella mientras Fino todavía carga los datos");
   env.context.ready = true; env.dirty = true; await env.flush();

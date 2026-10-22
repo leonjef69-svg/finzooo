@@ -1,5 +1,35 @@
 # Estado actual de Fino
 
+## Bloqueo — 22/10/2026 — sin tercera entrada del PIN al activar
+
+Marca `22oct-pin-sin-tercera-vez`. La causa era que `enableLock` notificaba un
+cambio genérico y el guardián volvía a bloquear una sesión que acababa de crear
+y confirmar el PIN. Ahora solo un guardado confirmado emite «enabled»; si Fino
+ya estaba desbloqueado y delante, se conserva en memoria una autorización de
+una sola comprobación. Se confirma igualmente privacidad y lectura del candado,
+pero no se exige otro PIN/huella en esa misma activación. No se modifica el PIN
+existente ni se inventa una salida o un margen persistente en SecureStore.
+
+La autorización no vale en arranque frío, si ya estaba bloqueado, tras un fallo
+de lectura/privacidad, al cambiar otra configuración, salir al fondo o desmontar.
+Se comprueba también su antigüedad y se consume una sola vez. AppState se escucha
+incluso mientras se confirma la primera activación para invalidarla si se sale
+durante esa espera. El margen ordinario y los siguientes desbloqueos se conservan.
+
+Regresión ampliada ejecutando guardián y enableLock originales con IO/React
+adaptados: activación con/sin biometría sin tercera autenticación, guardado
+confirmado, aviso estando bloqueado, reinicio, regreso >2 min y salida durante
+privacidad pendiente. Roja contra 60f1f38a por reproducir la tercera petición;
+verde actual, junto con panel, margen y privacidad. Sin operaciones en la cuenta
+ni uso de credenciales del usuario.
+TypeScript, ESLint, 254 pruebas y 8 auditores aprobados (tarjetas excluidas).
+Servidor local de desarrollo activo; sin activar/desactivar el bloqueo real.
+
+**Sigue/falta:** comprobar personalmente activar/confirmar en Android y sensor
+real; no se automatiza configuración/autenticación ni se cambia su seguridad.
+Sin campos persistentes nuevos, permisos, código nativo, APK/AAB/OTA o despliegue.
+Calendario diario permanece pendiente hasta cerrar el bloqueo.
+
 ## Bloqueo — 22/10/2026 — configuración en panel inferior compacto
 
 Marca `22oct-bloqueo-panel-compacto`. La ruta `app-lock` conserva acceso Pro y

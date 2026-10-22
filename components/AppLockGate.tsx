@@ -77,10 +77,14 @@ export default function AppLockGate() {
   const autoPrompted = useRef(false);
   const verifyingPin = useRef(false);
   const appActive = useRef(AppState.currentState !== "background");
+  // Solo en memoria: confirmar el PIN al activarlo ya autentica esta entrada.
+  // No sirve al arrancar de nuevo, estando bloqueado o después de salir.
+  const activation = useRef<{ at: number } | null>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      activation.current = null;
       authVersion.current += 1;
       if (prompting.current) void cancelBiometrics();
     };
@@ -107,6 +111,7 @@ export default function AppLockGate() {
   // depender de si Android tuvo a bien no matarla.
   useEffect(() => {
     let alive = true;
+    const activationProof = activation.current;
     authVersion.current += 1;
     autoPrompted.current = false;
     setMethod("biometric");
@@ -135,7 +140,11 @@ export default function AppLockGate() {
       if (on) {
         const reciente = !hadReadError && await salioHaceNada();
         if (!alive) return;
-        setLocked(!reciente);
+        const confirmedActivation = !hadReadError && activationProof !== null
+          && activation.current === activationProof && appActive.current
+          && Date.now() >= activationProof.at && Date.now() - activationProof.at <= GRACE_MS;
+        if (activation.current === activationProof) activation.current = null;
+        setLocked(!reciente && !confirmedActivation);
         // Si ya no vale, se borra: una marca vieja no tiene por qué quedarse
         // ahí esperando.
         if (!reciente) void olvidarSalida();
@@ -164,7 +173,9 @@ export default function AppLockGate() {
 
   // Encender o apagar el candado en Ajustes debe surtir efecto en esta misma
   // sesión. Antes se leía una sola vez al montar la app.
-  useEffect(() => subscribeLockConfiguration(() => {
+  useEffect(() => subscribeLockConfiguration((change) => {
+    activation.current = change === "enabled" && !lockedRef.current && !lockErrorRef.current && appActive.current
+      ? { at: Date.now() } : null;
     // Se cierran también los paneles nativos; al volver a crearlos React
     // Native copia FLAG_SECURE de la ventana principal. Una comprobación
     // anterior se cancela en la limpieza del efecto, no pisa la nueva.
@@ -223,11 +234,13 @@ export default function AppLockGate() {
 
   // Entrar y salir de la app
   useEffect(() => {
-    if (!enabled) return;
+    // Se escucha también mientras se confirma la primera activación: salir
+    // durante esa espera no debe conservar la confirmación de la sesión.
     appActive.current = AppState.currentState !== "background";
     setForeground(appActive.current);
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "background") {
+        activation.current = null;
         appActive.current = false;
         setForeground(false);
         if (lockedRef.current && verifyingPin.current) {
@@ -244,6 +257,7 @@ export default function AppLockGate() {
         appActive.current = true;
         setForeground(true);
       }
+      if (!enabled) return;
       if (next === "background" || next === "inactive") {
         if (!lockedRef.current && !prompting.current && leftAt.current === null) {
           leftAt.current = Date.now();
