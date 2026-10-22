@@ -37,9 +37,6 @@ export default function Reports({
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
-  // Vista puramente visual para comprobar las gráficas llenas. No crea
-  // movimientos, no cambia saldos y desaparece de las versiones publicadas.
-  const [chartPreview, setChartPreview] = useState(false);
   const [categoryType, setCategoryType] = useState<"expense" | "income">("expense");
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const mk = monthKey(month.y, month.m);
@@ -108,18 +105,6 @@ export default function Reports({
     [transactions, month.y, month.m],
   );
 
-  const previewDaily = useMemo(() => {
-    const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
-    return Array.from({ length: daysInMonth }, (_, index) => {
-      const day = index + 1;
-      // Patrón irregular y solo de prueba para revisar intensidades y cifras grandes.
-      const expense = ((day * 37) % 17 + 1) * 620_000_000 + (day % 6) * 95_000_000;
-      return { day, income: day % 3 === 0 ? expense * 1.4 : 0, expense };
-    });
-  }, [month.y, month.m]);
-
-  const shownDaily = chartPreview ? previewDaily : dailyCalendar;
-
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-noche"
@@ -131,25 +116,6 @@ export default function Reports({
         </View>
         <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
       </View>
-
-      {__DEV__ && (
-        <TouchableOpacity
-          onPress={() => setChartPreview((value) => !value)}
-          className={`mx-5 mt-3 self-start rounded-full border px-3 py-2 ${
-            chartPreview
-              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950"
-              : "border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche-2"
-          }`}
-        >
-          <Text
-            className={`text-xs font-bold ${
-              chartPreview ? "text-emerald-700 dark:text-emerald-300" : "text-slate-600 dark:text-slate-200"
-            }`}
-          >
-            {chartPreview ? t("reports.chartPreviewOff") : t("reports.chartPreviewOn")}
-          </Text>
-        </TouchableOpacity>
-      )}
 
       {/* En Reportes no repetimos el saldo ni las cuatro cifras de Inicio.
           Aquí empieza directamente el análisis del mes. */}
@@ -265,7 +231,7 @@ export default function Reports({
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
-        <DailyActivityCalendar data={shownDaily} month={month} onMonthChange={setMonth} />
+        <DailyActivityCalendar data={dailyCalendar} month={month} onMonthChange={setMonth} />
       </View>
 
       <View
@@ -276,7 +242,6 @@ export default function Reports({
           transactions={transactions}
           month={month}
           width={windowWidth - 72}
-          preview={chartPreview}
         />
       </View>
     </ScrollView>

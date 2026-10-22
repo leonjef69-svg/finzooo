@@ -1,5 +1,18 @@
 # Estado actual de Fino
 
+## Reportes — 22/10/2026 — retirada de la vista de prueba
+
+Se eliminó el botón «Probar 12 meses y 31 días» y el modo temporal que
+generaba cifras ficticias para llenar el calendario diario y la comparativa
+mensual. Ambas gráficas usan siempre los movimientos reales que ya recibe
+Reportes. No se escribe ni elimina información, ni se modifican saldos,
+filtros o cálculos. También se quitaron los textos del botón en español,
+inglés y portugués. La regresión verifica que no quede activador ni generador
+de datos de ejemplo. Marca `22oct-reportes-sin-modo-prueba`.
+
+**Sigue/falta:** verificar TypeScript, ESLint y el lote completo de pruebas.
+Sin cambios nativos ni necesidad de APK/AAB.
+
 ## Bloqueo — 22/10/2026 — cambiar método sin volver a bloquear dentro de Fino
 
 Se confirmó un fallo al cambiar entre huella y PIN: el ajuste avisaba un cambio

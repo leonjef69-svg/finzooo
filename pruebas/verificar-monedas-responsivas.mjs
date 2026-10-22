@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 const formato = fs.readFileSync("utils/format.ts", "utf8");
 const reports = fs.readFileSync("screens/Reports.tsx", "utf8");
+const translations = fs.readFileSync("constants/i18n.ts", "utf8");
 const dailyCalendar = fs.readFileSync("components/DailyActivityCalendar.tsx", "utf8");
 const monthlyComparison = fs.readFileSync("components/MonthlyActivityComparison.tsx", "utf8");
 const donut = fs.readFileSync("components/DonutChart.tsx", "utf8");
@@ -14,14 +15,15 @@ assert.match(formato, /fmtCompact/);
 assert.match(formato, /PUNTO_PARA_MILES/);
 assert.match(formato, /"CLP"/);
 assert.match(reports + donut, /minimumFontScale/);
-// La muestra llena debe ser solo de desarrollo y alimentar ambas gráficas
-// sin crear movimientos ficticios ni reemplazar las cuentas del reporte.
-assert.match(reports, /__DEV__\s*&&/);
-assert.match(reports, /new Date\(month\.y, month\.m \+ 1, 0\)\.getDate\(\)/);
-assert.match(reports, /<MonthlyActivityComparison[\s\S]*?preview=\{chartPreview\}/);
+// Reportes siempre presenta datos reales: no debe quedar botón ni modo de
+// ejemplo capaz de sustituir los movimientos en ninguna de las dos gráficas.
+assert.doesNotMatch(reports, /chartPreview|previewDaily|shownDaily|Probar 12 meses y 31 días/);
+assert.match(reports, /<DailyActivityCalendar data=\{dailyCalendar\}/);
+assert.match(reports, /<MonthlyActivityComparison[\s\S]*?transactions=\{transactions\}/);
+assert.doesNotMatch(monthlyComparison, /preview|1850, 2600|620_000_000/);
+assert.doesNotMatch(translations, /reports\.chartPreview(On|Off)/);
 assert.doesNotMatch(reports, /<BarChartSimple\b|shownBarData/);
-assert.match(reports, /shownDaily/);
-assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
+assert.doesNotMatch(reports, /preview|setTransactions\(/i);
 assert.ok(!reports.includes("Fino IA"), "Reportes ya no muestra Fino IA");
 assert.ok(
   reports.indexOf("<DailyActivityCalendar") < reports.indexOf("<MonthlyActivityComparison"),

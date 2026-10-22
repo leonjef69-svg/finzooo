@@ -11,12 +11,10 @@ export default function MonthlyActivityComparison({
   transactions,
   month,
   width,
-  preview = false,
 }: {
   transactions: readonly Transaction[];
   month: Month;
   width: number;
-  preview?: boolean;
 }) {
   const { t, fmt, monthNames } = useAppData();
   const [selectedMonth, setSelectedMonth] = useState(month.m);
@@ -34,14 +32,10 @@ export default function MonthlyActivityComparison({
     scrollRef.current?.scrollTo({ x: nextPage * width, animated: false });
   }, [month.y, month.m, width]);
 
-  const totals = useMemo<MonthTotals[]>(() => {
-    if (preview) {
-      const income = [1850, 2600, 3150, 2850, 3400, 2900, 3600, 3100, 3850, 3350, 4200, 3900];
-      const expense = [1250, 1430, 1600, 1510, 1880, 1700, 1800, 2050, 2350, 2100, 2200, 2480];
-      return income.map((amount, index) => ({ income: amount, expense: expense[index] }));
-    }
-    return monthlyActivityTotals(transactions, month.y);
-  }, [transactions, month.y, preview]);
+  const totals = useMemo<MonthTotals[]>(
+    () => monthlyActivityTotals(transactions, month.y),
+    [transactions, month.y],
+  );
 
   const maxAmount = Math.max(0, ...totals.flatMap((item) => [item.income, item.expense]));
   const money = (amount: number) => fmt(amount);

@@ -1,5 +1,17 @@
 # Entregas de Fino
 
+## 22/10/2026 — retirada de la vista de prueba de Reportes (desarrollo)
+
+Se quitó el botón «Probar 12 meses y 31 días», las cifras sintéticas que
+alimentaban el calendario diario y los totales de muestra de la comparativa
+mensual. Las gráficas quedan conectadas únicamente a los movimientos reales;
+no se alteran movimientos, saldos, filtros ni cálculos. Se eliminaron también
+los textos del modo de prueba en los tres idiomas. Una regresión comprueba que
+el botón y los generadores ya no estén.
+
+**Sigue/falta:** verificar TypeScript, ESLint y las pruebas completas. Sin
+cambios nativos; no requiere APK/AAB.
+
 ## 22/10/2026 — método de desbloqueo sin activar el candado dentro de la sesión
 
 Corregido un falso bloqueo: cambiar la preferencia huella/PIN emitía el mismo
