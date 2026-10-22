@@ -5,14 +5,14 @@ import { useColorScheme } from "nativewind";
 import { TrendingDown, TrendingUp } from "lucide-react-native";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
-import DailyBarsChart from "@/components/DailyBarsChart";
+import DailyActivityCalendar from "@/components/DailyActivityCalendar";
 import MonthSelector from "@/components/MonthSelector";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
 import { fmtExact, monthKey } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
-import { dailySpendBars } from "@/utils/reportDaily";
+import { dailyCalendarTotals } from "@/utils/reportCalendar";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 
@@ -135,14 +135,11 @@ export default function Reports({
       .filter((b) => b.value > 0);
   }, [transactions, month.y, month.m, monthNames]);
 
-  // Gasto de cada día del mes que se está viendo.
-  //
-  // Solo los días en que se gastó, en orden, igual que el gráfico de meses
-  // solo enseña los meses con gasto. Dibujar los 31 días del calendario
-  // dejaba cada columna en 9px, y ahí no cabe ni el número del día ni el
-  // monto: los números acababan debajo de la barra equivocada y los montos
-  // se pisaban o no se escribían.
-  const daily = useMemo(() => dailySpendBars(transactions, month), [transactions, month]);
+  // Totales diarios del calendario. Solo presentación: no se guardan ni alteran movimientos.
+  const dailyCalendar = useMemo(
+    () => dailyCalendarTotals(transactions, { y: month.y, m: month.m }),
+    [transactions, month.y, month.m],
+  );
 
   const previewBarData = useMemo(
     () =>
@@ -159,19 +156,18 @@ export default function Reports({
     [monthNames],
   );
 
-  const previewDaily = useMemo(
-    () =>
-      Array.from({ length: 31 }, (_, index) => {
-        const day = index + 1;
-        // Patrón irregular para que haya barras bajas, medias y altas juntas.
-        const amount = ((day * 37) % 17 + 1) * 620_000_000 + (day % 6) * 95_000_000;
-        return { day, amount };
-      }),
-    [],
-  );
+  const previewDaily = useMemo(() => {
+    const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      // Patrón irregular y solo de prueba para revisar intensidades y cifras grandes.
+      const expense = ((day * 37) % 17 + 1) * 620_000_000 + (day % 6) * 95_000_000;
+      return { day, income: day % 3 === 0 ? expense * 1.4 : 0, expense };
+    });
+  }, [month.y, month.m]);
 
   const shownBarData = chartPreview ? previewBarData : barData;
-  const shownDaily = chartPreview ? previewDaily : daily.bars;
+  const shownDaily = chartPreview ? previewDaily : dailyCalendar;
 
   return (
     <ScrollView
@@ -318,30 +314,7 @@ export default function Reports({
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
-        <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>
-        {shownDaily.length === 0 ? (
-          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
-            {t("reports.noDataThisMonth")}
-          </Text>
-        ) : (
-          <View className="mt-2">
-            <DailyBarsChart
-              data={shownDaily}
-              fmt={fmt}
-              fmtAxis={(value) => fmtCompact(value).replace(/\s+/g, "")}
-              width={windowWidth - 72}
-              today={chartPreview ? 0 : daily.today}
-              hint={t("reports.byDayHint")}
-              formatSelected={(day, amount) =>
-                amount > 0
-                  ? t("reports.byDaySelected", { day, month: monthNames[month.m], amount: fmt(amount) })
-                  : t("reports.byDayNoSpend", { day, month: monthNames[month.m] })
-              }
-              showAmountsLabel={t("reports.byDayShowAmounts")}
-              hideAmountsLabel={t("reports.byDayHideAmounts")}
-            />
-          </View>
-        )}
+        <DailyActivityCalendar data={shownDaily} month={month} onMonthChange={setMonth} />
       </View>
 
       <View

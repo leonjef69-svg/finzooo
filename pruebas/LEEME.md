@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+22/10 Reportes: `verificar-gasto-diario-real.ts` comprueba calendario completo
+(incluidos días vacíos), suma de ingreso/gasto por fecha, exclusión de
+transferencias internas, febrero bisiesto y que Reportes conecte el agregado
+real al calendario en vez de las barras. Todo con movimientos sintéticos; no
+escribe datos del usuario ni acredita la captura visual de Android. También
+impide que las cifras largas se reduzcan automáticamente de tamaño.
+
 22/10 Tercera petición del PIN: `verificar-bloqueo-alternativo-real.mjs` ejecuta
 el guardián y `enableLock` originales para activar en una sesión ya abierta sin
 volver a autenticar. Comprueba biometría disponible/no disponible, evento de

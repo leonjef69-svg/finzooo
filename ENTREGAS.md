@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 22/10/2026 — calendario de Gastos diarios (desarrollo)
+
+En Reportes, el gráfico de barras diarias se reemplaza por un calendario
+compacto de lunes a domingo. Los verdes indican la intensidad del gasto y tocar
+un día muestra ingresos en verde y gastos en rojo, ambos en sus lados; si falta
+uno, se aclara «Sin ingresos»/«Sin gastos». Sin operaciones ese día se muestra
+«Sin movimientos». El día más reciente con actividad queda seleccionado al abrir;
+en meses vacíos se selecciona hoy (o el día 1 si es un mes pasado). Los importes
+largos conservan su tamaño y pueden ocupar dos líneas; no se achican. Se usa el
+formateador monetario existente. No hay lista extra ni fecha repetida. Las
+flechas actualizan el mes común de Reportes y se conserva el selector mensual.
+
+Se usan los movimientos ya cargados, agrupados sin transferencias internas; no
+se crean, editan, borran ni persisten datos. Vista previa de desarrollo queda
+sintética y separada de los datos reales. Cambios solo JS/TypeScript: no requiere
+compilación nativa ni nuevos permisos/servicios; `PLAYSTORE.md` no cambia.
+La comprobación de pantalla en el emulador habitual quedó pendiente: la captura
+de Windows expiró, así que no se navegó ni se tocó la cuenta. Sin APK/AAB/OTA,
+publicación o despliegue.
+
+TypeScript, ESLint y `git diff --check` aprobados; lote completo: 256 pruebas y
+8 auditores, todos en verde.
+
 ## 22/10/2026 — activación sin tercera petición de PIN (desarrollo)
 
 Marca `22oct-pin-sin-tercera-vez`. Crear y confirmar PIN ya no provoca otra

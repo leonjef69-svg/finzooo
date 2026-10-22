@@ -1,5 +1,29 @@
 # Estado actual de Fino
 
+## Reportes — 22/10/2026 — calendario de gastos diarios
+
+«Gastos diarios» sustituye las barras por un calendario mensual compacto de
+lunes a domingo. Todos los días del mes aparecen; los tonos verdes indican cuánto
+se gastó (más intenso, mayor gasto). Al tocar un día se muestran Ingresos a la
+izquierda y Gastos a la derecha, con verde/rojo y «Sin ingresos»/«Sin gastos»
+cuando falta uno; si no hay actividad, «Sin movimientos». No se repiten fechas ni
+se agrega una lista de movimientos. Los importes usan el formateador monetario
+existente; si una cifra larga no cabe en una línea, ocupa dos con tamaño fijo en
+vez de encogerse.
+
+Las flechas cambian el mismo mes global de Reportes y el selector mensual
+existente sigue disponible. Se agrupan los movimientos reales, excluyendo las
+transferencias internas igual que el gráfico anterior. Es presentación derivada:
+no escribe, borra ni modifica movimientos, saldos, datos locales o nube. No hay
+campos nuevos ni cambio de permisos; PLAYSTORE.md no requiere actualización.
+La lógica de fechas valida mes, días y año bisiesto. TypeScript, ESLint, 256
+pruebas y 8 auditores aprobados; la regresión comprueba también el tamaño fijo
+de los importes largos.
+
+**Sigue/falta:** revisión visual de la pantalla en el emulador habitual; la
+captura de Windows expiró y no se interactuó con el emulador. Sin APK/AAB/OTA,
+publicación o despliegue. No se tocaron datos reales.
+
 ## Bloqueo — 22/10/2026 — sin tercera entrada del PIN al activar
 
 Marca `22oct-pin-sin-tercera-vez`. La causa era que `enableLock` notificaba un
@@ -28,7 +52,6 @@ Servidor local de desarrollo activo; sin activar/desactivar el bloqueo real.
 **Sigue/falta:** comprobar personalmente activar/confirmar en Android y sensor
 real; no se automatiza configuración/autenticación ni se cambia su seguridad.
 Sin campos persistentes nuevos, permisos, código nativo, APK/AAB/OTA o despliegue.
-Calendario diario permanece pendiente hasta cerrar el bloqueo.
 
 ## Bloqueo — 22/10/2026 — configuración en panel inferior compacto
 
