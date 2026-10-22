@@ -139,7 +139,7 @@ export default function ExportPdfSheet({
   // TypeScript diera por imposible un caso que sí ocurre.
   destination?: ExportDestination;
 }) {
-  const { t, transactions, month, monthNames, userName, userEmail, userCurrency, showToast, categoryBudgets, budgets } =
+  const { t, transactions, goals, month, monthNames, userName, userEmail, userCurrency, showToast, categoryBudgets, budgets } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { animatedPaddingStyle, onFieldFocus, onFieldBlur } = useKeyboardAnimatedPadding();
@@ -181,7 +181,6 @@ export default function ExportPdfSheet({
       if (!vivo) return;
       setEspacios(lista);
       setCarryoverCleared(cortes);
-      setEspacioId((actual) => lista.some((item) => item.id === actual) ? actual : "personal");
       setEspaciosCargando(false);
     });
     return () => { vivo = false; };
@@ -402,7 +401,7 @@ export default function ExportPdfSheet({
   // elegirlo solo llevaría a un "0 movimientos" y a un botón que no hace
   // nada. Ojo: NO se filtra por el tipo elegido abajo (Gastos/Ingresos), o
   // los meses irían apareciendo y desapareciendo al cambiar ese selector.
-  const espacio = espacios.find((item) => item.id === espacioId) ?? espacios[0];
+  const espacio = espacios.find((item) => item.id === espacioId);
   const movimientosDelEspacio = useMemo(() => espacio?.transactions ?? [], [espacio]);
   const fmt = espacio ? formateadorDelEspacio(espacio) : (() => "-");
 
@@ -492,6 +491,7 @@ export default function ExportPdfSheet({
    */
   /** El HTML del reporte. Las cuentas viven en utils/reportePdfDatos. */
   function construirHtml(): string {
+    if (!espacio) throw new Error(t("exportPdf.spaceUnavailable"));
     return htmlDelReporte({
       movimientos: monthTx,
       todos: movimientosDelEspacio,
@@ -507,10 +507,11 @@ export default function ExportPdfSheet({
       etiquetaDelMes: selectedMonthLabel,
       nombreDelEspacio: espacio?.name || t("spaces.personal"),
       resumen: resumenFinanciero(
-        espacio ?? espacios[0],
+        espacio,
         selectedMk,
         budgets,
         carryoverCleared,
+        goals,
       ),
       t,
     });
@@ -843,6 +844,12 @@ export default function ExportPdfSheet({
   useEffect(() => {
     if (!autoExport || autoFired.current || !initialMonth) return;
     if (espaciosCargando) return;
+    if (!espacio) {
+      autoFired.current = true;
+      showToast(t("exportPdf.spaceUnavailable"));
+      if (silent) onClose();
+      return;
+    }
 
     // Una programación sin movimientos no puede quedarse como una ruta
     // invisible abierta para siempre. Es un resultado terminal para esta
@@ -883,7 +890,7 @@ export default function ExportPdfSheet({
       if (silent) onClose();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoExport, initialMonth, availableMonths, recipientName, contactosCargados, espaciosCargando]);
+  }, [autoExport, initialMonth, availableMonths, recipientName, contactosCargados, espaciosCargando, espacio]);
 
   // La copia automática a Drive no dibuja nada. El trabajo lo hacen los
   // efectos de arriba, que corren igual: un componente que devuelve null
@@ -964,6 +971,12 @@ export default function ExportPdfSheet({
               </TouchableOpacity>
             ))}
           </ScrollView>
+        )}
+
+        {!espaciosCargando && !espacio && (
+          <View className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-3 mb-4">
+            <Text className="text-xs text-amber-800 dark:text-amber-200">{t("exportPdf.spaceUnavailable")}</Text>
+          </View>
         )}
 
         {/* Selector de mes. En fila con desplazamiento horizontal en vez de

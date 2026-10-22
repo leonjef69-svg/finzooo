@@ -1,5 +1,43 @@
 # Estado actual de Fino
 
+## Exportación — 22/10/2026 — filas coherentes con Personal
+
+Marca `22oct-reporte-coincide-personal`. La selección compartida de PDF, CSV y
+XLSX reutiliza ahora la regla de Inicio: los recibos antiguos de aportes y
+devoluciones de metas (`internalTransfer: goal`) no vuelven a aparecer como
+movimientos adicionales. No se borran, ocultan ni reescriben en el almacenamiento;
+continúan en el Historial de Ahorro existente. Se conservan los gastos reales y
+las transferencias de Familia/Cajas. No se modifica el saldo de ninguna cuenta.
+El disponible del PDF usa también el apartado actual de metas, con las mismas
+funciones de Inicio; no cambia metas, movimientos ni presupuesto al calcularlo.
+
+Manual y automático siguen tomando únicamente el espacio, mes y tipo elegidos.
+La regresión ejecuta los selectores originales de pantalla y el proceso de fondo
+con Personal, Familia, Caja privada y compartida. La pantalla ya no cambia a
+Personal cuando desaparece el espacio elegido: mantiene la elección y pide
+otra, sin generar el archivo equivocado. El automático invisible avisa y se
+cierra sin confirmar una entrega inexistente. El trabajo de fondo ya rechazaba
+un espacio ausente. PDF/CSV/XLSX, filtros, transferencias reales,
+meses y datos originales comprobados con datos ficticios. Falla contra 7b8aa9ea
+en el caso que antes volvía a incluir cinco recibos de Ahorro.
+
+Emulador habitual: la vista previa pasó de seis filas y total S/84 a una fila
+de ingreso S/100 y total S/100, conservando presupuesto S/50 y disponible S/150.
+Se abrió «Ver el documento» y se revisó su imagen real. La captura de Windows
+agotó el tiempo dos veces; se usó Android. No se enviaron archivos ni se hicieron
+operaciones financieras. Tras ampliar las comprobaciones se detectó una copia
+de desarrollo incompleta en el emulador (faltaba `[` frente al archivo servido
+por Metro). Se recargó la app completa, sin limpiar sus datos; Inicio volvió a
+mostrar S/150. TypeScript, ESLint y el lote final aprobados: 254 pruebas y 8
+auditores. Reservas cumplidas, disponible negativo, otros meses y espacio
+ausente se verificaron con datos sintéticos, sin modificar cuentas reales.
+
+**Sigue/falta:** conversión PDF
+nativa y entrega programada/WhatsApp reales siguen sin acreditarse por una vista
+previa; WhatsApp no está instalado en el emulador. No se genera APK/AAB/OTA,
+publicación o despliegue de Firebase. No se cambian campos guardados, permisos,
+destinos, programación, cifrado ni retención.
+
 ## Exportación PDF — 22/10/2026 — resumen compacto de base y movimientos
 
 Marca `22oct-pdf-base-movimientos`. El PDF de «Exportar movimientos», su vista

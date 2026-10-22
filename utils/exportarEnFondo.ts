@@ -44,7 +44,7 @@ import {
   toDateKey,
   type ScheduledExport,
 } from "@/utils/scheduledExport";
-import type { Profile, Transaction } from "@/types";
+import type { Goal, Profile, Transaction } from "@/types";
 import { loadPrueba, pruebaVigente } from "@/utils/pruebaPremium";
 import {
   cargarEspaciosExportables,
@@ -324,7 +324,8 @@ export async function exportarEnFondo(
         ),
         etiquetaDelMes: `${monthNamesFor(idioma)[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`,
         nombreDelEspacio: espacio.name,
-        resumen: resumenFinanciero(espacio, mes, budgets, carryoverCleared),
+        resumen: resumenFinanciero(espacio, mes, budgets, carryoverCleared,
+          espacio.kind === "personal" ? await loadJSON<Goal[]>(STORAGE_KEYS.goals, []) : []),
         t,
       });
       // La ruta se arma con la MISMA pieza que usa el Excel (new File(Paths.cache,

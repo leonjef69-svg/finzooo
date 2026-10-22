@@ -12,11 +12,12 @@ import {
   type MovimientoCajaCompartida,
 } from "@/utils/cloudCajasCompartidas";
 import { availablePersonalBalance } from "@/utils/finances";
+import { saldoLibre, totalApartado } from "@/utils/ahorro";
 import { fmtExact as formatAmount, horaDe } from "@/utils/format";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 import { loadJSON, STORAGE_KEYS } from "@/utils/storage";
-import type { Transaction } from "@/types";
+import type { Goal, Transaction } from "@/types";
 
 export type ExportSpaceKind = "personal" | "family" | "box" | "sharedBox";
 
@@ -157,6 +158,7 @@ export function resumenFinanciero(
   mes: string,
   budgets: Record<string, number>,
   carryoverCleared: string[],
+  goals: Goal[] = [],
 ): ExportFinancialSummary {
   const delMes = espacio.transactions.filter((item) => item.date.startsWith(mes));
   if (espacio.kind === "personal") {
@@ -167,7 +169,7 @@ export function resumenFinanciero(
     const budget = budgets[mes] ?? 0;
     const previousBalance = saldoAnteriorDe(mes, budgets, espacio.transactions, carryoverCleared);
     return {
-      available: availablePersonalBalance({ budget, prevBalance: previousBalance, income, spent: expenses, transfersOut, transfersIn }),
+      available: saldoLibre(availablePersonalBalance({ budget, prevBalance: previousBalance, income, spent: expenses, transfersOut, transfersIn }), totalApartado(goals)),
       income,
       expenses,
       result: moneyFromUnits(moneyUnits(income) - moneyUnits(expenses)),

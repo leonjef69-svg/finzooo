@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 22/10/2026 — reporte alineado con Personal, sin borrar movimientos (desarrollo)
+
+Marca `22oct-reporte-coincide-personal`. PDF/CSV/XLSX usan la misma regla de
+visibilidad de Inicio para recibos antiguos de Ahorro; los datos guardados y sus
+saldos no se modifican. Manual/automático conservan el espacio seleccionado y
+las transferencias reales de Familia/Cajas. El disponible exportado descuenta
+las reservas de metas igual que Inicio; solo lee esas metas, no las modifica.
+Si falta el espacio elegido, la pantalla ya no vuelve sola a Personal ni crea
+un reporte con ese otro libro. Prueba ampliada roja contra 7b8aa9ea
+y verde actual; selección original, cuatro espacios, tres filtros/formatos,
+pantalla y fondo con entradas/salidas adaptadas, sin datos reales alterados.
+
+Emulador habitual: documento revisado con un ingreso S/100, presupuesto S/50,
+disponible S/150 y total S/100; desaparece del reporte el antiguo total S/84.
+No se enviaron archivos ni se guardaron operaciones. Se volvió a cargar la app
+completa tras detectar una copia de desarrollo incompleta, sin borrar datos;
+Inicio vuelve a S/150. TypeScript, ESLint, 254 pruebas y 8 auditores aprobados.
+Reservas activas/cumplidas, disponible negativo, meses y espacio ausente
+comprobados con datos ficticios. **Sigue/falta:** conversión nativa, entrega
+programada y envío real por WhatsApp no probados.
+Sin APK/AAB/OTA, publicación o cambios en Firebase.
+
 ## 22/10/2026 — PDF con base y movimientos agrupados (desarrollo)
 
 Marca `22oct-pdf-base-movimientos`. Resumen compacto compartido por Exportar
