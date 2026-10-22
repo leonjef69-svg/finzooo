@@ -307,6 +307,7 @@ export async function exportarEnFondo(
         todos: movimientos,
         mes,
         tipo: schedule.type,
+        resumenAgrupado: true,
         charts: schedule.charts ?? false,
         userName: perfil.userName ?? "",
         nombresDeMes: monthNamesFor(idioma),

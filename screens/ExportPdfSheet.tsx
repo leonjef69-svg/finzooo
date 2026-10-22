@@ -497,6 +497,7 @@ export default function ExportPdfSheet({
       todos: movimientosDelEspacio,
       mes: selectedMk,
       tipo: exportType,
+      resumenAgrupado: true,
       charts,
       userName,
       nombresDeMes: monthNames,

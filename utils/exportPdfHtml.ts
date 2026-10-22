@@ -45,6 +45,8 @@ export type PdfTexts = {
   budget?: string;
   budgeted?: string;
   previousBalance?: string;
+  monthBase?: string;
+  monthlyMovements?: string;
   periodResult?: string;
   space?: string;
   byCategory: string;
@@ -86,6 +88,8 @@ export type PdfOptions = {
   monthly: PdfMonth[];
   /** Fecha de generación, ya escrita. */
   generatedAt: string;
+  /** Resumen compacto del reporte, con base y movimientos separados. */
+  groupedSummary?: boolean;
   summary?: {
     available: number;
     income: number;
@@ -419,6 +423,39 @@ export function cabeApretando(alto: number): boolean {
   return alto > ALTO_HOJA && alto <= ALTO_HOJA * 1.3;
 }
 
+function resumenAgrupado(o: PdfOptions, resumen: NonNullable<PdfOptions["summary"]>, ingresos: number, gastos: number, hayIngresos: boolean, hayGastos: boolean): string {
+  const { texts: T, fmt } = o;
+  const monto = (amount: number) => amount < 0 ? `-${fmt(Math.abs(amount))}` : fmt(amount);
+  const dato = (id: string, label: string, amount: number, color: string, sign = "") =>
+    `<div data-report-card="${id}"${id === "budget" ? " data-report-budget" : ""} style="margin-top:9px;">
+      <div style="font-size:9px;color:#64748b;">${esc(label)}</div>
+      <div style="margin-top:3px;font-size:17px;line-height:1.2;font-weight:600;color:${color};overflow-wrap:anywhere;">${sign}${esc(monto(amount))}</div>
+    </div>`;
+  const base = [
+    Number.isFinite(resumen.budget) && resumen.budget! > 0 ? dato("budget", T.budget || "Presupuesto", resumen.budget!, "#0f172a") : "",
+    Number.isFinite(resumen.previousBalance) && resumen.previousBalance !== 0
+      ? dato("previousBalance", T.previousBalance || "Saldo anterior", resumen.previousBalance!, resumen.previousBalance! < 0 ? ROJO : "#0f172a") : "",
+  ].filter(Boolean);
+  const movimientos = [hayIngresos ? dato("income", T.income, ingresos, VERDE, "+") : "", hayGastos ? dato("expenses", T.expenses, gastos, ROJO, "-") : ""].filter(Boolean);
+  const iconoBase = '<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.6" style="vertical-align:-2px;margin-right:5px;"><path d="M4 5h14v4H4a2 2 0 0 1 0-4Z"/><path d="M2 7v12h19V9H4"/><path d="M16 13h5v3h-5z"/></svg>';
+  const iconoMovimientos = '<svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.6" style="vertical-align:-2px;margin-right:5px;"><path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/></svg>';
+  const titulo = (label: string, icon: string) => `<div style="font-size:11px;font-weight:600;color:#334155;margin-bottom:12px;">${icon}${esc(label)}</div>`;
+  const bloqueBase = base.length ? `<div data-report-group="base">${titulo(T.monthBase || "Base del mes", iconoBase)}${base.join("")}</div>` : "";
+  const valoresMovimientos = !base.length && movimientos.length > 1
+    ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr>${movimientos.map(item => `<td style="width:50%;vertical-align:top;padding:0 12px 0 0;">${item}</td>`).join("")}</tr></table>` : movimientos.join("");
+  const bloqueMovimientos = movimientos.length ? `<div data-report-group="movements">${titulo(base.length ? T.movements : T.monthlyMovements || T.movements, iconoMovimientos)}${valoresMovimientos}</div>` : "";
+  const cuerpo = bloqueBase && bloqueMovimientos
+    ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><tr><td style="width:50%;vertical-align:top;padding:0 14px 0 0;">${bloqueBase}</td><td style="width:50%;vertical-align:top;padding:0;">${bloqueMovimientos}</td></tr></table>`
+    : bloqueBase || bloqueMovimientos;
+  return `<section data-report-summary data-report-layout="grouped" style="margin-top:15px;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;page-break-inside:avoid;">
+    ${cuerpo}
+    <div data-report-card="available" style="${cuerpo ? "margin-top:13px;padding-top:11px;border-top:1px solid #e2e8f0;" : ""}">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.3px;color:#475569;">${esc(T.available || "Saldo disponible")}</div>
+      <div style="font-size:22px;line-height:1.2;font-weight:600;margin-top:4px;color:${resumen.available < 0 ? ROJO : "#0f172a"};overflow-wrap:anywhere;">${esc(monto(resumen.available))}</div>
+    </div>
+  </section>`;
+}
+
 export function buildPdfHtml(o: PdfOptions): string {
   const { texts: T, fmt } = o;
   const tipo = o.reportType ?? "all";
@@ -512,6 +549,7 @@ export function buildPdfHtml(o: PdfOptions): string {
     })
     .join("");
 
+  const resumenHtml = o.groupedSummary ? resumenAgrupado(o, resumen, ingresos, gastos, hayIngresos, hayGastos) : (() => {
   const tarjeta = (id: string, etiqueta: string, monto: number, color: string, fondo: string, principal = false, detalle = "") => `
     <div data-report-card="${id}" style="border:1px solid ${color}33;border-left:3px solid ${color};border-radius:8px;background:${fondo};padding:10px 12px;page-break-inside:avoid;">
       <div style="font-size:10px;color:#475569;">${esc(etiqueta)}</div>
@@ -536,10 +574,11 @@ export function buildPdfHtml(o: PdfOptions): string {
   for (let i = 0; i < tarjetas.length; i += 2) {
     filasResumen.push(`<tr><td style="width:50%;padding:8px 4px 0 0;vertical-align:top;">${tarjetas[i]}</td><td style="width:50%;padding:8px 0 0 4px;vertical-align:top;">${tarjetas[i + 1] || ""}</td></tr>`);
   }
-  const resumenHtml = `<section data-report-summary style="margin-top:17px;page-break-inside:avoid;">
+  return `<section data-report-summary style="margin-top:17px;page-break-inside:avoid;">
     ${saldo}
     ${filasResumen.length ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">${filasResumen.join("")}</table>` : ""}
   </section>`;
+  })();
 
   const totalGastoCats = sumMoney(catsGasto.map((c) => c.amount));
   const totalIngresoCats = sumMoney(catsIngreso.map((c) => c.amount));

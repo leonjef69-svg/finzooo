@@ -75,6 +75,37 @@ for (const language of ["es", "en", "pt"]) {
 assert.equal(translations.es["exportPdf.colMethod"], "Método de pago");
 for (const budget of [undefined, 0, -5]) assert.ok(!htmlDelReporte(data("all", "es", { resumen: { ...resumen, budget } })).includes("data-report-budget"));
 const all = htmlDelReporte(data());
+// Referencias del usuario: dos columnas con base; movimientos a todo el
+// ancho sin presupuesto/arrastre, y un único saldo al pie. Mismos importes.
+const groupedCases = [
+  { budget: 500, previousBalance: 300, available: 780 },
+  { budget: 500, previousBalance: 0, available: 480 },
+  { previousBalance: 0, available: -20 },
+  { previousBalance: 300, available: 280 },
+];
+for (const language of ["es", "en", "pt"]) for (const example of groupedCases) {
+  const d = data("all", language, { resumenAgrupado: true, resumen: { income: 30, expenses: 50, result: -20, ...example } });
+  const html = htmlDelReporte(d);
+  assert.ok(html.includes('data-report-layout="grouped"'), "el automático usa la tarjeta agrupada pedida, no las tarjetas anteriores");
+  const section = html.match(/<section data-report-summary\b[^>]*>([\s\S]*?)<\/section>/)[1];
+  const fields = [...section.matchAll(/data-report-card="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(fields.length, new Set(fields).size, "cada dato aparece una sola vez");
+  assert.equal(fields.includes("budget"), Boolean(example.budget));
+  assert.equal(fields.includes("previousBalance"), Boolean(example.previousBalance));
+  assert.equal(fields.at(-1), "available", "el saldo disponible queda al pie del mismo bloque");
+  assert.equal(section.includes('data-report-group="base"'), Boolean(example.budget || example.previousBalance));
+  assert.equal(section.includes(d.t("exportPdf.monthBase")), Boolean(example.budget || example.previousBalance));
+  assert.ok(section.includes(example.available < 0 ? `-${fmt(Math.abs(example.available))}` : fmt(example.available)));
+  assert.ok(section.includes("+S/ 30.00") && section.includes("-S/ 50.00"));
+  assert.match(section, /color:#059669/); assert.match(section, /color:#e11d48/);
+  assert.ok(!section.includes(d.t("exportPdf.periodResult")), "no repite el resultado como otro saldo");
+  if (!example.budget && !example.previousBalance) assert.ok(section.includes(d.t("exportPdf.monthlyMovements")));
+}
+for (const type of ["income", "expense"]) {
+  const html = htmlDelReporte(data(type, "es", { resumenAgrupado: true }));
+  assert.ok(!text(html).includes(translations.es[type === "income" ? "exportPdf.expenses" : "exportPdf.income"]));
+  assert.equal((html.match(/data-report-card="available"/g) ?? []).length, 1);
+}
 assert.ok(text(all).includes("S/ 480.00") && all.includes("data-report-budget"));
 assert.ok(!all.includes(translations.es["exportPdf.previousBalance"]), "Saldo anterior cero no ocupa otra fila");
 const onlyExpenses = htmlDelReporte(data("all", "es", { movimientos: [movimientos[0]], resumen: { ...resumen, income: 0 } }));
@@ -132,18 +163,30 @@ for (const currency of ["PEN", "USD", "EUR", "JPY", "CLP", "BHD"]) {
   }
 }
 
-// ConstruirHtml de la pantalla REAL, no una copia del recorrido manual.
-for (const type of ["expense", "income"]) {
-  const manual = handlerOriginal("screens/ExportPdfSheet.tsx", "construirHtml", {
+// ConstruirHtml de la pantalla REAL en los tres recorridos: el PDF que se
+// previsualiza/comparte manualmente, el automático abierto y el programado.
+const screenModes = [
+  { name: "manual", autoExport: false, scheduledRunKey: undefined },
+  { name: "automático abierto", autoExport: true, scheduledRunKey: undefined },
+  { name: "programado", autoExport: false, scheduledRunKey: "2026-10-14-prueba" },
+];
+for (const type of ["expense", "income", "all"]) for (const mode of screenModes) {
+  const screenHtml = handlerOriginal("screens/ExportPdfSheet.tsx", "construirHtml", {
     htmlDelReporte, monthTx: movimientosParaReporte(movimientos, type), movimientosDelEspacio: movimientosReales,
     selectedMk: "2026-10", exportType: type, charts: true, userName: "Cuenta de ejemplo",
+    autoExport: mode.autoExport, scheduledRunKey: mode.scheduledRunKey,
     monthNames: monthNamesFor("es"), espacio: espacioReal, categoryBudgets: {}, fmt: fmtReal,
-    reportTitleFor: () => translations.es[type === "expense" ? "exportPdf.pdfTitleExpenses" : "exportPdf.pdfTitleIncome"],
+    reportTitleFor: () => translations.es[type === "expense" ? "exportPdf.pdfTitleExpenses" : type === "income" ? "exportPdf.pdfTitleIncome" : "exportPdf.pdfTitleAll"],
     selectedMonthLabel: "Octubre 2026", espacios: [], budgets, carryoverCleared: [],
     resumenFinanciero, t: key => translations.es[key] ?? key,
   }, read("screens/ExportPdfSheet.tsx"))();
-  assert.ok(!text(manual).includes(translations.es[type === "expense" ? "exportPdf.income" : "exportPdf.expenses"]));
-  assert.ok(text(manual).includes("S/ 1,999,202,250.75") && text(manual).includes("S/ 1,999,202,020.75"));
+  if (type !== "all") assert.ok(!text(screenHtml).includes(translations.es[type === "expense" ? "exportPdf.income" : "exportPdf.expenses"]));
+  assert.ok(text(screenHtml).includes("S/ 1,999,202,250.75") && text(screenHtml).includes("S/ 1,999,202,020.75"));
+  assert.ok(screenHtml.includes('data-report-layout="grouped"'), `${mode.name}/${type}: vista previa y PDF compartido usan el diseño agrupado`);
+  const section = screenHtml.match(/<section data-report-summary\b[^>]*>([\s\S]*?)<\/section>/)[1];
+  const fields = [...section.matchAll(/data-report-card="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(fields.length, new Set(fields).size, `${mode.name}/${type}: sin repetir cifras en el resumen`);
+  assert.equal(fields.at(-1), "available");
 }
 
 // El proceso original de fondo llega al MISMO generador; IO completamente ficticio.
@@ -171,7 +214,8 @@ for (const type of ["expense", "income"]) {
   }, source);
   const result = await run(false);
   assert.equal(result.resultado, "hecho", JSON.stringify(result));
+  assert.ok(htmlGenerated.includes('data-report-layout="grouped"'), "el proceso automático real activa el diseño nuevo");
   assert.ok(!text(htmlGenerated).includes(translations.es[type === "expense" ? "exportPdf.income" : "exportPdf.expenses"]));
   assert.ok(text(htmlGenerated).includes("S/ 1,999,202,250.75") && text(htmlGenerated).includes("S/ 1,999,202,020.75"));
 }
-console.log("PDF original manual/automático: tarjetas únicas de color, saldo/presupuesto reales en cada filtro, cifras completas, seis monedas, tres idiomas, método de pago y puntos azules. IO ficticio; conversión Android/entrega reales aparte.");
+console.log("PDF original manual/automático: pantalla real manual, automática abierta y programada con resumen agrupado, cuatro bases, campos únicos, saldo/presupuesto reales y filtros; cifras completas, seis monedas y tres idiomas. Fondo original con IO ficticio; conversión Android/entrega reales aparte.");

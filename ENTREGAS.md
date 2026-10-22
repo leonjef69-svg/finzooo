@@ -1,5 +1,25 @@
 # Entregas de Fino
 
+## 22/10/2026 — PDF con base y movimientos agrupados (desarrollo)
+
+Marca `22oct-pdf-base-movimientos`. Resumen compacto compartido por Exportar
+movimientos, vista previa/PDF para WhatsApp y exportación automática en pantalla
+o segundo plano. Base del mes opcional (presupuesto/saldo anterior), movimientos
+con ingresos/gastos presentes y un solo saldo disponible al pie; sin campos
+ausentes, cifras repetidas ni abreviaturas de montos. Sin cambios en cálculos,
+datos, destinos, programación, CSV ni XLSX.
+
+Regresión específica verde y roja contra e66fede0 sin el diseño; TypeScript,
+ESLint, 254 pruebas y 8 auditores aprobados. Cuatro PDF sintéticos impresos y
+revisados en Chromium. Emulador habitual recargado y vista previa real revisada:
+presupuesto S/50, ingreso S/100, saldo S/150; se dejó abierta sin enviar archivos
+ni modificar movimientos. WhatsApp no está instalado allí: por eso no aparece
+su botón, no porque se haya retirado la función.
+
+**Sigue/falta:** conversión PDF nativa, entrega programada y envío real por
+WhatsApp. Huella/PIN no se cambió. Sin APK/AAB/OTA, publicación ni despliegue de
+servicios Firebase.
+
 ## 21/10/2026 — metas con S/0 y devolución al anular gasto (desarrollo)
 
 Marca `21oct-ahorro-gasto-anulado-meta-cero`. Primer aporte opcional explicado;

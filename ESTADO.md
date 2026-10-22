@@ -1,5 +1,36 @@
 # Estado actual de Fino
 
+## Exportación PDF — 22/10/2026 — resumen compacto de base y movimientos
+
+Marca `22oct-pdf-base-movimientos`. El PDF de «Exportar movimientos», su vista
+previa y el archivo para compartir por WhatsApp usan el mismo resumen agrupado
+que el PDF automático, tanto abierto en pantalla como ejecutado en segundo
+plano. «Base del mes» agrupa presupuesto y saldo anterior solo cuando existen;
+«Movimientos» muestra ingresos y gastos presentes. Sin base, los movimientos
+aprovechan todo el ancho. Un único saldo disponible cierra el bloque, con montos
+completos y colores para distinguir ingresos, gastos y saldos negativos.
+
+Es únicamente presentación: se conservan cálculos, datos, filtros, destinos,
+programación y formatos CSV/XLSX. La regresión específica ejecuta el generador,
+la pantalla original en modo manual/automático/programado y el proceso de fondo
+con datos ficticios; pasa con el cambio y falla contra e66fede0 sin el diseño
+nuevo. TypeScript, ESLint y el lote general aprobados: 254 pruebas y 8 auditores.
+Se imprimieron y revisaron los cuatro ejemplos sintéticos en Chromium; no hubo
+desbordamiento ni campos repetidos.
+
+En el emulador habitual se recargó el código actual y se abrió «Exportar
+movimientos → Ver el documento»: base con presupuesto S/50, ingreso S/100 y
+saldo disponible S/150 en el bloque nuevo. No se cambiaron cifras ni movimientos;
+se dejó esa vista abierta. La captura de Windows expiró dos veces; se comprobó
+con captura Android. WhatsApp no está instalado en ese emulador y por eso no se
+ofrece el destino; el acceso directo y los contactos siguen en el código.
+
+**Sigue/falta:** conversión PDF nativa, entrega programada y envío real por
+WhatsApp; abrir la vista previa no acredita esos recorridos. No se generó
+APK/AAB, actualización OTA, publicación ni despliegue de Firebase. Huella/PIN
+sigue siendo una propuesta sin implementar; no se acredita una mejora de FPS
+por este cambio visual del reporte.
+
 ## Ahorro — 21/10/2026 — meta sin aporte y gasto anulado
 
 Crear una meta admite primer aporte vacío o cero y explica que se puede ahorrar

@@ -48,6 +48,7 @@ type DatosDelPdf = {
   /** Bolsillo exacto que se está exportando; nunca se mezclan entre sí. */
   nombreDelEspacio?: string;
   resumen?: ExportFinancialSummary;
+  resumenAgrupado?: boolean;
   t: (clave: string, valores?: Record<string, string | number>) => string;
 };
 
@@ -159,6 +160,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     // la noche del 30 habría salido fechado el 31.
     generatedAt: fmtDate(toDateKey(new Date()), nombresDeMes),
     summary: resumen,
+    groupedSummary: d.resumenAgrupado,
     texts: {
       colDate: t("exportPdf.colDate"),
       colTime: t("exportPdf.colTime"),
@@ -175,6 +177,8 @@ export function htmlDelReporte(d: DatosDelPdf): string {
       budget: t("exportPdf.budget"),
       budgeted: t("exportPdf.budgeted"),
       previousBalance: t("exportPdf.previousBalance"),
+      monthBase: t("exportPdf.monthBase"),
+      monthlyMovements: t("exportPdf.monthlyMovements"),
       periodResult: t("exportPdf.periodResult"),
       space: t("exportPdf.space"),
       byCategory: t("exportPdf.chartByCategory"),
