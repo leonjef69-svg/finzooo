@@ -1,5 +1,15 @@
 # Estado actual de Fino
 
+## Reportes — 22/10/2026 — alineación de Gastos
+
+En el resumen del día, «Gastos» queda al lado de la línea divisora, mientras
+el importe se mantiene en la esquina derecha. La línea central y la superior
+ahora tienen más contraste. Solo presentación: cálculos, movimientos y saldos
+no cambian. TypeScript, ESLint y las 256 pruebas con 8 auditores aprobaron.
+
+**Sigue/falta:** revisión visual en el emulador habitual. Sin cambios nativos,
+APK/AAB/OTA o publicación.
+
 ## Reportes — 22/10/2026 — calendario de gastos diarios
 
 «Gastos diarios» sustituye las barras por un calendario mensual compacto de

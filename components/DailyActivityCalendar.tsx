@@ -162,7 +162,7 @@ export default function DailyActivityCalendar({
         ))}
       </View>
 
-      <View className="mt-2 border-t border-slate-200 pt-2.5 dark:border-noche-borde">
+      <View className="mt-2 border-t border-slate-300 pt-2.5 dark:border-slate-600">
         {selected.income <= 0 && selected.expense <= 0 ? (
           <Text className="py-1 text-center text-[12px] font-medium text-slate-500 dark:text-slate-400">
             {t("reports.calendarNoMovements")}
@@ -180,8 +180,8 @@ export default function DailyActivityCalendar({
                 {activityText(selected.income, t("reports.calendarNoIncome"), "+")}
               </Text>
             </View>
-            <View className="h-10 w-px bg-slate-200 dark:bg-noche-borde" />
-            <View className="flex-1 items-end pl-3">
+            <View className="h-10 w-[2px] bg-slate-400 dark:bg-slate-500" />
+            <View className="flex-1 pl-3">
               <Text className="text-[12px] font-semibold text-rose-700 dark:text-rose-300">
                 {t("reports.calendarExpense")}
               </Text>

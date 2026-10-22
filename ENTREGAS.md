@@ -1,5 +1,13 @@
 # Entregas de Fino
 
+## 22/10/2026 — ajuste visual del calendario diario (desarrollo)
+
+«Gastos» se alinea junto a la división central y el importe sigue a la derecha;
+se aumenta el contraste de las líneas divisoria y superior. Sin cambios de
+cálculos, datos, ni código nativo. TypeScript, ESLint y 256 pruebas con 8
+auditores aprobados. **Sigue/falta:** revisión visual en el emulador habitual; no requiere
+APK/AAB/OTA ni publicación.
+
 ## 22/10/2026 — calendario de Gastos diarios (desarrollo)
 
 En Reportes, el gráfico de barras diarias se reemplaza por un calendario
