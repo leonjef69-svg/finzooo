@@ -1,5 +1,22 @@
 # Entregas de Fino
 
+## 22/10/2026 — WhatsApp visible, botón y voz con contacto (desarrollo)
+
+Marca `22oct-whatsapp-chat-boton-voz`. WhatsApp deja de desaparecer de Exportar
+movimientos cuando no está instalado. Aviso de instalación, destinatario claro y
+botón «Abrir chat en WhatsApp». Botón/voz requieren contacto único y teléfono
+normalizado antes de crear el archivo; un fallo ya no abre un selector general.
+Abrir la aplicación no confirma entrega. Sin cambios nativos, datos o saldos.
+
+Regresión específica verde y roja contra aaf14ea2; flujo original y orden de
+voz con datos ficticios. Árbol Android del emulador habitual confirma los nuevos
+controles y aviso; botón tocado sin abrir otra app. Capturas Windows agotadas y
+Android negra: sin comprobación visual de píxeles. No se enviaron archivos ni se
+guardaron contactos o movimientos. **Sigue/falta:** WhatsApp no está instalado;
+chat real con adjunto y reconocimiento de voz nativo no comprobados. Bloqueo
+huella/PIN pendiente, sin cambios. Sin APK/AAB/OTA o publicación.
+TypeScript, ESLint, 254 pruebas y 8 auditores aprobados; avisos en tres idiomas.
+
 ## 22/10/2026 — reporte alineado con Personal, sin borrar movimientos (desarrollo)
 
 Marca `22oct-reporte-coincide-personal`. PDF/CSV/XLSX usan la misma regla de

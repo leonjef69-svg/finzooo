@@ -1,5 +1,38 @@
 # Estado actual de Fino
 
+## Exportación — 22/10/2026 — WhatsApp visible y destinatario directo
+
+Marca `22oct-whatsapp-chat-boton-voz`. «Exportar movimientos» mantiene visible
+WhatsApp aunque falte la aplicación. Al elegirlo muestra «Abrir chat en WhatsApp»,
+el contacto guardado o la indicación de añadirlo y, cuando corresponde, el aviso
+de instalar WhatsApp. La disponibilidad se vuelve a comprobar al regresar a Fino.
+
+Botón y orden de voz resuelven el destinatario antes de generar el archivo:
+WhatsApp instalado, contacto único de WhatsApp y teléfono normalizado válido.
+Sin esos requisitos se avisa sin crear archivo ni abrir listas. Un fallo del
+puente tampoco deriva al selector general; Gmail/correo/otros destinos conservan
+su comportamiento. Abrir WhatsApp no se registra como entrega confirmada.
+No cambia el módulo nativo, permisos, almacenamiento, contactos ni saldos.
+
+Prueba ampliada con la lista y manejador originales y el intérprete de voz real:
+botón/voz con contacto ficticio, falta de aplicación/contacto, nombres ambiguos,
+teléfono inválido, fallo sin selector y garantías existentes de entrega/subidas.
+Roja contra aaf14ea2 por ocultar WhatsApp ausente, verde con el cambio.
+Emulador habitual: árbol Android actual confirma WhatsApp, aviso de instalación,
+añadir destinatario y botón directo; se tocó el botón sin abrir otra app.
+La captura de Windows falló dos veces y la captura Android salió negra: no se
+acredita revisión visual de píxeles. No se guardaron contactos ni movimientos,
+no se enviaron archivos ni se cambió la protección de pantalla.
+TypeScript, ESLint, 254 pruebas y 8 auditores aprobados; también se comprobó el
+catálogo de avisos de WhatsApp en español, inglés y portugués.
+
+**Sigue/falta:** WhatsApp no está instalado en el emulador. Falta probar con la
+aplicación real instalada y sesión del usuario que el chat concreto reciba el
+adjunto; también dictado/reconocimiento de voz nativo. La prueba de texto a
+orden/destinatario no acredita esos pasos ni la compatibilidad de toda versión
+de WhatsApp. Bloqueo de Fino sigue pendiente: huella principal y PIN alternativo
+es todavía propuesta, sin cambios en esta entrega. Sin APK/AAB/OTA ni publicación.
+
 ## Exportación — 22/10/2026 — filas coherentes con Personal
 
 Marca `22oct-reporte-coincide-personal`. La selección compartida de PDF, CSV y

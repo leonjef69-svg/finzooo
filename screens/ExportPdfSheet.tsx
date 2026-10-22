@@ -12,6 +12,7 @@ import { archivoCsv, archivoExcel, filasDelReporte, movimientosParaReporte } fro
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import {
   ActivityIndicator,
+  AppState,
   Keyboard,
   ScrollView,
   Text,
@@ -204,7 +205,13 @@ export default function ExportPdfSheet({
   // a esta función, porque la parte que habla con Gmail es código nativo y no
   // llega en las actualizaciones por internet.
   const [gmailDisponible] = useState(() => isGmailInstalled());
-  const [whatsappDisponible] = useState(() => isWhatsAppInstalled());
+  const [whatsappDisponible, setWhatsappDisponible] = useState(() => isWhatsAppInstalled());
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", state => {
+      if (state === "active") setWhatsappDisponible(isWhatsAppInstalled());
+    });
+    return () => subscription.remove();
+  }, []);
   // El documento que se está mirando en grande, o null. Se guarda el HTML ya
   // armado y no una marca de "abierto": así lo que se ve es exactamente lo
   // que había en el momento de tocar, sin recalcularse por debajo.
@@ -625,17 +632,35 @@ export default function ExportPdfSheet({
     // cargados (la exportación automática espera a que lo estén) y el nombre
     // llega por parámetro.
     const destinatario = resolveRecipient(contactoElegido, contactos, recipientName, destination);
+    let telefonoWhatsApp = "";
+    if (destination === "whatsapp") {
+      if (!isWhatsAppInstalled()) {
+        showToast(t("exportPdf.whatsappInstall"));
+        return;
+      }
+      if (!destinatario || destinatario.kind !== "whatsapp") {
+        showToast(t("exportPdf.whatsappChoose"));
+        return;
+      }
+      const telefono = checkPhone(destinatario.value);
+      if (telefono.warning || !/^[1-9]\d{7,14}$/.test(telefono.normalized)) {
+        showToast(t("exportPdf.whatsappInvalidPhone"));
+        return;
+      }
+      telefonoWhatsApp = telefono.normalized;
+    }
 
     // TENÍAS CONTACTOS Y NO ELEGISTE A NADIE.
     //
     // Se avisa antes de salir de Fino, porque después ya no hay dónde: la
-    // app de correo o WhatsApp se abren encima y el aviso quedaría detrás.
+    // app de correo se abre encima y el aviso quedaría detrás. WhatsApp
+    // exige destinatario en la comprobación anterior.
     //
     // No frena el envío —dejar el destinatario en blanco y escribirlo allí es
     // una forma legítima de usarlo—, pero avisa de que va a pasar. Abrir
     // Gmail con el "Para" vacío sin decir nada es lo que parece un fallo.
     const pideDestinatario =
-      destination === "whatsapp" || destination === "gmail" || destination === "mail";
+      destination === "gmail" || destination === "mail";
     if (pideDestinatario && !destinatario && contactosDelDestino.length > 0) {
       showToast(t("exportPdf.noContactPicked"));
     }
@@ -721,29 +746,21 @@ export default function ExportPdfSheet({
       }
 
       if (destination === "whatsapp") {
-        // Va directo a WhatsApp, sin pasar por el menú de compartir. Ese menú
-        // lo arma Android: WhatsApp puede salir al final de una lista larga,
-        // o no salir. Así se abre el selector de contactos de WhatsApp con el
-        // archivo ya adjunto y solo queda elegir a quién.
+        // El número ya está validado: botón y voz abren el mismo chat con
+        // el archivo. Si falla, no cambiar al selector de contactos ni a
+        // otra aplicación por cuenta propia.
         const ok = shareToWhatsApp(
           file.uri,
           file.mimeType,
           t("exportPdf.mailBody", { month: selectedMonthLabel }),
-          destinatario?.value ?? ""
+          telefonoWhatsApp
         );
         if (!ok) {
-          // Si no se pudo —sin WhatsApp, o con un APK anterior a esto— se cae
-          // al menú de compartir de siempre en vez de no hacer nada.
           showToast(t("exportPdf.whatsappMissing"));
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
-          } else {
-            showToast(t("exportPdf.shareUnavailable"));
-            return;
-          }
+          return;
         }
-        // Abrir WhatsApp/selector no demuestra envío ni recepción.
-        showToast(t("exportPdf.readyToSend"));
+        // Abrir el chat no confirma el envío ni la recepción del archivo.
+        showToast(t("exportPdf.whatsappReady"));
         return;
       }
 
@@ -1089,9 +1106,7 @@ export default function ExportPdfSheet({
             ...(gmailDisponible
               ? ([{ id: "gmail", label: t("schedExport.destGmail"), Icon: Mail }] as const)
               : []),
-            ...(whatsappDisponible
-              ? ([{ id: "whatsapp", label: t("exportPdf.destWhatsApp"), Icon: MessageCircle }] as const)
-              : []),
+            { id: "whatsapp", label: t("exportPdf.destWhatsApp"), Icon: MessageCircle },
             { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
             // DROPBOX. Faltaba aquí y sí estaba en la exportación automática, que es lo raro
             // al revés: subir a mano es lo que se hace primero, y lo automático viene después
@@ -1122,6 +1137,12 @@ export default function ExportPdfSheet({
             </TouchableOpacity>
           ))}
         </View>
+
+        {destination === "whatsapp" && !whatsappDisponible && (
+          <View className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-3.5 py-3 mb-4">
+            <Text className="text-xs text-amber-800 dark:text-amber-200">{t("exportPdf.whatsappInstall")}</Text>
+          </View>
+        )}
 
         {/* EN QUÉ DRIVE, DICHO ANTES DE TOCAR NADA.
             **Esto viene de un fallo real que costó una tarde de suposiciones (20/08/2026).**
@@ -1239,7 +1260,9 @@ export default function ExportPdfSheet({
               </TouchableOpacity>
             </View>
             <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-4">
-              {contactoId
+              {destination === "whatsapp"
+                ? t(contactoId ? "exportPdf.whatsappHint" : "exportPdf.whatsappChoose")
+                : contactoId
                 ? t("exportPdf.sendToHint")
                 : contactosDelDestino.length > 0
                   ? t("exportPdf.sendToNone")
@@ -1503,7 +1526,7 @@ export default function ExportPdfSheet({
           <Text className="text-white font-extrabold">
             {exporting
               ? t("exportPdf.exporting")
-              : t(destination === "drive" ? "exportPdf.saveToDrive" : "exportPdf.exportFormat", {
+              : t(destination === "whatsapp" ? "exportPdf.whatsappOpen" : destination === "drive" ? "exportPdf.saveToDrive" : "exportPdf.exportFormat", {
                   // El botón decía "Exportar PDF" incluso con Excel
                   // elegido. Ahora nombra lo que de verdad va a salir.
                   format: format === "pdf" ? "PDF" : format === "xlsx" ? "Excel" : "CSV",
