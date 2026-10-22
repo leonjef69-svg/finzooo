@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AppState, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Lock } from "lucide-react-native";
+import { Fingerprint, Lock, ScanFace } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import { useAppData } from "@/contexts/AppDataContext";
 import { setAppLocked } from "@/utils/lockState";
@@ -10,6 +10,7 @@ import {
   GRACE_MS,
   PIN_LENGTH,
   biometricKind,
+  cancelBiometrics,
   usaHuella,
   lockEnabledState,
   subscribeLockConfiguration,
@@ -45,17 +46,24 @@ export default function AppLockGate() {
   const [error, setError] = useState(false);
   const [failures, setFailures] = useState(0);
   const [retrySeconds, setRetrySeconds] = useState(0);
+  const [method, setMethod] = useState<"biometric" | "pin">("biometric");
+  const [authenticating, setAuthenticating] = useState(false);
+  const [checkingPin, setCheckingPin] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState !== "background");
+  const offerBiometrics = !lockError && kind !== "none";
+  const showPin = !offerBiometrics || method === "pin";
 
   useEffect(() => {
-    if (!locked) return;
+    if (!locked || !showPin) return;
+    let alive = true;
     const refresh = () =>
       pinRetryAfterMs().then((value) =>
-        setRetrySeconds(Math.ceil(value / 1000)),
+        alive && setRetrySeconds(Math.ceil(value / 1000)),
       );
     void refresh();
     const timer = setInterval(refresh, 1000);
-    return () => clearInterval(timer);
-  }, [locked]);
+    return () => { alive = false; clearInterval(timer); };
+  }, [locked, showPin]);
 
   // Mientras el cuadro de la huella está abierto, Android manda la app a
   // "inactive". Sin esta marca, el propio cuadro contaría como "se fue de la
@@ -64,6 +72,19 @@ export default function AppLockGate() {
   const prompting = useRef(false);
   const leftAt = useRef<number | null>(null);
   const lockErrorRef = useRef(false);
+  const mounted = useRef(true);
+  const authVersion = useRef(0);
+  const autoPrompted = useRef(false);
+  const verifyingPin = useRef(false);
+  const appActive = useRef(AppState.currentState !== "background");
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      authVersion.current += 1;
+      if (prompting.current) void cancelBiometrics();
+    };
+  }, []);
 
   // ¿Está el candado puesto AHORA MISMO? En una "caja" porque lo mira el
   // escuchador de abajo, que se registra una sola vez y si no vería siempre
@@ -86,6 +107,10 @@ export default function AppLockGate() {
   // depender de si Android tuvo a bien no matarla.
   useEffect(() => {
     let alive = true;
+    authVersion.current += 1;
+    autoPrompted.current = false;
+    setMethod("biometric");
+    setPin("");
     setChecked(false);
     (async () => {
       const status = await lockEnabledState();
@@ -143,35 +168,82 @@ export default function AppLockGate() {
     // Se cierran también los paneles nativos; al volver a crearlos React
     // Native copia FLAG_SECURE de la ventana principal. Una comprobación
     // anterior se cancela en la limpieza del efecto, no pisa la nueva.
+    authVersion.current += 1;
+    autoPrompted.current = false;
+    if (prompting.current) void cancelBiometrics();
     setAppLocked(true);
     setChecked(false);
     setCheckVersion((value) => value + 1);
   }), []);
 
-  const offerBiometrics = !lockError && kind !== "none";
-
   const askBiometrics = useCallback(async () => {
-    if (!offerBiometrics || prompting.current || lockErrorRef.current) return;
+    if (!ready || !checked || !lockedRef.current || !appActive.current || !offerBiometrics || prompting.current || verifyingPin.current || lockErrorRef.current) return;
+    const version = authVersion.current;
     prompting.current = true;
-    const ok = await promptBiometrics(t("lock.prompt"), t("lock.usePin"));
-    prompting.current = false;
-    if (ok && !lockErrorRef.current) {
-      setLocked(false);
-      setPin("");
-      setFailures(0);
+    setAuthenticating(true);
+    setMethod("biometric");
+    setPin("");
+    setError(false);
+    try {
+      const ok = await promptBiometrics(t("lock.prompt"), t("lock.usePin")).catch(() => false);
+      if (!mounted.current || version !== authVersion.current || lockErrorRef.current) return;
+      if (ok) {
+        setLocked(false);
+        setPin("");
+        setFailures(0);
+      } else {
+        // Cancelar, elegir «Usar PIN» o un sensor no disponible muestra
+        // directamente la alternativa; no se vuelve a abrir la huella sola.
+        setMethod("pin");
+      }
+    } finally {
+      prompting.current = false;
+      if (mounted.current) setAuthenticating(false);
     }
-  }, [offerBiometrics, t]);
+  }, [ready, checked, offerBiometrics, t]);
 
   // Se pide la huella sola en cuanto aparece la pantalla: lo normal es no
   // tener que tocar nada.
   useEffect(() => {
-    if (locked && offerBiometrics) void askBiometrics();
-  }, [locked, offerBiometrics, askBiometrics]);
+    if (!locked) { autoPrompted.current = false; return; }
+    if (ready && checked && foreground && offerBiometrics && !prompting.current && !verifyingPin.current && !autoPrompted.current) {
+      autoPrompted.current = true;
+      void askBiometrics();
+    }
+  }, [ready, checked, locked, foreground, offerBiometrics, authenticating, checkingPin, askBiometrics]);
+
+  function usePin() {
+    autoPrompted.current = true;
+    authVersion.current += 1;
+    if (prompting.current) void cancelBiometrics();
+    setMethod("pin");
+    setPin("");
+    setError(false);
+  }
 
   // Entrar y salir de la app
   useEffect(() => {
     if (!enabled) return;
+    appActive.current = AppState.currentState !== "background";
+    setForeground(appActive.current);
     const sub = AppState.addEventListener("change", (next) => {
+      if (next === "background") {
+        appActive.current = false;
+        setForeground(false);
+        if (lockedRef.current && verifyingPin.current) {
+          authVersion.current += 1;
+          setPin("");
+          setError(false);
+        }
+        if (prompting.current) {
+          authVersion.current += 1;
+          void cancelBiometrics();
+          setMethod("pin");
+        }
+      } else if (next === "active") {
+        appActive.current = true;
+        setForeground(true);
+      }
       if (next === "background" || next === "inactive") {
         if (!lockedRef.current && !prompting.current && leftAt.current === null) {
           leftAt.current = Date.now();
@@ -185,6 +257,8 @@ export default function AppLockGate() {
         leftAt.current = null;
         if (!prompting.current && since !== null && Date.now() - since > GRACE_MS) {
           setLocked(true);
+          autoPrompted.current = false;
+          setMethod("biometric");
           setPin("");
           setError(false);
           // Pasado el margen ya no sirve de nada: borrarlo evita que un
@@ -198,41 +272,49 @@ export default function AppLockGate() {
 
   // Comprobar el PIN en cuanto se completa: no hace falta botón de aceptar.
   useEffect(() => {
-    if (lockError || pin.length !== PIN_LENGTH || retrySeconds > 0) return;
+    if (!ready || !checked || !locked || !showPin || authenticating || lockError || pin.length !== PIN_LENGTH || retrySeconds > 0 || verifyingPin.current) return;
     let alive = true;
+    const version = authVersion.current;
+    verifyingPin.current = true;
+    setCheckingPin(true);
     (async () => {
-      const match = await verifyPin(pin);
-      if (!alive) return;
+      try {
+        const match = await verifyPin(pin);
+        const retryAfter = match === "locked" ? await pinRetryAfterMs() : 0;
+        if (!alive || version !== authVersion.current) return;
 
-      if (match === "real") {
-        setLocked(false);
-        setPin("");
-        setError(false);
-        setFailures(0);
-      } else if (match === "locked") {
-        setError(true);
-        setFailures((n) => Math.max(5, n + 1));
-        setRetrySeconds(Math.ceil((await pinRetryAfterMs()) / 1000));
-        setTimeout(() => {
-          if (!alive) return;
+        if (match === "real") {
+          setLocked(false);
           setPin("");
           setError(false);
-        }, 500);
-      } else {
-        setError(true);
-        setFailures((n) => n + 1);
-        // Se borra solo tras el temblor, para que dé tiempo a verlo.
-        setTimeout(() => {
-          if (!alive) return;
+          setFailures(0);
+        } else if (match === "locked") {
+          setError(true);
           setPin("");
-          setError(false);
-        }, 500);
+          setFailures((n) => Math.max(5, n + 1));
+          setRetrySeconds(Math.ceil(retryAfter / 1000));
+        } else {
+          setError(true);
+          setPin("");
+          setFailures((n) => n + 1);
+        }
+      } catch {
+        if (alive && version === authVersion.current) { setPin(""); setError(true); }
+      } finally {
+        verifyingPin.current = false;
+        if (mounted.current) setCheckingPin(false);
       }
     })();
     return () => {
       alive = false;
     };
-  }, [pin, retrySeconds, lockError]);
+  }, [ready, checked, locked, showPin, authenticating, pin, retrySeconds, lockError]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(false), 500);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   // Se avisa al resto de la app de si el candado está puesto. Lo usa la
   // apertura de un estado de cuenta compartido: mientras esto sea cierto no
@@ -288,21 +370,39 @@ export default function AppLockGate() {
       <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100 mb-1">
         {t("lock.title")}
       </Text>
-      <Text className="text-xs text-slate-500 dark:text-slate-300 mb-10 text-center">
-        {t(offerBiometrics ? "lock.subtitleBiometric" : "lock.subtitlePin")}
+      <Text className="text-xs text-slate-500 dark:text-slate-300 mb-6 text-center">
+        {t(showPin ? "lock.subtitlePin" : kind === "face" ? "lock.subtitleFace" : "lock.subtitleBiometric")}
       </Text>
 
+      {showPin ? (
       <PinPad
         deleteLabel={t("lock.eraseDigit")}
         biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")}
         value={pin}
-        onChange={(value) => retrySeconds === 0 && setPin(value)}
+        onChange={(value) => {
+          if (retrySeconds === 0 && !verifyingPin.current && !prompting.current) { setError(false); setPin(value); }
+        }}
+        disabled={retrySeconds > 0 || checkingPin || authenticating}
+        biometricDisabled={checkingPin || authenticating}
         error={error}
         biometric={offerBiometrics ? kind : "none"}
         onBiometric={() => void askBiometrics()}
       />
+      ) : (
+        <View className="w-full items-center" style={{ maxWidth: 300 }}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")} disabled={authenticating}
+            onPress={() => void askBiometrics()}
+            className="w-full rounded-2xl bg-emerald-600 py-5 items-center gap-2">
+            {kind === "face" ? <ScanFace size={32} color="#ffffff" /> : <Fingerprint size={32} color="#ffffff" />}
+            <Text className="text-sm font-bold text-white">{t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" onPress={usePin} className="mt-3 px-6 py-3">
+            <Text className="text-sm font-bold text-emerald-600">{t("lock.usePin")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {retrySeconds > 0 && (
+      {showPin && retrySeconds > 0 && (
         <Text className="mt-4 text-center text-xs font-bold text-rose-500">
           {t("lock.retryIn", { seconds: retrySeconds })}
         </Text>
@@ -311,19 +411,12 @@ export default function AppLockGate() {
       {/* Solo después de varios intentos. Antes de eso, sugerir que se
           reinstale la app asusta más de lo que ayuda: lo normal es haberse
           equivocado al teclear. */}
-      {failures >= 3 && (
+      {showPin && failures >= 3 && (
         <Text className="text-[11px] text-slate-400 text-center mt-6 leading-4 px-4">
           {t("lock.forgot")}
         </Text>
       )}
 
-      {offerBiometrics && (
-        <TouchableOpacity onPress={() => void askBiometrics()} className="mt-6 px-4 py-2">
-          <Text className="text-xs font-bold text-emerald-600">
-            {t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")}
-          </Text>
-        </TouchableOpacity>
-      )}
       </ScrollView>
       )}
     </View>

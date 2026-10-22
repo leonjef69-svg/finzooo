@@ -34,7 +34,7 @@ try {
 // Ejecuta los efectos y componentes ORIGINALES, no una copia del flujo.
 // Los hooks/ventana son adaptadores: no se anuncia como recorrido de Android.
 const lockExports = ["lockEnabledState", "subscribeLockConfiguration", "salioHaceNada", "usaHuella", "biometricKind",
-  "olvidarSalida", "pinRetryAfterMs", "promptBiometrics", "recordarSalida", "verifyPin"];
+  "olvidarSalida", "pinRetryAfterMs", "promptBiometrics", "cancelBiometrics", "recordarSalida", "verifyPin"];
 async function componentCode(file) {
   const compiled = await build({ stdin: { contents: read(file), sourcefile: file, loader: "tsx", resolveDir: process.cwd() },
     bundle: true, platform: "node", format: "cjs", jsx: "automatic", write: false, logLevel: "silent",
@@ -45,7 +45,7 @@ async function componentCode(file) {
         if (args.path === "react") contents = "export const {useCallback,useEffect,useLayoutEffect,useRef,useState}=globalThis.__gate.hooks;";
         else if (args.path === "react-native") contents = "export const AppState={addEventListener:()=>({remove(){}})}; export const Modal='Modal',ScrollView='ScrollView',Text='Text',TouchableOpacity='TouchableOpacity',View='View';";
         else if (args.path === "react-native-safe-area-context") contents = "export const useSafeAreaInsets=()=>({top:0,bottom:0});";
-        else if (args.path === "lucide-react-native") contents = "export const Lock='Lock';";
+        else if (args.path === "lucide-react-native") contents = "export const Lock='Lock',Fingerprint='Fingerprint',ScanFace='ScanFace';";
         else if (args.path.endsWith("appLock")) contents = `export const GRACE_MS=120000,PIN_LENGTH=4; ${lockExports.map(name => `export const ${name}=(...args)=>globalThis.__gate.io.${name}(...args);`).join("\n")}`;
         else if (args.path.endsWith("screenPrivacy")) contents = "export const applyLockScreenPrivacy=(...args)=>globalThis.__gate.io.applyLockScreenPrivacy(...args);";
         else if (args.path.endsWith("lockState")) contents = "export const setAppLocked=(v)=>globalThis.__gate.cover.push(v); export const useAppLocked=()=>globalThis.__gate.modalLocked;";

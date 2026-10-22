@@ -163,7 +163,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
 
   const title =
     step === "create"
-      ? t("lock.stepCreate")
+      ? t(conHuella && kind !== "none" ? "lock.backupCreate" : "lock.stepCreate")
       : step === "confirm"
         ? t("lock.stepConfirm")
         : step === "verify"
@@ -189,7 +189,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
           <View className="items-center pt-6">
             <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">{title}</Text>
             <Text className="text-xs text-slate-500 dark:text-slate-300 mb-10">
-              {t("lock.stepHint", { count: PIN_LENGTH })}
+              {t(conHuella && kind !== "none" && step !== "verify" ? "lock.backupHint" : "lock.stepHint", { count: PIN_LENGTH })}
             </Text>
             <PinPad value={pin} onChange={setPin} error={error} deleteLabel={t("lock.eraseDigit")} biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")} />
             {message !== "" && (
@@ -211,7 +211,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
                     {t("lock.rowLabel")}
                   </Text>
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300">
-                    {enabled ? t("lock.stateOn") : t("lock.stateOff")}
+                    {enabled ? t(conHuella && kind !== "none" ? kind === "face" ? "lock.primaryFace" : "lock.primaryBiometric" : "lock.primaryPin") : t("lock.stateOff")}
                   </Text>
                 </View>
                 <Toggle label={t("lock.rowLabel")} on={enabled} onChange={toggle} />

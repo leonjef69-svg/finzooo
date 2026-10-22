@@ -1,5 +1,49 @@
 # Estado actual de Fino
 
+## Bloqueo — 22/10/2026 — biometría principal, PIN alternativo
+
+Marca `22oct-bloqueo-huella-pin-alternativo`. El guardián ya no dibuja el PIN
+detrás de la petición de huella/cara ni repite el botón de reintento. Con
+biometría habilitada/disponible la solicita una vez, cuando datos/candado están
+listos y la app está delante. Una confirmación abre sin PIN. Cancelar, elegir
+«Usar PIN» o fallar el lector muestra directamente el teclado; solo un reintento
+manual vuelve a la biometría. Sin biometría o con la preferencia apagada se
+mantiene el PIN directo. No cambia automáticamente la elección del usuario.
+
+La petición Expo mantiene desactivado el PIN del teléfono como segunda vía y
+no solicita confirmación adicional. Configuración de bloqueo cambiada, salida
+real al fondo, desmontaje o elección de PIN invalidan respuestas biométricas
+atrasadas. La comprobación de PIN en curso también se invalida al salir al fondo.
+Se conservan protección de pantalla, cubierta no descartable con Atrás y margen
+de dos minutos. PIN fallido se limpia sin esperar un temporizador ligado a esas
+cuatro cifras: acabar la espera progresiva no vuelve a probarlas solo. Teclas
+bloqueadas durante comprobación/espera; huella manual disponible durante espera
+del PIN. Ajustes aclara «Huella/Rostro para entrar · PIN de respaldo» y crear el
+PIN alternativo una sola vez. No se cambia PIN, hash, sal, preferencias, dinero,
+retención o campos guardados; sin módulo nativo nuevo ni compilación.
+
+`verificar-bloqueo-alternativo-real.mjs` ejecuta el componente, JSX, efectos y
+petición Expo originales con React/Android/reloj adaptados: entrada única,
+cancelación/error, PIN directo, doble toque, fondo/regreso/margen, disponibilidad,
+configuración/respuestas atrasadas y PIN incorrecto/espera. Roja contra d1be8fd8
+(pedía huella antes de cargar datos), verde actual. Privacidad y margen originales
+también aprobados. Lote: 253 pruebas y 8 auditores con tarjetas excluidas.
+TypeScript y ESLint aprobados sobre la versión final del cambio.
+
+Emulador habitual: el usuario desbloqueó personalmente; se observó el paso del
+PIN a Inicio sin segunda autenticación y se abrió Ajustes → Bloquear Fino solo
+para leer. El texto nuevo «Entras con tu PIN» confirma código actualizado; no
+aparece la opción biométrica, por no detectarse disponible. No se introdujeron
+credenciales mediante herramientas ni se activó/desactivó seguridad; no se
+guardaron movimientos. Windows agotó dos capturas; se leyó el árbol Android sin
+desproteger capturas ni saltar el candado.
+
+**Sigue/falta:** confirmación real de huella/cara, cancelación nativa y prueba
+en teléfono con biometría registrada. El control del emulador no automatiza
+autenticación ni configuración de seguridad: esa parte la realiza el usuario.
+No se acredita sensor físico, vista de píxeles o FPS con las pruebas adaptadas.
+Sin APK/AAB/OTA, publicación o cambios en Firebase. WhatsApp real sigue pendiente.
+
 ## Exportación — 22/10/2026 — WhatsApp visible y destinatario directo
 
 Marca `22oct-whatsapp-chat-boton-voz`. «Exportar movimientos» mantiene visible

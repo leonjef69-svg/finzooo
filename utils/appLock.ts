@@ -170,10 +170,22 @@ export async function promptBiometrics(reason: string, cancelLabel: string): Pro
       promptMessage: reason,
       cancelLabel,
       disableDeviceFallback: true,
+      fallbackLabel: "",
+      requireConfirmation: false,
     });
     return result.success;
   } catch {
     return false;
+  }
+}
+
+/** Cierra solo la petición biométrica en curso, nunca cambia el candado ni el PIN. */
+export async function cancelBiometrics(): Promise<void> {
+  try {
+    await LocalAuthentication.cancelAuthenticate();
+  } catch {
+    // No todos los sistemas permiten cancelarla. El guardián invalida también
+    // su respuesta: una confirmación atrasada no abre otra configuración.
   }
 }
 

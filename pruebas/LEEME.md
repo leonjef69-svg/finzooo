@@ -1,5 +1,15 @@
 # Pruebas y auditores
 
+22/10 Bloqueo: `verificar-bloqueo-alternativo-real.mjs` monta el guardián original
+con JSX/hooks, reloj y Android adaptados. Comprueba huella sin PIN simultáneo,
+arranque listo, cancelar/elegir PIN, error y reintento único, retorno corto/largo,
+fondo, cambio de configuración, respuestas atrasadas y PIN fallido/espera sin
+reenvío. Ejecuta la petición Expo original (sin PIN de teléfono ni confirmación
+extra). `FINO_LOCK_ALTERNATIVE_BASELINE=d1be8fd8` falla porque la versión anterior
+pedía huella antes de estar listos los datos. No prueba un sensor ni autentica
+al usuario. Credenciales ficticias; no escribe datos del emulador o cuenta.
+Privacidad/cubierta y margen se comprueban también en sus suites originales.
+
 21/10 Ahorro: `verificar-lote-borrado-real.mjs` comprueba anulación de gastos
 enlazados con guardado SQLite conjunto, tarjeta acumulada sin filas nuevas,
 reintento/reinicio y copia atrasada. `FINO_SAVINGS_DELETE_BASELINE=e2858044`

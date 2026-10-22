@@ -24,6 +24,8 @@ export default function PinPad({
   onBiometric,
   deleteLabel,
   biometricLabel,
+  disabled = false,
+  biometricDisabled = disabled,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -34,6 +36,8 @@ export default function PinPad({
   onBiometric?: () => void;
   deleteLabel: string;
   biometricLabel: string;
+  disabled?: boolean;
+  biometricDisabled?: boolean;
 }) {
   const { width: screenWidth } = useWindowDimensions();
   // Se mide la pantalla y se reparte a mano: el ancho del teclado, y el de
@@ -58,13 +62,13 @@ export default function PinPad({
   }, [error, shake]);
 
   function press(digit: string) {
-    if (value.length >= PIN_LENGTH) return;
+    if (disabled || value.length >= PIN_LENGTH) return;
     Haptics.selectionAsync().catch(() => {});
     onChange(value + digit);
   }
 
   function backspace() {
-    if (value.length === 0) return;
+    if (disabled || value.length === 0) return;
     Haptics.selectionAsync().catch(() => {});
     onChange(value.slice(0, -1));
   }
@@ -120,7 +124,7 @@ export default function PinPad({
         ].map((row) => (
           <View key={row[0]} className="flex-row mb-3" style={{ gap: GAP }}>
             {row.map((digit) => (
-              <Key key={digit} label={digit} width={keyWidth} onPress={() => press(digit)}>
+              <Key key={digit} label={digit} width={keyWidth} disabled={disabled} onPress={() => press(digit)}>
                 <Text className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{digit}</Text>
               </Key>
             ))}
@@ -129,7 +133,7 @@ export default function PinPad({
 
         <View className="flex-row" style={{ gap: GAP }}>
           {showBiometric ? (
-            <Key label={biometricLabel} role="button" onPress={onBiometric} plain width={keyWidth}>
+            <Key label={biometricLabel} role="button" onPress={onBiometric} plain width={keyWidth} disabled={biometricDisabled}>
               {biometric === "face" ? (
                 <ScanFace size={26} color="#059669" />
               ) : (
@@ -141,11 +145,11 @@ export default function PinPad({
             <View style={{ width: keyWidth, height: 64 }} />
           )}
 
-          <Key label="0" onPress={() => press("0")} width={keyWidth}>
+          <Key label="0" onPress={() => press("0")} width={keyWidth} disabled={disabled}>
             <Text className="text-2xl font-semibold text-slate-900 dark:text-slate-100">0</Text>
           </Key>
 
-          <Key label={deleteLabel} onPress={backspace} plain width={keyWidth}>
+          <Key label={deleteLabel} onPress={backspace} plain width={keyWidth} disabled={disabled}>
             <Delete size={24} color="#94a3b8" />
           </Key>
         </View>
@@ -161,6 +165,7 @@ function Key({
   width,
   label,
   role = "keyboardkey",
+  disabled = false,
 }: {
   onPress: () => void;
   children: React.ReactNode;
@@ -169,11 +174,14 @@ function Key({
   width: number;
   label: string;
   role?: "keyboardkey" | "button";
+  disabled?: boolean;
 }) {
   return (
     <TouchableOpacity
       accessibilityRole={role}
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       activeOpacity={0.6}
       // El ancho llega como número, no como flex-1. Con flex-1 dentro de un

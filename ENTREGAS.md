@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 22/10/2026 — bloqueo con PIN solo alternativo (desarrollo)
+
+Marca `22oct-bloqueo-huella-pin-alternativo`. Huella/cara al abrir cuando está
+disponible y habilitada; teclado PIN solo al elegirlo, cancelar/fallar o carecer
+de biometría. Sin controles duplicados ni segunda confirmación después del
+acierto. Se conservan PIN existente, preferencia, espera progresiva, cubierta,
+protección de pantalla y margen. Respuestas atrasadas/configuración/salida al
+fondo protegidas y cifras incorrectas no reenviadas al terminar la espera.
+
+Prueba nueva sobre guardián/JSX y solicitud Expo originales, roja en d1be8fd8;
+253 pruebas y 8 auditores aprobados, tarjetas excluidas. Datos/credenciales
+ficticios en pruebas; el usuario desbloqueó personalmente el emulador y se
+observó Inicio sin segunda petición. Ajustes muestra el nuevo texto «Entras con
+tu PIN», pero no ofrece biometría. Se revisó su árbol Android tras dos capturas
+Windows fallidas; sin alterar protección, PIN, preferencias ni dinero.
+
+**Sigue/falta:** autenticación biométrica/cancelación nativa reales en dispositivo
+con huella o cara registrada; configuración/autenticación corresponde al usuario,
+no se automatiza ni se usa su PIN. Sin revisión de píxeles/sensor físico ni
+medición FPS. Sin cambios nativos, APK/AAB/OTA, publicación o despliegue. WhatsApp
+con adjunto en chat real continúa pendiente.
+TypeScript y ESLint de la versión final aprobados.
+
 ## 22/10/2026 — WhatsApp visible, botón y voz con contacto (desarrollo)
 
 Marca `22oct-whatsapp-chat-boton-voz`. WhatsApp deja de desaparecer de Exportar
