@@ -132,6 +132,7 @@ const SUITES = [
   { archivo: "verificar-exportar.ts", alias: EXPO },
   { archivo: "verificar-panorama.ts", alias: BASE },
   { archivo: "verificar-gasto-diario-real.ts", alias: BASE },
+  { archivo: "verificar-comparativa-mensual.ts", alias: BASE },
   { archivo: "verificar-comparar-meses-real.ts", alias: BASE },
   { archivo: "verificar-resumen-dia-real.ts", alias: BASE },
   { archivo: "verificar-fusion.ts", alias: BASE },

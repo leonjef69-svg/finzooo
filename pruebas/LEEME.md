@@ -1,5 +1,13 @@
 # Pruebas y auditores
 
+22/10 Reportes: `verificar-comparativa-mensual.ts` verifica que los doce meses
+se agreguen por año y tipo, incluye meses vacíos y excluye transferencias
+internas; también comprueba que Reportes conecte la tarjeta, permita deslizar
+por páginas de seis, compare conservando el mes inicial para elegir solo otro,
+muestre puntos de página sin flechas ni texto de ayuda, amplíe etiquetas/barras
+y el resumen, ajuste un poco el botón de comparar y anuncie un único mensaje si
+un mes no tiene actividad. Usa movimientos sintéticos.
+
 22/10 Reportes: `verificar-gasto-diario-real.ts` comprueba calendario completo
 (incluidos días vacíos), suma de ingreso/gasto por fecha, exclusión de
 transferencias internas, febrero bisiesto y que Reportes conecte el agregado

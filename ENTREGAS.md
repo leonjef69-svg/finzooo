@@ -1,5 +1,26 @@
 # Entregas de Fino
 
+## 22/10/2026 — comparativa mensual táctil (desarrollo)
+
+Reemplaza la gráfica mensual de gastos por doce meses del año seleccionado,
+seis por página con desplazamiento táctil horizontal. Al tocar un mes aparece
+su ingreso y gasto; «Comparar meses» conserva esa selección y pide tocar solo
+un segundo mes. Los dos valores usan una escala común; los meses sin movimientos
+siguen visibles y al elegir uno aparece un solo aviso breve bajo la división.
+Se quitaron las flechas y el texto de ayuda; dos puntos discretos muestran qué
+grupo está visible. Los nombres y barras de los meses se hicieron un poco más
+grandes; también el título e importes. El botón de comparar es un poco mayor y
+su texto/borde se ven mejor sin dejar de ser compacto. Las transferencias
+internas no cuentan. Cálculo local
+derivado, sin alterar datos financieros ni permisos. Marca
+`22oct-comparativa-mensual-tactil`.
+
+Verificado: TypeScript, ESLint, `git diff --check`, 257 pruebas y 8 auditores.
+El servidor de desarrollo generó el paquete actual. No se modificaron
+movimientos ni saldos. **Sigue/falta:** comprobar visualmente
+el gesto táctil en el emulador habitual cuando Fino esté desbloqueado. Sin código
+nativo, no requiere APK/AAB.
+
 ## 22/10/2026 — ajuste visual del calendario diario (desarrollo)
 
 «Gastos» se alinea junto a la división central y el importe sigue a la derecha;

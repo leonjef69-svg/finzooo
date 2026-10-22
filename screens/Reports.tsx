@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { TrendingDown, TrendingUp } from "lucide-react-native";
 import DonutChart from "@/components/DonutChart";
-import BarChartSimple from "@/components/BarChartSimple";
 import DailyActivityCalendar from "@/components/DailyActivityCalendar";
+import MonthlyActivityComparison from "@/components/MonthlyActivityComparison";
 import MonthSelector from "@/components/MonthSelector";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -27,7 +27,6 @@ export default function Reports({
 }) {
   const {
     fmt,
-    fmtCompact,
     t,
     monthNames,
     userLanguage,
@@ -103,57 +102,10 @@ export default function Reports({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, mk, userLanguage, categoryType]);
 
-  // Los 3 meses que terminan en el mes que se está viendo.
-  //
-  // Bug corregido: antes esto era `[4, 5, 6]` fijo en el código, o sea
-  // Mayo/Junio/Julio SIEMPRE, sin importar en qué mes estuvieras parado ni
-  // en qué mes del año real fuera. En agosto seguía mostrando Mayo-Julio, y
-  // al cambiar de mes con las flechas de Inicio el gráfico no se movía.
-  // También cruza bien el cambio de año (ej. viendo Enero muestra
-  // Nov, Dic del año anterior + Ene).
-  // Solo se muestran los meses en los que de verdad hubo gastos. Un mes en
-  // cero no aporta nada al gráfico: solo ocupa espacio y hace que las barras
-  // de los meses con datos se vean más chicas de lo que son.
-  const barData = useMemo(() => {
-    // DOCE MESES, NO TRES. Con tres no se ve si un gasto subió o si es lo de siempre; con el
-    // año entero sí. Los que no caben en la pantalla se alcanzan deslizando de lado, y el
-    // gráfico se abre por el final, en el mes que se está mirando.
-    return [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
-      .map((back) => {
-        let m = month.m - back;
-        let y = month.y;
-        if (m < 0) {
-          m += 12;
-          y -= 1;
-        }
-        const key = monthKey(y, m);
-        const sp = transactions
-          .filter((t) => t.type === "expense" && !t.internalTransfer && t.date.startsWith(key))
-          .reduce((s, t) => s + t.amount, 0);
-        return { label: monthNames[m].slice(0, 3), value: sp };
-      })
-      .filter((b) => b.value > 0);
-  }, [transactions, month.y, month.m, monthNames]);
-
   // Totales diarios del calendario. Solo presentación: no se guardan ni alteran movimientos.
   const dailyCalendar = useMemo(
     () => dailyCalendarTotals(transactions, { y: month.y, m: month.m }),
     [transactions, month.y, month.m],
-  );
-
-  const previewBarData = useMemo(
-    () =>
-      monthNames.map((name, index) => ({
-        label: name.slice(0, 3),
-        // Montos deliberadamente distintos, incluidos algunos grandes, para
-        // comprobar alturas, etiquetas y desplazamiento sin ensuciar los datos.
-        value: [
-          185_000, 2_600_000, 740_000, 8_800_000_000, 1_350_000_000,
-          12_400_000_000, 3_100_000_000, 26_500_000_000, 7_900_000_000,
-          51_200_000_000, 18_700_000_000, 39_600_000_000,
-        ][index],
-      })),
-    [monthNames],
   );
 
   const previewDaily = useMemo(() => {
@@ -166,7 +118,6 @@ export default function Reports({
     });
   }, [month.y, month.m]);
 
-  const shownBarData = chartPreview ? previewBarData : barData;
   const shownDaily = chartPreview ? previewDaily : dailyCalendar;
 
   return (
@@ -321,14 +272,12 @@ export default function Reports({
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
-        <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
-        {shownBarData.length === 0 ? (
-          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
-            {t("reports.noMonthsWithSpending")}
-          </Text>
-        ) : (
-          <BarChartSimple data={shownBarData} fmt={fmtCompact} width={windowWidth - 72} />
-        )}
+        <MonthlyActivityComparison
+          transactions={transactions}
+          month={month}
+          width={windowWidth - 72}
+          preview={chartPreview}
+        />
       </View>
     </ScrollView>
   );

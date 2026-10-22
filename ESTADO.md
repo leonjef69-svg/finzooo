@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Reportes — 22/10/2026 — comparativa mensual táctil
+
+La gráfica mensual de gastos ahora muestra una cuadrícula de los doce meses del
+año seleccionado, seis por página, con deslizamiento horizontal táctil. Los
+colores identifican ingresos/gastos con barras a una escala común. Al tocar un
+mes se ve su detalle; al comparar, ese mes queda fijado y se toca solo un segundo
+mes. Se quitaron las flechas y la indicación escrita; dos puntos discretos
+muestran cuál grupo está visible. Los nombres de los meses y las barras son algo
+más grandes. Un mes vacío muestra «Sin movimientos este mes» debajo de la división,
+sin filas repetidas en cero. El título del mes y las cifras de ingresos/gastos
+bajo la línea ganaron un poco de tamaño; «Comparar meses» es apenas más alto y
+ancho, con texto y borde un poco más visibles. Incluye meses vacíos y excluye
+transferencias internas. Cálculo solo de lectura, sin nuevos datos guardados. Marca
+`22oct-comparativa-mensual-tactil`.
+
+Verificado: TypeScript, ESLint, `git diff --check`, 257 pruebas y 8 auditores.
+El servidor de desarrollo generó el paquete con el mensaje y el botón nuevos.
+No se modificaron movimientos ni saldos. El emulador habitual quedó en la
+pantalla protegida por PIN; falta confirmar visualmente el gesto allí cuando
+Fino esté desbloqueado. Sin cambios nativos ni necesidad de APK/AAB.
+
 ## Reportes — 22/10/2026 — alineación de Gastos
 
 En el resumen del día, «Gastos» queda al lado de la línea divisora, mientras
