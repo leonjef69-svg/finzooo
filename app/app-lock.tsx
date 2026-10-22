@@ -4,11 +4,13 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 import { isLockEnabled } from "@/utils/appLock";
 import { useEffect, useState } from "react";
+import { useAppLocked } from "@/utils/lockState";
 
 export default function AppLockRoute() {
   const { t, isPremium } = useAppData();
   const [lockWasEnabled, setLockWasEnabled] = useState<boolean | null>(null);
   const blocked = useRedirectIfOrphaned();
+  const locked = useAppLocked();
   useEffect(() => {
     if (isPremium) {
       setLockWasEnabled(null);
@@ -16,7 +18,7 @@ export default function AppLockRoute() {
     }
     void isLockEnabled().then(setLockWasEnabled);
   }, [isPremium]);
-  if (blocked) return null;
+  if (blocked || locked) return null;
 
   if (!isPremium && lockWasEnabled !== true) {
     return (

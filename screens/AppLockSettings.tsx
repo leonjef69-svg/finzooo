@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { BackHandler, Pressable, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Fingerprint, Info, Lock, ScanFace } from "lucide-react-native";
+import { ChevronDown, ChevronLeft, ChevronRight, Fingerprint, Info, Lock, ScanFace, X } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import Toggle from "@/components/Toggle";
-import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import {
   PIN_LENGTH,
@@ -27,6 +26,7 @@ type Step =
 export default function AppLockSettings({ onBack, allowEnable = true }: { onBack: () => void; allowEnable?: boolean }) {
   const { t, isCloudSynced } = useAppData();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
   const [enabled, setEnabled] = useState(false);
   /**
@@ -49,6 +49,15 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
   const [firstPin, setFirstPin] = useState("");
   const [error, setError] = useState(false);
   const [message, setMessage] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const leaving = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -62,22 +71,49 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
       setEnabled(on);
       setKind(biometric);
       setConHuella(huella);
-    })();
+      setLoaded(true);
+    })().catch(() => {
+      if (alive) setMessage(t("lock.readError"));
+    });
     return () => {
       alive = false;
     };
+    // Solo lectura al abrir; cambiar de idioma no vuelve a pedir el PIN.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function reset() {
+    if (saving.current) return;
     setStep("idle");
     setPin("");
     setFirstPin("");
     setError(false);
+    setMessage("");
   }
+
+  function closePanel() {
+    if (saving.current || leaving.current) return;
+    leaving.current = true;
+    setPin("");
+    setFirstPin("");
+    try { onBack(); } catch { leaving.current = false; }
+  }
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (saving.current) return true;
+      if (step !== "idle") { reset(); return true; }
+      closePanel();
+      return true;
+    });
+    return () => subscription.remove();
+    // El cierre siempre vuelve al mismo Ajustes que abrió el panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, onBack]);
 
   // Todo el flujo pasa por aquí: se dispara al completar las cuatro cifras.
   useEffect(() => {
-    if (pin.length !== PIN_LENGTH || step === "idle") return;
+    if (pin.length !== PIN_LENGTH || step === "idle" || saving.current) return;
     let alive = true;
 
     (async () => {
@@ -104,7 +140,11 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
           }, 700);
           return;
         }
-        const ok = await enableLock(pin);
+        saving.current = true;
+        setBusy(true);
+        let ok = false;
+        try { ok = await enableLock(pin); }
+        finally { saving.current = false; if (alive) setBusy(false); }
         if (!alive) return;
         if (ok) {
           setEnabled(true);
@@ -119,10 +159,16 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
       }
 
       if (step === "verify") {
-        const ok = await verifyPin(pin);
+        saving.current = true;
+        setBusy(true);
+        let ok;
+        try { ok = await verifyPin(pin); }
+        catch { ok = null; }
         if (!alive) return;
         if (ok === "real") {
-          const disabled = await disableLock();
+          let disabled = false;
+          try { disabled = await disableLock(); }
+          finally { saving.current = false; if (alive) setBusy(false); }
           if (!alive) return;
           if (disabled) {
             setEnabled(false);
@@ -134,6 +180,8 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
             setPin("");
           }
         } else {
+          saving.current = false;
+          setBusy(false);
           setError(true);
           setTimeout(() => {
             if (!alive) return;
@@ -142,7 +190,10 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
           }, 500);
         }
       }
-    })();
+    })().catch(() => {
+      saving.current = false;
+      if (alive) { setBusy(false); setError(true); setMessage(t("lock.saveFailed")); setPin(""); }
+    });
 
     return () => {
       alive = false;
@@ -151,6 +202,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
   }, [pin, step, firstPin]);
 
   function toggle(next: boolean) {
+    if (!loaded || saving.current || leaving.current) return;
     setMessage("");
     if (next && !allowEnable) return;
     // Para apagarlo hay que saber el PIN. Si no, cualquiera que agarre el
@@ -171,27 +223,35 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
           : "";
 
   return (
-    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
-      <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t(step === "idle" ? "common.back" : "common.cancel")} hitSlop={6}
-          onPress={step === "idle" ? onBack : reset}
-          className="w-9 h-9 items-center justify-center -ml-2"
-        >
-          <ChevronLeft size={24} color="#94a3b8" />
-        </TouchableOpacity>
-        <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+    <View className="flex-1 justify-end bg-black/45" style={{ paddingTop: insets.top + 24 }} accessibilityViewIsModal>
+      <Pressable testID="app-lock-settings-backdrop" accessibilityRole="button" accessibilityLabel={t("common.close")}
+        disabled={busy} onPress={closePanel} className="absolute inset-0" />
+      <View testID="app-lock-settings-sheet" className="rounded-t-[28px] bg-white dark:bg-noche px-5 pt-2"
+        style={{ maxHeight: height - insets.top - 24, paddingBottom: Math.max(insets.bottom, 12) + 8 }}>
+      <View className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600 self-center my-2" />
+      <View className="pb-2 flex-row items-center justify-between gap-2">
+        <Text accessibilityRole="header" className="flex-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">
           {t("lock.settingsTitle")}
         </Text>
+        <TouchableOpacity testID="app-lock-settings-close" accessibilityRole="button" accessibilityLabel={t("common.close")}
+          disabled={busy} onPress={closePanel} className="h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-2">
+          <X size={19} color="#64748b" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}>
+      <ScrollView style={{ flexGrow: 0 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
+        {step !== "idle" && <TouchableOpacity testID="app-lock-settings-cancel" accessibilityRole="button" accessibilityLabel={t("common.cancel")}
+          disabled={busy} onPress={reset} className="min-h-11 self-start flex-row items-center gap-1 mb-2">
+          <ChevronLeft size={17} color="#059669" /><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text>
+        </TouchableOpacity>}
         {step !== "idle" ? (
-          <View className="items-center pt-6">
+          <View className="items-center pb-3">
             <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">{title}</Text>
-            <Text className="text-xs text-slate-500 dark:text-slate-300 mb-10">
+            <Text className="text-xs text-slate-500 dark:text-slate-300 mb-5">
               {t(conHuella && kind !== "none" && step !== "verify" ? "lock.backupHint" : "lock.stepHint", { count: PIN_LENGTH })}
             </Text>
-            <PinPad value={pin} onChange={setPin} error={error} deleteLabel={t("lock.eraseDigit")} biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")} />
+            <PinPad value={pin} onChange={(value) => { if (!saving.current) setPin(value); }} disabled={busy} error={error} deleteLabel={t("lock.eraseDigit")} biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")} />
+            {busy && <Text accessibilityLiveRegion="polite" className="text-xs text-slate-500 mt-3">{t("common.loading")}</Text>}
             {message !== "" && (
               <Text className="text-xs text-rose-500 mt-6 text-center">{message}</Text>
             )}
@@ -199,8 +259,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
         ) : (
           <>
             <View
-              className="rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
-              style={CARD_SHADOW}
+              className="rounded-2xl p-3 bg-slate-50 dark:bg-noche-2"
             >
               <View className="flex-row items-center gap-3">
                 <View className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
@@ -211,10 +270,10 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
                     {t("lock.rowLabel")}
                   </Text>
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300">
-                    {enabled ? t(conHuella && kind !== "none" ? kind === "face" ? "lock.primaryFace" : "lock.primaryBiometric" : "lock.primaryPin") : t("lock.stateOff")}
+                    {!loaded ? t("common.loading") : enabled ? t(conHuella && kind !== "none" ? kind === "face" ? "lock.primaryFace" : "lock.primaryBiometric" : "lock.primaryPin") : t("lock.stateOff")}
                   </Text>
                 </View>
-                <Toggle label={t("lock.rowLabel")} on={enabled} onChange={toggle} />
+                <Toggle label={t("lock.rowLabel")} on={enabled} onChange={toggle} disabled={!loaded || busy} />
               </View>
 
               {/* LA HUELLA, COMO UNA ELECCIÓN Y NO COMO UN HECHO.
@@ -240,14 +299,23 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
                   <Toggle
                     label={t(kind === "face" ? "lock.usarCara" : "lock.usarHuella")}
                     on={conHuella}
-                    onChange={(v) => {
-                      setConHuella(v);
-                      guardarUsaHuella(v);
+                    disabled={busy}
+                    onChange={async (v) => {
+                      if (saving.current || leaving.current) return;
+                      saving.current = true;
+                      setBusy(true);
+                      try { await guardarUsaHuella(v); if (mounted.current) setConHuella(v); }
+                      catch { if (mounted.current) setMessage(t("lock.saveFailed")); }
+                      finally { saving.current = false; if (mounted.current) setBusy(false); }
                     }}
                   />
                 </View>
               )}
           </View>
+          {loaded && kind === "none" && <Text className="mt-3 px-1 text-[11px] text-slate-500 dark:text-slate-300">
+            {t("lock.biometricUnavailable")}
+          </Text>}
+          {message !== "" && <Text className="mt-3 text-xs text-rose-500">{message}</Text>}
 
           {/* LOS CINCO PÁRRAFOS, DETRÁS DE UN TOQUE (19/08/2026)
               La pantalla tenía varios bloques de texto sobre el método, la recuperación
@@ -260,13 +328,14 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
               La explicación completa se conserva dentro de esta ayuda. */}
           <TouchableOpacity
             onPress={() => setVerAyuda((v) => !v)}
-            className="flex-row items-center gap-2.5 py-4 mt-1"
+            accessibilityRole="button" accessibilityLabel={t("lock.comoFunciona")} accessibilityState={{ expanded: verAyuda }}
+            className="flex-row items-center gap-2.5 min-h-11 py-3 mt-1"
           >
             <Info size={17} color="#64748b" />
             <Text className="flex-1 text-[13px] text-slate-500 dark:text-slate-300">
               {t("lock.comoFunciona")}
             </Text>
-            <ChevronRight size={16} color="#94a3b8" />
+            {verAyuda ? <ChevronDown size={16} color="#94a3b8" /> : <ChevronRight size={16} color="#94a3b8" />}
           </TouchableOpacity>
 
           {verAyuda && (
@@ -287,6 +356,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
           </>
         )}
       </ScrollView>
+      </View>
     </View>
   );
 }

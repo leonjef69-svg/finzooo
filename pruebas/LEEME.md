@@ -1,5 +1,15 @@
 # Pruebas y auditores
 
+22/10 Panel de bloqueo: `verificar-panel-bloqueo-real.mjs` ejecuta JSX, opciones
+de ruta, efectos y callbacks originales con React/Android/IO adaptados. Carga y
+errores sin escritura, cierre X/fondo/Atrás, borradores cancelables, PIN distintos
+o incorrecto, guardado y dobles toques, lectura atrasada/desmontaje, acceso Pro
+y configuración oculta durante candado. La cubierta completa sigue no
+descartable y sus acciones se prueban además en bloqueo/privacidad originales.
+`FINO_LOCK_SHEET_BASELINE=5ec3de48` falla por faltar la declaración de panel
+inferior. Ayuda en tres idiomas coincide con GRACE_MS y evita recomendar
+desinstalar. No utiliza credenciales reales ni modifica datos del emulador.
+
 22/10 Bloqueo: `verificar-bloqueo-alternativo-real.mjs` monta el guardián original
 con JSX/hooks, reloj y Android adaptados. Comprueba huella sin PIN simultáneo,
 arranque listo, cancelar/elegir PIN, error y reintento único, retorno corto/largo,

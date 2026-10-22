@@ -647,6 +647,7 @@ function RootNavigator() {
             <Stack.Screen name="language" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="country" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="currency" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
+            <Stack.Screen name="app-lock" options={{ presentation: "transparentModal", animation: "slide_from_bottom", gestureEnabled: false, contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="(tabs)" options={{ animation: spaceAnimation, animationTypeForReplace: "push", contentStyle: { backgroundColor: screenBg } }} />
             <Stack.Screen name="family" options={{ animation: spaceAnimation, animationTypeForReplace: "push", contentStyle: { backgroundColor: screenBg } }} />
             <Stack.Screen name="boxes" options={{ animation: spaceAnimation, animationTypeForReplace: "push", contentStyle: { backgroundColor: screenBg } }} />

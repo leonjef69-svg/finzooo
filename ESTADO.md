@@ -1,5 +1,52 @@
 # Estado actual de Fino
 
+## Bloqueo — 22/10/2026 — configuración en panel inferior compacto
+
+Marca `22oct-bloqueo-panel-compacto`. La ruta `app-lock` conserva acceso Pro y
+gestión de un candado existente sin Pro, pero ahora presenta un único panel
+transparente sobre Ajustes, con entrada nativa desde abajo. Contenido compacto,
+asa, X, fondo tocable, ayuda desplegable y aviso breve de biometría no disponible.
+Altura máxima según ventana/zona segura y scroll para PIN/ayuda; sin segunda
+ventana modal, dependencia o pantalla de configuración adicional. El gesto de
+navegación nativo no puede saltar las guardias del panel durante un guardado.
+
+Crear/confirmar o comprobar el PIN usa el mismo panel; Cancelar y Atrás vuelven
+al resumen antes de salir. X/fondo descartan borradores sin guardar. Lectura
+inicial pendiente no habilita interruptores y guardado/comprobación en curso
+inhibe cierre, entradas y dobles toques hasta su respuesta. La configuración se
+desmonta si aparece el candado. `AppLockGate`, almacenamiento del PIN, margen y
+protección de pantalla no cambian: el desbloqueo sigue opaco, completo y no
+descartable con Atrás, independiente del nuevo panel.
+
+La ayuda tenía textos antiguos: se ajustó al margen real de dos minutos y se
+quitó el consejo de reinstalar/garantía de recuperar todo de la nube. Ahora
+indica no desinstalar y contactar al soporte; el respaldo puede no incluir el
+último cambio. Tres idiomas, sin nuevos datos guardados ni cambios en políticas.
+
+`verificar-panel-bloqueo-real.mjs` ejecuta ruta/opciones, JSX, efectos y acciones
+originales con React/Android/IO adaptados: panel acotado, carga/error, cierres sin
+escritura, borradores, PIN distintos/incorrecto, activar/desactivar, error y doble
+toque, respuesta pendiente, acceso Pro y cubierta conservada. Roja contra
+5ec3de48 por carecer de presentación inferior; verde actual. Ayuda comparada con
+GRACE_MS y sin recomendar desinstalación. Se conservan las suites de desbloqueo,
+privacidad y accesibilidad. Lote general: 254 pruebas y 8 auditores, tarjetas
+excluidas; TypeScript/ESLint aprobados, textos finales revisados de nuevo.
+
+Emulador habitual: el usuario desbloqueó personalmente. Se abrió desde Ajustes
+y el árbol Android confirma panel inferior (cabecera alrededor de y=1870 en
+pantalla 2400), resumen, X y ayuda. Se abrió/cerró/reabrió con X y Atrás, ambos
+vuelven al mismo Ajustes; ayuda expande el panel sin otra pantalla. No se tocaron
+interruptores, PIN ni datos financieros. Windows falló dos capturas y Android
+devolvió imagen negra; no se desactivó protección ni se acredita revisión de
+píxeles. Al recargar los textos finales de desarrollo reapareció la cubierta
+del PIN; no se intentó saltarla ni usar credenciales con herramientas.
+
+**Sigue/falta:** prueba de huella/cara reales en dispositivo con biometría
+disponible; el emulador no la ofrece. Activación/desactivación reales no se
+hicieron sobre la cuenta: se probaron con IO ficticio. La guía de control del
+emulador reserva autenticación y ajustes de seguridad al usuario. Sin medición
+FPS, APK/AAB/OTA, publicación o despliegue; WhatsApp real continúa pendiente.
+
 ## Bloqueo — 22/10/2026 — biometría principal, PIN alternativo
 
 Marca `22oct-bloqueo-huella-pin-alternativo`. El guardián ya no dibuja el PIN

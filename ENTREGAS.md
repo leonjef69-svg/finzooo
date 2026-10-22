@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 22/10/2026 — configuración de bloqueo en panel inferior (desarrollo)
+
+Marca `22oct-bloqueo-panel-compacto`. Panel compacto sobre Ajustes con entrada
+desde abajo, X/fondo y ayuda inline; PIN se crea/comprueba sin otra pantalla.
+Lectura pendiente, guardado y doble toque protegidos. Borradores se cancelan sin
+escritura; desbloqueo global y PIN guardado intactos. Nota de huella no disponible
+y ayuda corregida (dos minutos reales; no recomendar reinstalar ni garantizar
+restauración completa desde nube).
+
+Regresión original de panel/ruta/guardias verde y roja contra 5ec3de48;
+TypeScript, ESLint, 254 pruebas y 8 auditores aprobados con tarjetas excluidas.
+Emulador habitual: apertura, cierre/reapertura con X y Atrás y expansión de ayuda
+confirmados por árbol Android, con Ajustes detrás y sin cambiar seguridad ni
+dinero. Captura Windows falla y Android negra; no se desprotegen capturas ni se
+acredita verificación de píxeles. Recarga final de textos mantiene cubierta PIN.
+
+**Sigue/falta:** sensor biométrico real (no disponible en el emulador), prueba
+personal de autenticación y configuración con hardware; no se usa PIN del
+usuario ni se automatizan esos ajustes. Activar/desactivar solo con datos de
+prueba. Sin código nativo, APK/AAB/OTA, publicación o despliegue. WhatsApp real
+con archivo en chat continúa pendiente.
+
 ## 22/10/2026 — bloqueo con PIN solo alternativo (desarrollo)
 
 Marca `22oct-bloqueo-huella-pin-alternativo`. Huella/cara al abrir cuando está
