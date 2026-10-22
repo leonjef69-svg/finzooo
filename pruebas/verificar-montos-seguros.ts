@@ -53,8 +53,10 @@ const categoryBudgets = fs.readFileSync(
   "utf8",
 );
 assert.match(categoryBudgets, /category-budget-limit-/, "cada categoría conserva su campo editable de límite");
-assert.match(categoryBudgets, /categoryBudgets\.limit/, "el límite se identifica a la izquierda sin confundirse con el gasto");
-assert.match(categoryBudgets, /categoryBudgets\.spent/, "la pantalla conserva el monto gastado por categoría");
+assert.match(categoryBudgets, /categoryBudgets\.limitFor/, "el límite sigue identificado para editarlo");
+assert.match(categoryBudgets, /categoryBudgets\.monthlyLimit/, "debajo del importe se aclara que el límite es mensual");
+assert.doesNotMatch(categoryBudgets, /categoryBudgets\.spent/, "el editor no repite el gasto junto al límite");
+assert.match(categoryBudgets, /accessibilityHint=\{t\("categoryBudgets\.tapToEdit"\)\}/, "toda la fila anuncia que se puede tocar para editar");
 assert.match(categoryBudgets, /categoryBudgets\.overLimit/, "superar el límite muestra una alerta roja breve");
 assert.match(categoryBudgets, /categoryBudgets\.nearLimit/, "acercarse al límite muestra una alerta ámbar breve");
 assert.match(categoryBudgets, /spent \/ limit >= 0\.9/, "el aviso ámbar empieza al alcanzar el 90% del límite");

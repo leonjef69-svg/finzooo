@@ -146,7 +146,7 @@ function labelText(nodes) {
 
 render();
 const all = flatten(tree);
-assert.equal(all.filter((item) => item.props?.testID?.startsWith("category-budget-row-")).length, 4, "cada categoría mantiene su tarjeta y su campo para fijar el límite");
+assert.equal(all.filter((item) => item.props?.testID?.startsWith("category-budget-row-")).length, 4, "cada categoría mantiene una tarjeta táctil para fijar el límite");
 
 assert(node("category-budget-add"), "la acción para agregar categoría queda junto al título");
 assert(node("category-budget-search"), "se puede buscar una categoría por nombre");
@@ -158,10 +158,14 @@ const amberStatusText = flatten(node("category-budget-status-comida").children).
 assert(String(amberStatusText.props.className).includes("text-amber-700"), "acercarse al límite se identifica en ámbar");
 assert.equal(node("category-budget-status-compras"), undefined, "si el gasto está normal no añade texto ni color de aviso");
 assert.equal(flatten(tree).some((item) => String(item.props?.testID ?? "").includes("progress")), false, "la pantalla de edición no repite las barras de la consulta de presupuestos");
-const spentAmount = node("category-budget-spent-transporte");
-assert.equal(labelText([spentAmount]), "S/ 943,854,353,434", "el monto gastado se conserva y no se encoge");
-assert.equal(spentAmount.props.numberOfLines, 2, "un gasto largo puede ocupar dos líneas sin reducir la letra");
-assert.equal(labelText([node("category-budget-limit-label-transporte")]), "Límite S/ 100", "el límite queda separado del gasto y alineado a la izquierda");
+assert.equal(node("category-budget-spent-transporte"), undefined, "la edición no repite el gasto junto al límite");
+assert.equal(labelText([node("category-budget-limit-label-transporte")]), "S/ 100", "la esquina muestra únicamente el monto del límite");
+assert.equal(labelText([node("category-budget-monthly-label-transporte")]), "Límite mensual", "la aclaración queda debajo del monto");
+const rowTransporte = node("category-budget-row-transporte");
+assert.equal(rowTransporte.type, "TouchableOpacity", "toda la tarjeta se puede tocar para editar el límite");
+assert.equal(rowTransporte.props.accessibilityHint, "Toca para editar");
+assert.equal(flatten(rowTransporte.children).some((item) => item.type === "Pencil"), true, "el lápiz aparece junto al monto en la esquina derecha");
+assert.equal(node("category-budget-monthly-label-comida") && node("category-budget-monthly-label-compras") ? true : false, true, "todas las categorías identifican el límite mensual");
 data.categorySpent.compras = 45;
 render();
 assert.equal(labelText([node("category-budget-status-compras")]), "Cerca del límite", "el aviso ámbar comienza exactamente al 90%");
@@ -217,7 +221,7 @@ assert.equal(node("report-category-budget-transporte").props.style.borderBottomW
 
 hooks.splice(0, hooks.length, ...categoryScreenHooks);
 render();
-node("category-budget-edit-transporte").props.onPress();
+node("category-budget-row-transporte").props.onPress();
 render();
 const limitInput = node("category-budget-limit-transporte");
 assert.equal(limitInput.props.value, "100");

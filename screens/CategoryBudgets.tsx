@@ -131,93 +131,78 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
           const over = limit > 0 && spent > limit;
           const near = limit > 0 && !over && spent / limit >= 0.9;
           return (
-            <View
+            <TouchableOpacity
               key={category.id}
               testID={`category-budget-row-${category.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${t(category.label)} · ${t("categoryBudgets.limitFor", { category: t(category.label) })}`}
+              accessibilityHint={t("categoryBudgets.tapToEdit")}
+              onPress={() => setEditingId(category.id)}
               className="min-h-[72px] flex-row items-center gap-2.5 py-2.5"
               style={{ borderBottomColor: dividerColor, borderBottomWidth: 1.2 }}
             >
               <IconBadge Icon={category.icon} color={category.color} size={38} image={category.image} />
               <View className="min-w-0 flex-1 gap-1">
-                <View className="flex-row items-start justify-between gap-2">
-                  <Text className="min-w-0 flex-1 pt-0.5 text-[13px] font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>
-                    {t(category.label)}
-                  </Text>
-                  <View className="max-w-[142px] shrink-0 items-end">
-                    <Text
-                      testID={`category-budget-spent-${category.id}`}
-                      className={`text-right text-sm font-bold ${over ? "text-rose-600 dark:text-rose-400" : near ? "text-amber-700 dark:text-amber-400" : "text-slate-900 dark:text-slate-100"}`}
-                      numberOfLines={2}
-                    >
-                      {fmt(spent)}
-                    </Text>
-                    <Text className="text-[10px] text-slate-500 dark:text-slate-400">
-                      {t("categoryBudgets.spent")}
+                <Text className="min-w-0 pt-0.5 text-[13px] font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>
+                  {t(category.label)}
+                </Text>
+                {over ? (
+                  <View testID={`category-budget-status-${category.id}`} className="flex-row items-center gap-1">
+                    <AlertTriangle size={12} color={dark ? "#fb7185" : "#e11d48"} />
+                    <Text className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                      {t("categoryBudgets.overLimit")}
                     </Text>
                   </View>
-                </View>
-
-                <View className="flex-row items-center justify-between gap-2">
-                  {editingId === category.id ? (
-                    <View className="min-h-8 min-w-[112px] flex-row items-center gap-1 rounded-lg border border-emerald-500 bg-emerald-50 px-2 dark:bg-emerald-950">
-                      <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">{t("categoryBudgets.limit")}</Text>
-                      <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">{currencySymbolFor(userCurrency)}</Text>
-                      <TextInput
-                        testID={`category-budget-limit-${category.id}`}
-                        accessibilityLabel={t("categoryBudgets.limitFor", { category: t(category.label) })}
-                        disableFullscreenUI
-                        autoFocus
-                        selectTextOnFocus
-                        value={currentAmount}
-                        onChangeText={(value) => setAmounts((previous) => ({
-                          ...previous,
-                          [category.id]: sanitizeSafeAmountInput(value, userCurrency),
-                        }))}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        placeholderTextColor="#94a3b8"
-                        className="min-w-0 flex-1 text-right text-xs font-bold text-slate-900 dark:text-slate-100"
-                        style={{ padding: 0 }}
-                      />
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      accessibilityLabel={t("categoryBudgets.limitFor", { category: t(category.label) })}
-                      accessibilityHint={t("categoryBudgets.tapToEdit")}
-                      testID={`category-budget-edit-${category.id}`}
-                      onPress={() => setEditingId(category.id)}
-                      className="min-h-8 flex-row items-center gap-1.5 rounded-lg px-1 py-1"
-                    >
-                      <Text
-                        testID={`category-budget-limit-label-${category.id}`}
-                        className={`text-xs ${limit === 0 ? "text-slate-500 dark:text-slate-400" : "text-slate-600 dark:text-slate-300"}`}
-                        numberOfLines={1}
-                      >
-                        {t("categoryBudgets.limit")} {limit > 0 ? fmt(limit) : t("categoryBudgets.noLimit")}
-                      </Text>
-                      <Pencil size={12} color={dark ? "#94a3b8" : "#64748b"} />
-                    </TouchableOpacity>
-                  )}
-
-                  {over ? (
-                    <View testID={`category-budget-status-${category.id}`} className="flex-row items-center gap-1">
-                      <AlertTriangle size={12} color={dark ? "#fb7185" : "#e11d48"} />
-                      <Text className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
-                        {t("categoryBudgets.overLimit")}
-                      </Text>
-                    </View>
-                  ) : near ? (
-                    <View testID={`category-budget-status-${category.id}`} className="flex-row items-center gap-1">
-                      <AlertTriangle size={12} color={dark ? "#fbbf24" : "#d97706"} />
-                      <Text className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                        {t("categoryBudgets.nearLimit")}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
+                ) : near ? (
+                  <View testID={`category-budget-status-${category.id}`} className="flex-row items-center gap-1">
+                    <AlertTriangle size={12} color={dark ? "#fbbf24" : "#d97706"} />
+                    <Text className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                      {t("categoryBudgets.nearLimit")}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
-            </View>
+              <View className="max-w-[48%] shrink-0 items-end">
+                {editingId === category.id ? (
+                  <View className="min-h-8 min-w-[104px] flex-row items-center gap-1 rounded-lg border border-emerald-500 bg-emerald-50 px-2 dark:bg-emerald-950">
+                    <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">{currencySymbolFor(userCurrency)}</Text>
+                    <TextInput
+                      testID={`category-budget-limit-${category.id}`}
+                      accessibilityLabel={t("categoryBudgets.limitFor", { category: t(category.label) })}
+                      disableFullscreenUI
+                      autoFocus
+                      selectTextOnFocus
+                      value={currentAmount}
+                      onChangeText={(value) => setAmounts((previous) => ({
+                        ...previous,
+                        [category.id]: sanitizeSafeAmountInput(value, userCurrency),
+                      }))}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor="#94a3b8"
+                      className="min-w-0 flex-1 text-right text-xs font-bold text-slate-900 dark:text-slate-100"
+                      style={{ padding: 0 }}
+                    />
+                  </View>
+                ) : (
+                  <View className="min-h-8 flex-row items-center justify-end gap-1">
+                    <Text
+                      testID={`category-budget-limit-label-${category.id}`}
+                      className={`text-right text-sm font-bold ${limit === 0 ? "text-slate-500 dark:text-slate-400" : "text-slate-900 dark:text-slate-100"}`}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.72}
+                    >
+                      {limit > 0 ? fmt(limit) : t("categoryBudgets.noLimit")}
+                    </Text>
+                    <Pencil size={13} color={dark ? "#94a3b8" : "#64748b"} />
+                  </View>
+                )}
+                <Text testID={`category-budget-monthly-label-${category.id}`} className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {t("categoryBudgets.monthlyLimit")}
+                </Text>
+              </View>
+            </TouchableOpacity>
           );
         })}
         {filteredCategories.length === 0 ? (

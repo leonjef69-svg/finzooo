@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Presupuestos por categoría — 22/10/2026 — límite visible y fila táctil
+
+En la pantalla que edita límites, cada categoría muestra a la derecha solo el
+monto del límite (o «Sin límite»), con el lápiz a su lado y «Límite mensual»
+debajo. Se retiró de esta pantalla el importe «Gastado», para no mezclarlo con
+el límite; los avisos ámbar/rojo siguen apareciendo solo cuando corresponde.
+Toda la fila se puede tocar para editar, además del lápiz visible. Guardar sigue
+siendo explícito: al cancelar o salir no se guardan cambios. Reportes conserva su
+consulta de gastos y barras; movimientos y saldos no cambian.
+
+La regresión verifica la posición/etiqueta del límite, la ausencia del gasto en
+el editor, el toque en toda la fila, los avisos, Reportes intacto y que el diseño
+anterior falle. TypeScript, ESLint, 258 pruebas y 8 auditores pasan. El emulador
+habitual carga el bundle nuevo y la pantalla muestra «Presupuestos por
+categoría», «Toca para editar» y «Límite mensual» en su jerarquía accesible; la
+captura Android sale negra, así que no pude verificar los píxeles. No se tocó
+ningún dato financiero ni código nativo. PLAYSTORE.md no requiere cambios.
+
+**Sigue/falta:** si se necesita confirmar visualmente colores y alineación en el
+emulador, queda pendiente una captura visible. No requiere APK/AAB.
+
 ## Negocio — 22/10/2026 — resumen unificado de ingresos, gastos y resultado
 
 Ingresos, Gastos y Resultado ahora se ven dentro de una sola tarjeta compacta.

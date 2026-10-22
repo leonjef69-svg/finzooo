@@ -1,5 +1,20 @@
 # Entregas de Fino
 
+## 22/10/2026 — límite de presupuesto en la esquina (desarrollo)
+
+En el editor, cada fila muestra el importe del límite en la esquina derecha,
+con el lápiz a su lado y «Límite mensual» debajo. Se oculta ahí el gasto para no
+confundirlo con el límite; los avisos rojo/ámbar siguen cuando son necesarios.
+Tocar cualquier parte de la fila permite editar. Guardar mantiene el flujo
+actual y Reportes no cambia. No se tocan movimientos ni saldos.
+
+La regresión del editor falla con la versión previa y pasa con este ajuste.
+TypeScript, ESLint, 258 pruebas y 8 auditores pasan. El emulador carga el bundle
+nuevo y su jerarquía muestra el título y las etiquetas actualizadas; su captura
+sale negra, así que no se pudieron revisar visualmente los píxeles. No se
+alteraron datos financieros. **Sigue/falta:** confirmar colores y alineación con
+una captura visible. No requiere APK/AAB porque no hay cambios nativos.
+
 ## 22/10/2026 — resumen unificado de Modo Negocio (desarrollo)
 
 Ingresos, Gastos y Resultado comparten una sola tarjeta compacta. Los dos
