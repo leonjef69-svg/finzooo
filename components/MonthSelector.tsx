@@ -3,12 +3,13 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Modal from "@/components/PrivateModal";
 import { CalendarDays, Check, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import type { Month, Transaction } from "@/types";
+import type { Month } from "@/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
-import { compactPersonalTransferRows } from "@/utils/linkedTransfers";
+import { saldoLibre, totalApartado } from "@/utils/ahorro";
 import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
+import { personalMonthlyMovementCounts } from "@/utils/personalMonthRows";
 
 type Props = {
   month: Month;
@@ -35,30 +36,29 @@ function labelFor(key: string, monthNames: string[]) {
 export default function MonthSelector({ month, months, monthNames, onChange, showMovementCount = false }: Props) {
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
-  const { t, fmtCompact, transactions, budgets, carryoverCleared } = useAppData();
+  const { t, fmtCompact, transactions, budgets, carryoverCleared, goals } = useAppData();
   const currentKey = `${month.y}-${String(month.m + 1).padStart(2, "0")}`;
   const label = `${monthNames[month.m]} ${month.y}`;
   const dark = colorScheme === "dark";
   // Volver a Inicio no debe calcular todos los meses para un panel cerrado.
   // Al abrirlo se usan las fuentes actuales, sin guardar otra copia del saldo.
-  const monthBalances = useMemo(() => !open ? {} : Object.fromEntries(months.map((key) => {
-    const totals = totalsForMonth(transactions, key);
-    const total = availablePersonalBalance({
-      budget: presupuestoDelMes(budgets, key),
-      prevBalance: saldoAnteriorDe(key, budgets, transactions, carryoverCleared),
-      ...totals,
-    });
-    return [key, total];
-  })), [open, months, transactions, budgets, carryoverCleared]);
-  const monthMovementCounts = useMemo(() => {
-    if (!open || !showMovementCount) return {};
-    const grouped: Record<string, Transaction[]> = Object.fromEntries(months.map((key) => [key, []]));
-    for (const transaction of transactions) {
-      const key = transaction.date.slice(0, 7);
-      if (grouped[key]) grouped[key].push(transaction);
-    }
-    return Object.fromEntries(months.map((key) => [key, compactPersonalTransferRows(grouped[key]).length]));
-  }, [open, months, showMovementCount, transactions]);
+  const monthBalances = useMemo(() => {
+    if (!open) return {};
+    const reservedSavings = totalApartado(goals);
+    return Object.fromEntries(months.map((key) => {
+      const totals = totalsForMonth(transactions, key);
+      const personalBalance = availablePersonalBalance({
+        budget: presupuestoDelMes(budgets, key),
+        prevBalance: saldoAnteriorDe(key, budgets, transactions, carryoverCleared),
+        ...totals,
+      });
+      return [key, saldoLibre(personalBalance, reservedSavings)];
+    }));
+  }, [open, months, transactions, budgets, carryoverCleared, goals]);
+  const monthMovementCounts = useMemo(
+    () => !open || !showMovementCount ? {} : personalMonthlyMovementCounts(transactions, months),
+    [open, showMovementCount, months, transactions],
+  );
 
   return (
     <>

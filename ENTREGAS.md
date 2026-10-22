@@ -1,5 +1,17 @@
 # Entregas de Fino
 
+## 22/10/2026 — conteo y saldo del selector mensual (desarrollo)
+
+Personal cuenta las tarjetas visibles de cada mes, sin recibos internos de
+ahorro ni movimientos ocultos, y agrupa transferencias por día como su lista.
+Reportes ahora muestra el mismo conteo. El saldo de los meses resta el ahorro
+reservado en metas, tal como el saldo disponible de Personal. Sin modificaciones
+en movimientos o saldos guardados.
+
+TypeScript, ESLint, 258 pruebas y 8 auditores pasan. Metro sirve el bundle nuevo
+y el emulador abrió Reportes; no se pudo desplegar el selector con automatización,
+por lo que su revisión visual sigue pendiente. No requiere APK/AAB.
+
 ## 22/10/2026 — límite de presupuesto en la esquina (desarrollo)
 
 En el editor, cada fila muestra el importe del límite en la esquina derecha,

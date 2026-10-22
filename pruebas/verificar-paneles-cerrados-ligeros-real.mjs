@@ -13,8 +13,10 @@ function load(file, require) {
 const pure = new Map();
 function original(file) {
   if (!pure.has(file)) pure.set(file, load(file, name => {
-    assert.ok(name.startsWith("@/utils/"), name);
-    return original(name.slice(2) + ".ts");
+    if (name === "@/utils/recordOrigin") return { identityForExplicitEdit: (_original, candidate) => candidate };
+    if (name.startsWith("@/utils/")) return original(name.slice(2) + ".ts");
+    if (name === "@/constants/currencies") return { currencyDecimals: () => 2 };
+    assert.fail(name);
   }));
   return pure.get(file);
 }
@@ -39,9 +41,18 @@ const flatten = node => !node || typeof node !== "object" ? [] : Array.isArray(n
 const texts = node => !node || typeof node === "boolean" ? [] : typeof node === "object" ? Array.isArray(node) ? node.flatMap(texts) : texts(node.props?.children) : [String(node)];
 const element = (type, props) => ({ type, props: props ?? {} });
 const months = ["2026-09", "2026-10"];
-const context = { t: key => key, fmtCompact: n => `S/ ${n}`, userCountry: "PE", showToast() {},
-  transactions: [{ id: 1, date: "2026-09-01", type: "income", amount: 100 }, { id: 2, date: "2026-10-01", type: "expense", amount: 20 }],
-  budgets: { "2026-10": 50 }, carryoverCleared: [] };
+const context = { t: (key, values) => key === "monthPicker.oneMovement" ? "1 movimiento"
+  : key === "monthPicker.manyMovements" ? `${values.count} movimientos` : key,
+  fmtCompact: n => `S/ ${n}`, userCountry: "PE", showToast() {},
+  transactions: [
+    { id: 1, date: "2026-09-01", type: "income", amount: 100 },
+    { id: 2, date: "2026-09-01", type: "expense", amount: 0, hiddenFromHistory: true },
+    { id: 3, date: "2026-09-01", type: "expense", amount: 0, internalTransfer: "goal" },
+    { id: 4, date: "2026-09-01", type: "expense", amount: 1, internalTransfer: "family", internalTransferSpaceId: "family-1" },
+    { id: 5, date: "2026-09-01", type: "income", amount: 1, internalTransfer: "family", internalTransferSpaceId: "family-1" },
+    { id: 6, date: "2026-10-01", type: "expense", amount: 20 },
+  ],
+  goals: [{ id: 1, name: "Viaje", saved: 30 }], budgets: { "2026-10": 50 }, carryoverCleared: [] };
 const before = JSON.stringify(context);
 let generated = 0, totalsCalls = 0, categoryCalls = 0, memberComparisons = 0;
 const jsx = (type, props) => { generated++; return element(type, props); };
@@ -56,13 +67,25 @@ function dependencies(name) {
   if (name === "react-native-safe-area-context") return { useSafeAreaInsets: () => ({ bottom: 0 }) };
   if (name.endsWith("AppDataContext")) return { useAppData: () => context };
   if (name.endsWith("finances")) return { ...finances, totalsForMonth: (...args) => { totalsCalls++; return finances.totalsForMonth(...args); } };
-  if (["linkedTransfers", "presupuestoMensual", "saldoAnterior"].some(file => name.endsWith(file))) return original(name.slice(2) + ".ts");
+  if (["ahorro", "linkedTransfers", "presupuestoMensual", "saldoAnterior", "movementDates", "personalHistory", "recentMovementFilters", "personalMonthRows"].some(file => name.endsWith(file))) return original(name.slice(2) + ".ts");
   if (name.endsWith("categories")) return { ingresosDisponibles: () => { categoryCalls++; return []; }, gastosDisponibles: () => { categoryCalls++; return []; } };
   if (name.endsWith("countries")) return { COUNTRIES: [] };
   if (name.endsWith("currencies")) return { currencySymbolFor: () => "S/" };
   return { default: name.split("/").at(-1) };
 }
 const Picker = load("components/MonthSelector.tsx", dependencies).default;
+const personalRows = original("utils/personalMonthRows.ts");
+const countRows = [
+  { id: 11, date: "2026-10-01", type: "income", amount: 10 },
+  { id: 12, date: "2026-10-01", type: "expense", amount: 5 },
+  { id: 13, date: "2026-10-01", type: "expense", amount: 80, hiddenFromHistory: true },
+  { id: 14, date: "2026-10-01", type: "expense", amount: 30, internalTransfer: "goal" },
+  { id: 15, date: "2026-10-01", type: "expense", amount: 7, internalTransfer: "family", internalTransferSpaceId: "home" },
+  { id: 16, date: "2026-10-01", type: "income", amount: 7, internalTransfer: "family", internalTransferSpaceId: "home" },
+  { id: 17, date: "2026-10-02", type: "expense", amount: 4, internalTransfer: "family", internalTransferSpaceId: "home" },
+];
+assert.equal(personalRows.personalMonthlyMovementCounts(countRows, ["2026-10"])["2026-10"], 4,
+  "el conteo es igual a las filas visibles: excluye recibos ocultos/de metas y agrupa transferencias por día");
 const changes = [], props = { month: { y: 2026, m: 9 }, months, monthNames: Array.from({ length: 12 }, (_, i) => `Mes ${i + 1}`), onChange: month => changes.push(month), showMovementCount: true };
 const render = () => { runtime.begin(); return Picker(props); };
 let tree = render();
@@ -72,11 +95,13 @@ assert.equal(JSON.stringify(context), before, "montar el selector no altera sus 
 flatten(tree).find(n => n.type === "TouchableOpacity").props.onPress();
 tree = render();
 assert.equal(totalsCalls, months.length);
-assert.ok(texts(tree).includes("S/ 100")); assert.ok(texts(tree).includes("S/ 130"), "las fórmulas originales incluyen el arrastre y presupuesto");
+assert.ok(texts(tree).includes("S/ 70")); assert.ok(texts(tree).includes("S/ 100"), "el saldo descuenta lo guardado en metas e incluye el arrastre y presupuesto");
+assert.ok(texts(tree).includes("2 movimientos"), "el mes cuenta solo filas visibles, con transferencia resumida por día");
+assert.ok(texts(tree).includes("1 movimiento"), "el otro mes muestra su único movimiento visible");
 const visibleCalls = totalsCalls;
 render(); assert.equal(totalsCalls, visibleCalls, "abrir no recalcula sin cambios");
 context.transactions = [...context.transactions, { id: 3, date: "2026-10-02", type: "income", amount: 7 }];
-tree = render(); assert.ok(texts(tree).includes("S/ 137"), "una llegada real actualiza el selector abierto");
+tree = render(); assert.ok(texts(tree).includes("S/ 107"), "una llegada real actualiza el saldo libre del selector abierto");
 const monthButton = flatten(tree).find(n => n.type === "TouchableOpacity" && n.props.accessibilityState?.selected === true);
 monthButton.props.onPress(); tree = render();
 assert.deepEqual(JSON.parse(JSON.stringify(changes)), [{ y: 2026, m: 9 }]);
@@ -85,7 +110,7 @@ const closedCalls = totalsCalls;
 context.budgets = { "2026-10": 80 }; render();
 assert.equal(totalsCalls, closedCalls, "cerrado tampoco procesa cambios financieros que aún no muestra");
 flatten(render()).find(n => n.type === "TouchableOpacity").props.onPress();
-assert.ok(texts(render()).includes("S/ 167"), "reabrir usa los datos actuales, no una copia financiera antigua");
+assert.ok(texts(render()).includes("S/ 137"), "reabrir usa el presupuesto actual y resta lo reservado en metas");
 const currentData = JSON.stringify(context); render();
 assert.equal(JSON.stringify(context), currentData, "presentar meses no escribe ni modifica dinero");
 

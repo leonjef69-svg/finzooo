@@ -3,6 +3,7 @@ import fs from "node:fs";
 
 const leer = (ruta) => fs.readFileSync(ruta, "utf8");
 const home = leer("screens/Home.tsx");
+const personalRows = leer("utils/personalMonthRows.ts");
 const history = leer("screens/History.tsx");
 const detail = leer("screens/Detail.tsx");
 const family = leer("screens/Family.tsx");
@@ -18,7 +19,8 @@ assert.match(home, /isTransfer \? <View[\s\S]*SpaceTransferAmounts[\s\S]*transfe
 assert.match(detail, /transfer\.notIncomeExpense/, "el detalle explica que una transferencia no es ingreso ni gasto");
 assert.match(history, /matchesPersonalMovementFilter\(t, filter\)/, "el filtro usa el separador común de movimientos, probado funcionalmente en ahorro-unificado-real");
 assert.match(controls, /"transferencia"[\s\S]*SpaceTransferFilter/, "Familia y Caja comparten un filtro exclusivo de transferencias");
-assert.match(home, /movementRowsByDay\(monthTx[\s\S]*compactPersonalTransferRows\(dayItems\)/, "Inicio agrupa transferencias por destino dentro de cada día");
+assert.match(home, /personalMovementRowsByDay\(monthTx\)/, "Inicio usa el mismo agrupamiento de filas visibles que el conteo mensual");
+assert.match(personalRows, /movementRowsByDay\(visible, row => row\.date, dayItems => compactPersonalTransferRows\(dayItems\)\)/, "Personal agrupa transferencias por destino dentro de cada día");
 assert.match(history, /filter === "all"[\s\S]*compactPersonalTransferRows/, "Historial agrupa por defecto y conserva el filtro con el detalle completo");
 
 for (const [nombre, codigo] of [["Familia", family], ["Caja", boxes], ["Caja compartida", sharedBoxes]]) {

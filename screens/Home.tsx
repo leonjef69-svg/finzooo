@@ -1,6 +1,6 @@
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { saldoLibre } from "@/utils/ahorro";
-import { removablePersonalHistoryIds, removableLegacyReturnIds, visiblePersonalMovement } from "@/utils/personalHistory";
+import { removablePersonalHistoryIds, removableLegacyReturnIds } from "@/utils/personalHistory";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import MonthSelector from "@/components/MonthSelector";
@@ -31,10 +31,11 @@ import { availablePersonalBalance, budgetUsed, totalsForMonth } from "@/utils/fi
 import { paymentForCalendarNotification } from "@/utils/calendarNotificationTap";
 import { monthKey } from "@/utils/format";
 import { summarizeGoalFunding } from "@/utils/savingsSummary";
-import { movementRowsByDay, startsMovementDay, personalMovementRowTime } from "@/utils/movementDates";
+import { startsMovementDay, personalMovementRowTime } from "@/utils/movementDates";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
 import { availableRecentMovementTypes, showInPersonalRecent } from "@/utils/recentMovementFilters";
+import { personalMovementRowsByDay } from "@/utils/personalMonthRows";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -438,8 +439,7 @@ export default function Home({
     [monthTx, mk],
   );
   // Una transferencia resumida nunca incluye otros días bajo esta fecha.
-  const compactMonthRows = useMemo(() => movementRowsByDay(monthTx.filter(row => showInPersonalRecent(row) && visiblePersonalMovement(row)), item => item.date,
-    dayItems => compactPersonalTransferRows(dayItems)), [monthTx]);
+  const compactMonthRows = useMemo(() => personalMovementRowsByDay(monthTx), [monthTx]);
   const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
   const recentMovementTypes = useMemo(() => availableRecentMovementTypes(monthTx), [monthTx]);
   useEffect(() => {

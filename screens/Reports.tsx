@@ -124,7 +124,7 @@ export default function Reports({
         <View>
           <Text className="text-xl font-extrabold" style={{ color: primaryTextColor }}>{t("reports.title")}</Text>
         </View>
-        <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
+        <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} showMovementCount />
       </View>
 
       {/* En Reportes no repetimos el saldo ni las cuatro cifras de Inicio.

@@ -109,8 +109,10 @@ const legacyCopy = { ...freshGoal, funding: { format: 1, base: 0, changes: { add
 assert.deepEqual(fundingApi.mergeGoalFunding(freshGoal, legacyCopy).funding.changeTypes, freshGoal.funding.changeTypes,
   "al unir una copia antigua de nube no se pierden los tipos de aporte, devolución ni gasto");
 const home = fs.readFileSync("screens/Home.tsx", "utf8"), history = fs.readFileSync("screens/History.tsx", "utf8");
+const personalRows = fs.readFileSync("utils/personalMonthRows.ts", "utf8");
 assert.match(home, /saldoLibre\(personalTotal, apartado\)/); assert.match(history, /id: "savings"/);
-assert.match(home, /showInPersonalRecent\(row\)/);
+assert.match(home, /personalMovementRowsByDay\(monthTx\)/);
+assert.match(personalRows, /showInPersonalRecent\(row\) && visiblePersonalMovement\(row\)/);
 assert.match(home, /personalSavingsSummaries/); assert.match(home, /personal-savings-summary-/,
   "Personal muestra una tarjeta acumulada por meta, fuera de la selección y borrado de movimientos reales");
 assert.match(history, /if \(tx\.internalTransfer === "goal"\) return[\s\S]*?<SavingsMovementRow/);

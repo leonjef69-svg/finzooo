@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## Meses de Personal y Reportes — 22/10/2026 — conteo visible y saldo libre
+
+El selector mensual ahora cuenta las mismas tarjetas que aparecen en Personal:
+no suma los recibos de ahorro ocultos ni movimientos quitados del historial, y
+resume las transferencias por día como la lista. Reportes también muestra ese
+conteo. El saldo del selector resta lo reservado en las metas, igual que el
+saldo disponible de Personal. No se modifican movimientos, presupuestos,
+apartados ni saldos guardados.
+
+La prueba reproduce filas ordinarias, recibos ocultos/de metas y transferencias
+en varios días; comprueba el conteo visible, el saldo con metas y el recálculo al
+cambiar datos. TypeScript, ESLint, 258 pruebas y 8 auditores pasan. Metro sirve
+el bundle Android actualizado y el emulador abrió Reportes; la automatización no
+consiguió desplegar el selector, así que falta confirmar visualmente esa hoja.
+No hay cambios nativos ni requiere APK/AAB. PLAYSTORE.md no requiere cambios.
+
+**Sigue/falta:** revisión visual del selector abierto en Android. No se tocaron
+los datos financieros del emulador.
+
 ## Presupuestos por categoría — 22/10/2026 — límite visible y fila táctil
 
 En la pantalla que edita límites, cada categoría muestra a la derecha solo el
