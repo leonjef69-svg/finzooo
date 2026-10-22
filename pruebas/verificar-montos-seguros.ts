@@ -52,7 +52,17 @@ const categoryBudgets = fs.readFileSync(
   path.join(process.cwd(), "screens/CategoryBudgets.tsx"),
   "utf8",
 );
-assert.match(categoryBudgets, /w-\[152px\]/, "el limite por categoria aprovecha el espacio disponible");
+assert.match(categoryBudgets, /category-budget-limit-/, "cada categoría conserva su campo editable de límite");
+assert.match(categoryBudgets, /categoryBudgets\.limit/, "el límite se identifica en la tarjeta y no se confunde con el gasto");
+assert.match(categoryBudgets, /categoryBudgets\.usedPercent/, "la tarjeta muestra qué porcentaje del límite se ha usado");
+const reportBudgets = fs.readFileSync(
+  path.join(process.cwd(), "screens/Reports.tsx"),
+  "utf8",
+);
+assert.match(reportBudgets, /report-category-budget-spent-/, "Reportes separa el gasto del límite");
+assert.match(reportBudgets, /report-category-budget-limit-/, "Reportes alinea el límite a la izquierda");
+assert.match(reportBudgets, /COLOR_HEX_600\[b\.color\]/, "cada barra conserva el color de su categoría");
+assert.match(reportBudgets, /borderBottomWidth: 1/, "las categorías se separan con una línea visible");
 assert.match(
   categoryBudgets,
   /sanitizeSafeAmountInput\(v, userCurrency\)/,

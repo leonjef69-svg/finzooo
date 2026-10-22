@@ -3,6 +3,7 @@ import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "r
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import { TrendingDown, TrendingUp } from "lucide-react-native";
+import IconBadge from "@/components/IconBadge";
 import DonutChart from "@/components/DonutChart";
 import DailyActivityCalendar from "@/components/DailyActivityCalendar";
 import MonthlyActivityComparison from "@/components/MonthlyActivityComparison";
@@ -65,7 +66,16 @@ export default function Reports({
       .map(([id, limit]) => {
         const spent = categorySpent[id] || 0;
         const c = catInfo(id);
-        return { id, limit, spent, pct: limit > 0 ? spent / limit : 0, name: t(c.label) };
+        return {
+          id,
+          limit,
+          spent,
+          pct: limit > 0 ? spent / limit : 0,
+          name: t(c.label),
+          icon: c.icon,
+          color: c.color,
+          image: c.image,
+        };
       })
       .sort((a, b) => b.pct - a.pct);
 
@@ -161,7 +171,7 @@ export default function Reports({
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
-        <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
+        <Text testID="report-category-budgets-title" className="text-[15px] font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
         {budgetProgress.length === 0 ? (
           /* LA TARJETA SE CONTRADECÍA, y es lo que reportó el usuario el
              07/08/2026 con una captura: arriba decía "aún no le pusiste límite a
@@ -177,34 +187,71 @@ export default function Reports({
           </Text>
         ) : (
           <View className="gap-3 mt-2">
-            {budgetProgress.map((b) => {
-              const over = b.pct >= 1;
-              const barColor = over ? "#f43f5e" : b.pct >= 0.7 ? "#f59e0b" : "#10b981";
+            {budgetProgress.map((b, index) => {
+              const over = b.spent > b.limit;
+              const atLimit = b.spent === b.limit;
+              const barColor = COLOR_HEX_600[b.color] || "#10b981";
+              const percentText = b.pct > 999
+                ? t("categoryBudgets.usedPercentMoreThan999")
+                : t("categoryBudgets.usedPercent", { percent: String(Math.round(b.pct * 100)) });
               return (
-                <View key={b.id}>
-                  <View className="flex-row items-center justify-between mb-1">
-                    <Text
-                      className="text-xs font-bold flex-1 mr-2"
-                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
-                      numberOfLines={1}
-                    >
-                      {b.name}
-                    </Text>
-                    <Text className={`text-xs font-bold ${over ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>
-                      {t("categoryBudgets.spentOfLimit", { spent: fmt(b.spent), limit: fmt(b.limit) })}
-                    </Text>
-                  </View>
-                  <View className="h-2 rounded-full bg-slate-100 dark:bg-noche-2 overflow-hidden">
+                <View
+                  key={b.id}
+                  testID={`report-category-budget-${b.id}`}
+                  className="flex-row items-center gap-2.5"
+                  style={index < budgetProgress.length - 1 ? {
+                    borderBottomColor: colorScheme === "dark" ? "#64748b" : "#94a3b8",
+                    borderBottomWidth: 1.5,
+                    paddingBottom: 10,
+                  } : undefined}
+                >
+                  <IconBadge Icon={b.icon} color={b.color} size={38} image={b.image} />
+                  <View className="flex-1 min-w-0 gap-1">
+                    <View className="flex-row items-start justify-between gap-2">
+                      <Text
+                        testID={`report-category-budget-name-${b.id}`}
+                        className="text-[13px] font-bold flex-1 min-w-0 mr-1"
+                        style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
+                        numberOfLines={1}
+                      >
+                        {b.name}
+                      </Text>
+                      <Text
+                        testID={`report-category-budget-spent-${b.id}`}
+                        className={`shrink-0 max-w-[168px] text-right text-xs font-bold ${over ? "text-rose-600 dark:text-rose-400" : "text-slate-800 dark:text-slate-100"}`}
+                        numberOfLines={2}
+                      >
+                        {fmt(b.spent)}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center justify-between gap-2">
+                      <Text
+                        testID={`report-category-budget-limit-${b.id}`}
+                        className="min-w-0 flex-1 text-[13px] text-slate-500 dark:text-slate-300"
+                        numberOfLines={1}
+                      >
+                        {t("categoryBudgets.limit")} {fmt(b.limit)}
+                      </Text>
+                      <Text
+                        testID={`report-category-budget-percent-${b.id}`}
+                        className={`shrink-0 max-w-[112px] text-right text-[11px] font-bold ${over ? "text-rose-600 dark:text-rose-400" : atLimit ? "text-amber-600 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}
+                        numberOfLines={2}
+                      >
+                        {percentText}
+                      </Text>
+                    </View>
                     <View
-                      className="h-2 rounded-full"
-                      style={{ width: `${Math.min(b.pct, 1) * 100}%`, backgroundColor: barColor }}
-                    />
+                      testID={`report-category-budget-progress-${b.id}`}
+                      accessibilityLabel={percentText}
+                      className="h-1.5 rounded-full bg-slate-100 dark:bg-noche-2 overflow-hidden mt-0.5"
+                    >
+                      <View
+                        testID={`report-category-budget-progress-fill-${b.id}`}
+                        className="h-1.5 rounded-full"
+                        style={{ width: `${Math.max(0, Math.min(b.pct, 1)) * 100}%`, backgroundColor: barColor }}
+                      />
+                    </View>
                   </View>
-                  {over ? (
-                    <Text className="text-[11px] text-rose-500 font-medium mt-1">
-                      {t("categoryBudgets.overBudget")}
-                    </Text>
-                  ) : null}
                 </View>
               );
             })}

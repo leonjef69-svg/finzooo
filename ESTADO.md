@@ -1,5 +1,31 @@
 # Estado actual de Fino
 
+## Presupuestos por categoría — 22/10/2026 — tarjeta compacta en Reportes y edición
+
+Se corrigió la pantalla equivocada de la primera pasada: el diseño que el usuario
+señalaba estaba en la tarjeta de Reportes. Ahora ambas superficies separan el
+gasto (arriba a la derecha), el límite (a la izquierda), el porcentaje y la
+barra. La barra usa el color de la categoría/icono; el porcentaje indica en
+verde/ámbar/rojo si está debajo, justo en el límite o por encima. Montos largos
+ocupan hasta dos líneas, la barra no excede el ancho y Reportes separa las
+categorías con una línea de mayor contraste. Se aumentó ligeramente el título,
+los nombres, el límite y los iconos para que se lean mejor sin perder el diseño
+compacto. Se conservan el guardado del límite, los movimientos, los filtros y
+los cálculos.
+
+La tarjeta toma los gastos reales por categoría de `categorySpent`; la vista no
+multiplica esos importes. Los valores extraordinarios de la captura requieren
+revisar los movimientos de origen si aún aparecen, sin alterar saldos ni
+ocultarlos. Marca `22oct-presupuestos-reporte-legible`.
+
+TypeScript, ESLint, la prueba directa de ambas pantallas y el lote completo
+(258 pruebas/8 auditores) pasan. `git diff --check` también pasa.
+
+**Sigue/falta:** confirmar visualmente la tarjeta en Android. El emulador está
+encendido y la app instalada es una compilación de desarrollo, pero el puerto
+8081 ya está ocupado por un Metro activo de origen no confirmado; no se lo
+reemplazó. Sin cambios nativos ni migración; no necesita APK/AAB.
+
 ## Reportes — 22/10/2026 — retirada de la vista de prueba
 
 Se eliminó el botón «Probar 12 meses y 31 días» y el modo temporal que

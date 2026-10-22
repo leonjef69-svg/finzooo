@@ -6,6 +6,7 @@ import { useColorScheme } from "nativewind";
 import { Plus } from "lucide-react-native";
 import IconBadge from "@/components/IconBadge";
 import { gastosDisponibles } from "@/constants/categories";
+import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -107,79 +108,93 @@ export default function CategoryBudgets({
             const limit = categoryBudgets[c.id] || 0;
             const spent = categorySpent[c.id] || 0;
             const pct = limit > 0 ? spent / limit : 0;
-            const over = limit > 0 && pct >= 1;
-            const barColor = over ? "#f43f5e" : pct >= 0.7 ? "#f59e0b" : "#10b981";
+            const over = limit > 0 && spent > limit;
+            const atLimit = limit > 0 && spent === limit;
+            const barColor = COLOR_HEX_600[c.color] || "#10b981";
+            const percentText = limit > 0
+              ? pct > 999
+                ? t("categoryBudgets.usedPercentMoreThan999")
+                : t("categoryBudgets.usedPercent", { percent: String(Math.round(pct * 100)) })
+              : null;
             return (
-              /* LA FILA: MÁS BAJA, PERO CON EL MISMO CONTORNO QUE EL RESTO (12/08/2026).
-
-                 Primero pidió bajarla "un poco, pero que no se deforme": se recortó SOLO el aire
-                 —relleno, tamaño del dibujo y separación de la barra—, unos 14 px por fila. NO se
-                 toca la casilla del monto ni ningún tamaño de letra: bajarle el alto la volvería
-                 difícil de acertar con el dedo, y encoger la letra es justo lo que se lee como
-                 "se deformó".
-
-                 Después: "los contornos que sean un poquito más gruesos, como los de Ajustes e
-                 Inicio". El grosor ya era el mismo —1,5 px en las tres pantallas—; lo que
-                 cambiaba era el FONDO. Allí las tarjetas son blancas y con sombra, y aquí eran
-                 grises y planas, así que el mismo contorno se perdía contra el fondo.
-
-                 Se igualan: tarjeta blanca con sombra, y la casilla del monto pasa a gris, o
-                 dejaría de leerse como una casilla encima de una tarjeta blanca. */
+              /* Diseño compacto: categoría y gasto arriba; límite editable a la izquierda
+                 y porcentaje a la derecha. Se conserva el mismo campo de límite y guardado. */
               <View
                 key={c.id}
-                className="bg-white dark:bg-noche-2 rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-noche-borde"
+                testID={`category-budget-row-${c.id}`}
+                className="bg-white dark:bg-noche-2 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
-                <View className="flex-row items-center gap-3">
-                  <IconBadge Icon={c.icon} color={c.color} size={34} image={c.image} />
-                  <Text
-                    className="flex-1 text-sm font-bold"
-                    style={{ color: primaryTextColor }}
-                    numberOfLines={1}
-                  >
-                    {t(c.label)}
-                  </Text>
-                  {/* 152 px aprovecha el espacio libre para monedas y cifras largas sin aumentar el alto
-                      de la tarjeta; el nombre aprovecha el espacio restante. */}
-                  <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-2.5 py-2 w-[152px]">
-                    <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
-                      {currencySymbolFor(userCurrency)}
-                    </Text>
-                    <TextInput
-                      disableFullscreenUI                      value={amounts[c.id] ?? ""}
-                      onChangeText={(v) =>
-                        setAmounts((prev) => ({ ...prev, [c.id]: sanitizeSafeAmountInput(v, userCurrency) }))
-                      }
-                      keyboardType="decimal-pad"
-                      placeholder={t("categoryBudgets.noLimit")}
-                      placeholderTextColor="#94a3b8"
-                      className="flex-1 text-sm font-bold text-center"
-                      style={{ color: primaryTextColor, padding: 0 }}
-                    />
-                  </View>
-                </View>
-                {limit > 0 ? (
-                  /* La barra no puede quedar pegada al borde de abajo: sin ese aire parece
-                     que la tarjeta esta cortada. */
-                  <View className="mt-2 mb-1 pl-[44px]">
-                    <View className="flex-row items-center justify-between mb-0.5">
-                      <Text className={`text-[11px] font-bold ${over ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>
-                        {t("categoryBudgets.spentOfLimit", { spent: fmt(spent), limit: fmt(limit) })}
+                <View className="flex-row items-center gap-2.5">
+                  <IconBadge Icon={c.icon} color={c.color} size={38} image={c.image} />
+                  <View className="flex-1 min-w-0 gap-1.5">
+                    <View className="flex-row items-start justify-between gap-2">
+                      <Text
+                        className="flex-1 min-w-0 text-sm font-bold"
+                        style={{ color: primaryTextColor }}
+                        numberOfLines={1}
+                      >
+                        {t(c.label)}
+                      </Text>
+                      <Text
+                        testID={`category-budget-spent-${c.id}`}
+                        className={`shrink-0 max-w-[150px] text-right text-sm font-bold ${over ? "text-rose-600 dark:text-rose-400" : ""}`}
+                        style={over ? undefined : { color: primaryTextColor }}
+                        numberOfLines={2}
+                      >
+                        {fmt(spent)}
                       </Text>
                     </View>
-                    <View className="h-1.5 rounded-full bg-slate-200 dark:bg-noche-3 overflow-hidden">
+
+                    <View className="flex-row items-center justify-between gap-2">
+                      <View className="flex-1 min-w-0 flex-row items-center">
+                        <Text className="text-[11px] text-slate-500 dark:text-slate-300 mr-1">
+                          {t("categoryBudgets.limit")}
+                        </Text>
+                        <Text className="text-[11px] text-slate-500 dark:text-slate-300 mr-1">
+                          {currencySymbolFor(userCurrency)}
+                        </Text>
+                        <TextInput
+                          testID={`category-budget-limit-${c.id}`}
+                          accessibilityLabel={t("categoryBudgets.limitFor", { category: t(c.label) })}
+                          disableFullscreenUI
+                          value={amounts[c.id] ?? ""}
+                          onChangeText={(v) =>
+                            setAmounts((prev) => ({ ...prev, [c.id]: sanitizeSafeAmountInput(v, userCurrency) }))
+                          }
+                          keyboardType="decimal-pad"
+                          placeholder={t("categoryBudgets.noLimit")}
+                          placeholderTextColor="#94a3b8"
+                          className="min-w-0 max-w-[108px] flex-1 text-xs font-bold"
+                          style={{ color: primaryTextColor, padding: 0 }}
+                        />
+                      </View>
+                      {percentText ? (
+                        <Text
+                          testID={`category-budget-percent-${c.id}`}
+                          className={`shrink-0 max-w-[112px] text-right text-[11px] font-bold ${over ? "text-rose-600 dark:text-rose-400" : atLimit ? "text-amber-600 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}
+                          numberOfLines={2}
+                        >
+                          {percentText}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    {limit > 0 ? (
                       <View
-                        className="h-1.5 rounded-full"
-                        style={{ width: `${Math.min(pct, 1) * 100}%`, backgroundColor: barColor }}
-                      />
-                    </View>
-                    {over ? (
-                      <Text className="text-[11px] text-rose-500 font-medium mt-1">
-                        {t("categoryBudgets.overBudget")}
-                      </Text>
+                        testID={`category-budget-progress-${c.id}`}
+                        accessibilityLabel={percentText ?? undefined}
+                        className="h-2 rounded-full bg-slate-200 dark:bg-noche-3 overflow-hidden mt-0.5"
+                      >
+                        <View
+                          testID={`category-budget-progress-fill-${c.id}`}
+                          className="h-2 rounded-full"
+                          style={{ width: `${Math.max(0, Math.min(pct, 1)) * 100}%`, backgroundColor: barColor }}
+                        />
+                      </View>
                     ) : null}
                   </View>
-                ) : null}
+                </View>
               </View>
             );
           })}

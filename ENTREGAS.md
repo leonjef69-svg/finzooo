@@ -1,5 +1,24 @@
 # Entregas de Fino
 
+## 22/10/2026 — presupuestos por categoría compactos (desarrollo)
+
+El diseño nuevo quedó aplicado tanto en Reportes (la tarjeta que aparecía en la
+captura) como en la pantalla que edita los límites. Gasto y límite ya no van
+pegados; el límite queda a la izquierda y la barra usa el color de su categoría.
+El porcentaje señala el estado con color; montos largos se conservan sin reducir
+su letra. Se aumentaron un poco el título, nombres, límite e iconos, y se dio más
+contraste a la línea que separa categorías. No se cambian movimientos, saldos ni
+cuentas. La prueba ejecuta ambas pantallas y valida montos grandes, colores,
+divisor, tamaños y edición del límite.
+
+TypeScript, ESLint, la prueba directa de ambas pantallas y 258 pruebas/8
+auditores pasan. `git diff --check` también pasa.
+
+**Sigue/falta:** confirmar visualmente la tarjeta en el emulador. La app de
+desarrollo está instalada, pero el puerto 8081 ya tiene un Metro activo y no se
+confirmó que pertenezca a este proyecto, así que no se reemplazó. Sin cambios
+nativos; no requiere APK/AAB.
+
 ## 22/10/2026 — retirada de la vista de prueba de Reportes (desarrollo)
 
 Se quitó el botón «Probar 12 meses y 31 días», las cifras sintéticas que
