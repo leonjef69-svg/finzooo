@@ -1,5 +1,36 @@
 # Entregas de Fino
 
+## 22/10/2026 — editor compacto de presupuestos por categoría (desarrollo)
+
+Lista compacta con mes, búsqueda y botón «Categoría». Muestra el gasto a la
+derecha y el límite editable a la izquierda. Sin barras en esta pantalla: rojo
+si se supera el límite, ámbar desde 90% y ningún aviso cuando está normal.
+Reportes conserva sus barras. «Categoría» abre el mismo panel inferior y no otra
+pantalla ni el selector intermedio. No se cambian movimientos ni saldos.
+
+TypeScript, ESLint, 258 pruebas y 8 auditores pasan. Metro respondió HTTP 200 con
+el marcador y los textos del nuevo diseño. La captura visual del emulador agotó
+el tiempo incluso al reintentar; no se guardó ninguna categoría de prueba.
+
+**Sigue/falta:** comprobar la apariencia directamente en el emulador. No requiere
+APK/AAB porque no hay cambios nativos.
+
+## 22/10/2026 — nueva categoría en el panel de Presupuestos (desarrollo)
+
+Presupuestos abre el formulario de categoría dentro del panel inferior
+reutilizable, sin otra pantalla ni selector intermedio. Cancelar, X o Atrás
+cierran el panel; al guardar se conserva el alta actual y se vuelve a Presupuestos
+con la categoría lista para asignarle un límite vacío. No se cambian movimientos,
+saldos ni categorías existentes.
+
+La regresión falla contra la versión previa y pasa con el cambio. TypeScript,
+ESLint, 258 pruebas y 8 auditores pasan; la prueba dirigida se repitió tras
+añadir el caso de Atrás. No se pudo revisar visualmente el emulador: la captura
+de su ventana agotó el tiempo y no se reemplazó el Metro activo en 8081.
+
+**Sigue/falta:** revisar visualmente en Android cuando la ventana del emulador
+se deje capturar. Sin cambios nativos; no requiere APK/AAB.
+
 ## 22/10/2026 — presupuestos por categoría compactos (desarrollo)
 
 El diseño nuevo quedó aplicado tanto en Reportes (la tarjeta que aparecía en la

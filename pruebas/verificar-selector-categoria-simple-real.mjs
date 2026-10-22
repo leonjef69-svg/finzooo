@@ -7,6 +7,7 @@ import { createSourceReader } from "./helpers/source-reader.mjs";
 const read = createSourceReader({ revision: process.env.FINO_CATEGORY_SIMPLE_BASELINE ?? "" });
 const React = { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
 let state = [], cursor = 0;
+let backHandler = null;
 const selected = [], created = [];
 let closed = 0, dismissed = 0;
 const deps = {
@@ -14,17 +15,17 @@ const deps = {
   TextInput: "TextInput", Image: "Image", Camera: "Camera", Check: "Check", ImagePlus: "ImagePlus",
   Pencil: "Pencil", Plus: "Plus", X: "X", CategoryAvatar: "Avatar", ImageCropper: "Cropper",
   useState: initial => { const index = cursor++; if (!(index in state)) state[index] = initial; return [state[index], value => { state[index] = value; }]; },
-  useMemo: fn => fn(), useEffect() {}, useSafeAreaInsets: () => ({ bottom: 0 }),
+  useMemo: fn => fn(), useEffect: effect => { effect(); }, useSafeAreaInsets: () => ({ bottom: 0 }),
   useAppData: () => ({ t: key => key, categoriasPropias: [], crearCategoria: data => { created.push(data); return "new-id"; }, showToast() {} }),
   sanitizeName: value => value.trim(), nombreRepetido: () => false,
   Keyboard: { dismiss: () => { dismissed++; }, isVisible: () => false },
-  BackHandler: { addEventListener: () => ({ remove() {} }) }, ImagePicker: {},
+  BackHandler: { addEventListener: (_event, handler) => { backHandler = handler; return { remove() {} }; } }, ImagePicker: {},
 };
 const renderOriginal = handlerOriginal("components/TransactionCategorySheet.tsx", "TransactionCategorySheet", deps, read("components/TransactionCategorySheet.tsx"));
-function render(type = "expense") {
+function render(type = "expense", initialCreate = false, onClose = () => { closed++; }) {
   cursor = 0;
   return renderOriginal({ type, categories: [{ id: "comida", label: "food" }, { id: "otros", label: "other" }], selectedId: "comida",
-    onClose: () => { closed++; }, onSelect: id => selected.push(id), onManage: () => { throw Error("acceso retirado"); } });
+    initialCreate, onClose, onSelect: id => selected.push(id), onManage: () => { throw Error("acceso retirado"); } });
 }
 function nodes(node) { return Array.isArray(node) ? node.flatMap(nodes) : node && typeof node === "object" ? [node, ...node.children.flatMap(nodes)] : []; }
 function text(node) { return Array.isArray(node) ? node.map(text).join("|") : node && typeof node === "object" ? text(node.children) : node == null || typeof node === "boolean" ? "" : String(node); }
@@ -48,6 +49,22 @@ assert.equal(created[0].nombre, "Nueva de prueba");
 assert.equal(created[0].tipo, "expense");
 assert.deepEqual(selected, ["comida", "new-id"]);
 assert.ok(dismissed > 0);
+state = [];
+let directClosed = 0;
+let directForm = render("expense", true, () => { directClosed++; });
+assert.ok(text(directForm).includes("nuevaCat.title"), "presupuestos abre directamente el formulario dentro de la misma hoja");
+nodes(directForm).find(node => node.type === "TouchableOpacity" && text(node).includes("nuevaCat.cancelar")).props.onPress();
+assert.equal(directClosed, 1, "cancelar desde creación directa cierra la hoja sin mostrar el selector intermedio");
+state = [];
+directClosed = 0;
+directForm = render("expense", true, () => { directClosed++; });
+nodes(directForm).find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === "common.close").props.onPress();
+assert.equal(directClosed, 1, "la X izquierda cierra la creación directa y no abre otra pantalla");
+state = [];
+directClosed = 0;
+render("expense", true, () => { directClosed++; });
+assert.equal(backHandler(), true, "Atrás del teléfono queda atendido dentro de la hoja");
+assert.equal(directClosed, 1, "Atrás cierra la creación directa sin mostrar el selector intermedio");
 state = []; assert.ok(!text(render("income")).includes("catCustom.rowLabel"), "ingresos tampoco recupera el acceso retirado");
 
 // Comprueba el JSX original del formulario que se abre desde Inicio.

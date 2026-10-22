@@ -12,6 +12,7 @@ const categories = [
 ];
 const budgetChanges = [];
 const transactions = [{ id: "keep", type: "expense", amount: 10 }];
+let transactionCategorySheetProps;
 const data = {
   t(key, vars = {}) {
     if (key === "categoryBudgets.usedPercent") return `${vars.percent}% usado`;
@@ -23,6 +24,15 @@ const data = {
       "categoryBudgets.limit": "Límite",
       "categoryBudgets.noLimit": "Sin límite",
       "categoryBudgets.nueva": "Nueva categoría",
+      "categoryBudgets.addCategory": "Categoría",
+      "categoryBudgets.search": "Buscar categoría...",
+      "categoryBudgets.category": "categoría",
+      "categoryBudgets.categories": "categorías",
+      "categoryBudgets.tapToEdit": "Toca para editar",
+      "categoryBudgets.monthlyLimit": "Límite mensual",
+      "categoryBudgets.overLimit": "Límite superado",
+      "categoryBudgets.nearLimit": "Cerca del límite",
+      "categoryBudgets.noSearchResults": "No hay categorías con ese nombre.",
       "common.saveChanges": "Guardar cambios",
     })[key] ?? key;
   },
@@ -68,7 +78,7 @@ const aliases = new Map([
   ["react-native-reanimated", { __esModule: true, default: { View: "AnimatedView" } }],
   ["react-native-safe-area-context", { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }],
   ["nativewind", { useColorScheme: () => ({ colorScheme: "light" }) }],
-  ["lucide-react-native", { Plus: "Plus", TrendingDown: "TrendingDown", TrendingUp: "TrendingUp" }],
+  ["lucide-react-native", { AlertTriangle: "AlertTriangle", Pencil: "Pencil", Plus: "Plus", Search: "Search", TrendingDown: "TrendingDown", TrendingUp: "TrendingUp" }],
   ["@/constants/categories", {
     gastosDisponibles: () => categories,
     catInfo: (id) => categories.find((category) => category.id === id) ?? categories.at(-1),
@@ -83,7 +93,7 @@ const aliases = new Map([
   }],
   ["@/utils/keyboard", { useKeyboardAnimatedPadding: () => ({ animatedPaddingStyle: {} }) }],
   ["@/components/BackButton", { __esModule: true, default: (props) => React.createElement("TouchableOpacity", props, "Atrás") }],
-  ["@/components/TransactionCategorySheet", { __esModule: true, default: () => null }],
+  ["@/components/TransactionCategorySheet", { __esModule: true, default: (props) => { transactionCategorySheetProps = props; return null; } }],
   ["@/constants/colors", { COLOR_HEX_600: { yellow: "#d97706", green: "#059669", violet: "#7c3aed", teal: "#0d9488" } }],
   ["@/utils/format", {
     fmtExact: (amount) => data.fmt(amount),
@@ -138,28 +148,45 @@ render();
 const all = flatten(tree);
 assert.equal(all.filter((item) => item.props?.testID?.startsWith("category-budget-row-")).length, 4, "cada categoría mantiene su tarjeta y su campo para fijar el límite");
 
-const overAmount = node("category-budget-spent-transporte");
-assert.equal(labelText([overAmount]), "S/ 943,854,353,434", "el monto grande conserva todas sus cifras y no se encoge");
-assert.equal(overAmount.props.numberOfLines, 2, "el gasto largo puede ocupar dos líneas sin reducir el tamaño de letra");
-assert(String(overAmount.props.className).includes("text-rose-600"), "el importe se destaca cuando supera el límite");
-assert.equal(labelText([node("category-budget-percent-transporte")]), "Más de 999% usado", "el porcentaje extremo no desborda la tarjeta");
-assert.equal(node("category-budget-progress-fill-transporte").props.style.width, "100%", "la barra se limita al ancho de la tarjeta");
-assert.equal(node("category-budget-progress-fill-transporte").props.style.backgroundColor, "#d97706", "la barra usa el color de su categoría");
-assert(String(node("category-budget-percent-transporte").props.className).includes("text-rose-600"), "superar el límite se indica en rojo junto al porcentaje");
+assert(node("category-budget-add"), "la acción para agregar categoría queda junto al título");
+assert(node("category-budget-search"), "se puede buscar una categoría por nombre");
+assert.equal(labelText([node("category-budget-status-transporte")]), "Límite superado", "superar el límite muestra un aviso breve");
+const redStatusText = flatten(node("category-budget-status-transporte").children).find((item) => item.type === "Text");
+assert(String(redStatusText.props.className).includes("text-rose-600"), "el exceso se identifica en rojo");
+assert.equal(labelText([node("category-budget-status-comida")]), "Cerca del límite", "llegar al 90% o más sin superar muestra aviso ámbar");
+const amberStatusText = flatten(node("category-budget-status-comida").children).find((item) => item.type === "Text");
+assert(String(amberStatusText.props.className).includes("text-amber-700"), "acercarse al límite se identifica en ámbar");
+assert.equal(node("category-budget-status-compras"), undefined, "si el gasto está normal no añade texto ni color de aviso");
+assert.equal(flatten(tree).some((item) => String(item.props?.testID ?? "").includes("progress")), false, "la pantalla de edición no repite las barras de la consulta de presupuestos");
+const spentAmount = node("category-budget-spent-transporte");
+assert.equal(labelText([spentAmount]), "S/ 943,854,353,434", "el monto gastado se conserva y no se encoge");
+assert.equal(spentAmount.props.numberOfLines, 2, "un gasto largo puede ocupar dos líneas sin reducir la letra");
+assert.equal(labelText([node("category-budget-limit-label-transporte")]), "Límite S/ 100", "el límite queda separado del gasto y alineado a la izquierda");
+data.categorySpent.compras = 45;
+render();
+assert.equal(labelText([node("category-budget-status-compras")]), "Cerca del límite", "el aviso ámbar comienza exactamente al 90%");
+data.categorySpent.compras = 35;
+render();
 
-assert.equal(labelText([node("category-budget-percent-comida")]), "100% usado");
-assert.equal(node("category-budget-progress-fill-comida").props.style.backgroundColor, "#059669", "la barra conserva el color de su categoría al llegar al límite");
-assert(String(node("category-budget-percent-comida").props.className).includes("text-amber-600"), "llegar exactamente al límite se indica en ámbar");
-assert.equal(labelText([node("category-budget-percent-compras")]), "70% usado");
-assert.equal(node("category-budget-progress-fill-compras").props.style.width, "70%");
-assert.equal(node("category-budget-progress-fill-compras").props.style.backgroundColor, "#7c3aed", "la barra usa el color propio de la categoría Compras");
-assert(String(node("category-budget-percent-compras").props.className).includes("text-emerald-700"), "estar debajo del límite se indica en verde");
-assert.equal(node("category-budget-progress-otros"), undefined, "sin límite no se dibuja una barra falsa");
-
-const comidaCard = node("category-budget-row-comida");
-const icon = flatten(comidaCard.children).find((item) => String(item.props?.className).includes("rounded-2xl") && String(item.props?.className).includes("bg-green-100"));
+const comidaRow = node("category-budget-row-comida");
+const icon = flatten(comidaRow.children).find((item) => String(item.props?.className).includes("rounded-2xl") && String(item.props?.className).includes("bg-green-100"));
 assert(icon, "el icono conserva su fondo en un cuadrado redondeado de color");
 assert.equal(icon.props.style.width, 38);
+
+node("category-budget-add").props.onPress();
+render();
+assert.equal(transactionCategorySheetProps.initialCreate, true, "agregar categoría abre directamente su formulario en el panel compartido");
+assert.equal(transactionCategorySheetProps.type, "expense");
+transactionCategorySheetProps.onClose();
+render();
+
+const search = node("category-budget-search");
+search.props.onChangeText("Comida");
+render();
+assert.equal(flatten(tree).filter((item) => item.props?.testID?.startsWith("category-budget-row-")).length, 1, "la búsqueda reduce la lista a la categoría coincidente");
+assert(node("category-budget-row-comida"));
+node("category-budget-search").props.onChangeText("");
+render();
 
 const categoryScreenHooks = hooks.slice();
 hooks.length = 0;
@@ -190,16 +217,18 @@ assert.equal(node("report-category-budget-transporte").props.style.borderBottomW
 
 hooks.splice(0, hooks.length, ...categoryScreenHooks);
 render();
+node("category-budget-edit-transporte").props.onPress();
+render();
 const limitInput = node("category-budget-limit-transporte");
 assert.equal(limitInput.props.value, "100");
 assert.match(limitInput.props.accessibilityLabel, /Transporte/);
 limitInput.props.onChangeText("150");
 render();
-const save = flatten(tree).find((item) => item.type === "TouchableOpacity" && labelText([item]) === "Guardar cambios");
+const save = node("category-budget-save");
 assert(save, "se conserva la acción de guardar los límites");
 save.props.onPress();
 assert.equal(budgetChanges.length, 1);
 assert.equal(budgetChanges[0].transporte, 150, "guardar conserva la edición del límite");
 assert.equal(JSON.stringify(transactions), '[{"id":"keep","type":"expense","amount":10}]', "la pantalla no altera los movimientos");
 
-console.log("Presupuestos en Ajustes y Reportes: título, nombres, límite e iconos legibles; divisor visible, barras con color de categoría y edición sin tocar movimientos.");
+console.log("Presupuestos: búsqueda, edición directa, avisos al 90% o al superar el límite, creación en panel compartido y consulta de Reportes sin cambios.");

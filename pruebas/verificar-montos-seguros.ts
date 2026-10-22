@@ -53,8 +53,13 @@ const categoryBudgets = fs.readFileSync(
   "utf8",
 );
 assert.match(categoryBudgets, /category-budget-limit-/, "cada categoría conserva su campo editable de límite");
-assert.match(categoryBudgets, /categoryBudgets\.limit/, "el límite se identifica en la tarjeta y no se confunde con el gasto");
-assert.match(categoryBudgets, /categoryBudgets\.usedPercent/, "la tarjeta muestra qué porcentaje del límite se ha usado");
+assert.match(categoryBudgets, /categoryBudgets\.limit/, "el límite se identifica a la izquierda sin confundirse con el gasto");
+assert.match(categoryBudgets, /categoryBudgets\.spent/, "la pantalla conserva el monto gastado por categoría");
+assert.match(categoryBudgets, /categoryBudgets\.overLimit/, "superar el límite muestra una alerta roja breve");
+assert.match(categoryBudgets, /categoryBudgets\.nearLimit/, "acercarse al límite muestra una alerta ámbar breve");
+assert.match(categoryBudgets, /spent \/ limit >= 0\.9/, "el aviso ámbar empieza al alcanzar el 90% del límite");
+assert.doesNotMatch(categoryBudgets, /category-budget-progress-/, "la pantalla de edición no repite las barras de consulta");
+assert.match(categoryBudgets, /initialCreate/, "crear una categoría usa el formulario compartido en el panel inferior");
 const reportBudgets = fs.readFileSync(
   path.join(process.cwd(), "screens/Reports.tsx"),
   "utf8",
@@ -65,7 +70,7 @@ assert.match(reportBudgets, /COLOR_HEX_600\[b\.color\]/, "cada barra conserva el
 assert.match(reportBudgets, /borderBottomWidth: 1/, "las categorías se separan con una línea visible");
 assert.match(
   categoryBudgets,
-  /sanitizeSafeAmountInput\(v, userCurrency\)/,
+  /sanitizeSafeAmountInput\(value, userCurrency\)/,
   "el limite por categoria no se bloquea al escribir rapido",
 );
 

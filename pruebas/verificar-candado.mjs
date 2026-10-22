@@ -195,7 +195,7 @@ console.log("\n--- LOS LIMITES SE PUEDEN PONER A LAS CATEGORIAS PROPIAS (12/08/2
 
   // Y UNA CATEGORIA CREADA DESPUES DE ABRIR LA PANTALLA no puede dejar su casilla sin valor:
   // React se queja y el campo deja de responder.
-  ok(/amounts\[c\.id\] \?\? ""/.test(limites), "una categoria nueva no deja la casilla rota");
+  ok(/amounts\[category\.id\] \?\? ""/.test(limites), "una categoria nueva no deja el limite sin valor inicial");
 
   // La creación de presupuesto usa el mismo selector inferior que los movimientos: no abre
   // la pantalla completa antigua; su modo directo evita pasar primero por la lista.

@@ -45,7 +45,8 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
         return true;
       }
       if (creating) {
-        setCreating(false);
+        if (initialCreate) onClose();
+        else setCreating(false);
         return true;
       }
       Keyboard.dismiss();
@@ -53,11 +54,17 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
       return true;
     });
     return () => subscription.remove();
-  }, [creating, cropUri, onClose]);
+  }, [creating, cropUri, initialCreate, onClose]);
 
   function close() {
     Keyboard.dismiss();
     onClose();
+  }
+
+  function cancelCreate() {
+    Keyboard.dismiss();
+    if (initialCreate) onClose();
+    else setCreating(false);
   }
 
   async function chooseImage(source: "camera" | "library") {
@@ -117,7 +124,7 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
         </View>
         <View className="flex-row items-center justify-between px-5 pb-3 pt-1">
           {creating ? (
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.back")} hitSlop={6} onPress={() => { Keyboard.dismiss(); setCreating(false); }} className="h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t(initialCreate ? "common.close" : "common.back")} hitSlop={6} onPress={cancelCreate} className="h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
               <X size={17} color="#64748b" />
             </TouchableOpacity>
           ) : (
@@ -177,7 +184,7 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
             </View>
 
             <View className="flex-row gap-2 pt-1">
-              <TouchableOpacity onPress={() => { Keyboard.dismiss(); setCreating(false); }} className="h-12 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche-3">
+              <TouchableOpacity onPress={cancelCreate} className="h-12 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche-3">
                 <Text className="text-sm font-bold text-slate-600 dark:text-slate-200">{t("nuevaCat.cancelar")}</Text>
               </TouchableOpacity>
               <TouchableOpacity

@@ -1,5 +1,43 @@
 # Estado actual de Fino
 
+## Presupuestos por categoría — 22/10/2026 — editor compacto y búsqueda
+
+La pantalla de edición ahora reúne el mes, búsqueda y alta de categoría arriba;
+cada fila compacta muestra el gasto a la derecha y el límite editable a la
+izquierda. Solo aparece «Cerca del límite» en ámbar desde el 90%, o «Límite
+superado» en rojo cuando el gasto es mayor; en valores normales no añade aviso.
+Se quitaron las barras de esta pantalla y se conservaron en Reportes. «Nueva
+categoría» abre el formulario existente en el panel inferior; cancelar, X y Atrás
+regresan a Presupuestos sin un selector intermedio. No se tocan movimientos ni
+saldos; los límites solo se guardan al pulsar «Guardar cambios».
+
+La prueba de regresión falla contra el editor anterior y valida búsqueda,
+edición, umbrales, ausencia de barras en la edición, alta en el panel compartido
+y Reportes intacto. TypeScript, ESLint, 258 pruebas y 8 auditores pasan.
+
+**Sigue/falta:** Metro respondió con el marcador nuevo y el paquete actualizado
+(HTTP 200). La captura visual del emulador agotó el tiempo incluso tras reintentar,
+así que queda pendiente confirmar la apariencia en pantalla. No se guardaron ni
+crearon categorías de prueba; sin cambio nativo ni APK/AAB.
+
+## Presupuestos por categoría — 22/10/2026 — crear categoría en el mismo panel
+
+Desde Presupuestos, «Nueva categoría» abre directamente el formulario compacto
+en `TransactionCategorySheet`, sin navegar a otra pantalla ni pasar primero
+por el selector. Al cancelar, cerrar o usar Atrás se cierra el panel y se vuelve
+a Presupuestos; los demás usos del selector conservan su regreso normal a la
+lista. Guardar mantiene el alta existente y agrega la categoría a la lista de
+presupuestos con el límite vacío. No se alteran movimientos ni saldos.
+
+La regresión de creación directa falla contra la versión anterior y pasa con
+Cancelar, X y Atrás. TypeScript, ESLint, 258 pruebas y 8 auditores aprobados;
+la prueba dirigida volvió a pasar tras añadir Atrás.
+
+**Sigue/falta:** verificación visual en Android. La captura del emulador falló
+dos veces con tiempo agotado; el servidor Metro de 8081 sigue activo y no se
+reemplazó porque no se pudo confirmar su proyecto. Sin cambios nativos ni
+necesidad de APK/AAB.
+
 ## Presupuestos por categoría — 22/10/2026 — tarjeta compacta en Reportes y edición
 
 Se corrigió la pantalla equivocada de la primera pasada: el diseño que el usuario
