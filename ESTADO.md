@@ -1,5 +1,28 @@
 # Estado actual de Fino
 
+## Negocio — 22/10/2026 — resumen unificado de ingresos, gastos y resultado
+
+Ingresos, Gastos y Resultado ahora se ven dentro de una sola tarjeta compacta.
+El contorno exterior está algo más marcado. Los dos importes están arriba; una
+línea los separa de «Resultado», a la izquierda, y su monto a la derecha.
+Reutiliza los totales del periodo elegido
+(ingresos menos gastos); verde si es positivo, rojo si es negativo y neutro si
+queda en cero. Cambiar el periodo o eliminar un movimiento lo recalcula al
+instante. Es solo presentación: no crea registros, no modifica movimientos ni
+saldos y no añade información guardada.
+
+La prueba de interfaz usa datos sintéticos, comprueba los tres idiomas, el
+resultado positivo y negativo y su actualización al borrar un movimiento; la
+misma comprobación falla al cargar el panel anterior. No usa ni cambia datos
+del emulador. Sin cambios nativos ni migración. PLAYSTORE.md no requiere cambios.
+
+TypeScript, ESLint, 258 pruebas y 8 auditores pasan. La prueba falla contra el
+panel anterior. Metro sirve el bundle Android con el marcador actualizado y la
+tarjeta unificada.
+
+**Sigue/falta:** revisión visual de píxeles en la pantalla del emulador. Sin
+APK/AAB ni publicación.
+
 ## Presupuestos por categoría — 22/10/2026 — editor compacto y búsqueda
 
 La pantalla de edición ahora reúne el mes, búsqueda y alta de categoría arriba;

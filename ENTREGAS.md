@@ -1,5 +1,21 @@
 # Entregas de Fino
 
+## 22/10/2026 — resumen unificado de Modo Negocio (desarrollo)
+
+Ingresos, Gastos y Resultado comparten una sola tarjeta compacta. Los dos
+importes van arriba y un contorno exterior más visible rodea el conjunto. Una
+línea separa el Resultado debajo, con su texto a la izquierda y el monto a la
+derecha. Se calcula con los mismos registros y filtros:
+ingresos menos gastos; verde cuando es positivo, rojo cuando es negativo y neutro
+cuando queda en cero. No crea ni altera movimientos o saldos.
+
+La prueba usa datos inventados y verifica la tarjeta única, el cálculo, el cambio
+de color y la actualización al borrar; falla con la pantalla anterior.
+TypeScript, ESLint, 258 pruebas y 8 auditores pasan. Metro sirve el bundle Android
+con el marcador nuevo y la tarjeta unificada. **Sigue/falta:** confirmar la
+apariencia visual en el emulador; no requiere APK/AAB porque no se modificó
+código nativo.
+
 ## 22/10/2026 — editor compacto de presupuestos por categoría (desarrollo)
 
 Lista compacta con mes, búsqueda y botón «Categoría». Muestra el gasto a la

@@ -6,7 +6,7 @@ const COPY = {
   yapeSetup:["Falta activar el registro de Yape.","Enable Yape recording first.","Ative o registro Yape primeiro."], setup:["Configurar Yape","Set up Yape","Configurar Yape"],
   switchYape:["Los nuevos Yapes dejarán de entrar en «{name}» y llegarán aquí. Los anteriores no cambian.","New Yape receipts will go here instead of “{name}”. Existing records stay unchanged.","Os novos Yapes virão para cá em vez de «{name}». Os anteriores não mudam."],
   today:["Hoy","Today","Hoje"], month:["Este mes","This month","Este mês"], dates:["Fechas","Dates","Datas"], all:["Ver todo","View all","Ver tudo"], allHistory:["Todo el historial","All history","Todo o histórico"],
-  income:["Ingreso","Income","Receita"], incomes:["Ingresos","Income","Receitas"], expense:["Gasto","Expense","Despesa"], expenses:["Gastos","Expenses","Despesas"],
+  income:["Ingreso","Income","Receita"], incomes:["Ingresos","Income","Receitas"], expense:["Gasto","Expense","Despesa"], expenses:["Gastos","Expenses","Despesas"], result:["Resultado","Result","Resultado"],
   register:["Registrar","Record","Registrar"], pending:["Por clasificar","To categorize","A classificar"], quickHint:["Toca una categoría y se registra al instante.","Tap a category to record it instantly.","Toque em uma categoria para registrar na hora."],
   simpleHint:["Anota un ingreso o gasto en un solo formulario.","Record income or an expense in one form.","Registre uma receita ou despesa em um formulário."],
   movements:["Movimientos","Transactions","Movimentações"], search:["Buscar","Search","Buscar"], filters:["Filtros","Filters","Filtros"], select:["Seleccionar","Select","Selecionar"],
