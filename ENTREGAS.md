@@ -1,5 +1,20 @@
 # Entregas de Fino
 
+## 22/10/2026 — método de desbloqueo sin activar el candado dentro de la sesión
+
+Corregido un falso bloqueo: cambiar la preferencia huella/PIN emitía el mismo
+aviso que los cambios del candado y podía mostrar el PIN de inmediato dentro
+de Fino. Ahora actualiza únicamente el método que se usará la próxima vez; el
+guardado/apagado del candado mantiene su ruta protegida y las respuestas viejas
+no pisan una selección más reciente. No cambia el PIN ni el margen de seguridad.
+
+La regresión reproduce el fallo con `ecae5063` y pasa con el arreglo; verifica
+también el aviso que envía la preferencia guardada. TypeScript, ESLint,
+`git diff --check` y 257 pruebas/8 auditores aprobados. Sin credenciales,
+movimientos ni saldos reales. Sin código nativo: no requiere APK/AAB.
+**Sigue/falta:** comprobar el ajuste visualmente en Android; el emulador no se
+abrió porque la herramienta de pantalla no presentó su ventana nativa.
+
 ## 22/10/2026 — comparativa mensual táctil (desarrollo)
 
 Reemplaza la gráfica mensual de gastos por doce meses del año seleccionado,

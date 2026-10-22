@@ -86,6 +86,9 @@ try {
   enabled = true; env.configuration("enabled"); await env.flush();
   assert.equal(env.tree, null, "PIN recién creado/confirmado no vuelve a pedirlo para abrir la misma sesión");
   assert.deepEqual(env.pins, []); assert.equal(env.requests.length, 0);
+  env.configuration("authentication-method"); await env.flush();
+  assert.equal(env.tree, null, "Cambiar el método de entrada no activa el PIN dentro de una sesión ya abierta");
+  assert.deepEqual(env.pins, []); assert.equal(env.requests.length, 0);
   env.emit("background"); env.now += 121000; env.emit("active"); await env.flush();
   assert.ok(env.pad(), "La activación no elimina el bloqueo al salir más de dos minutos");
   env.configuration("enabled"); await env.flush(); assert.ok(env.pad(), "Un aviso de activación no abre una app que ya estaba bloqueada"); env.close();
@@ -118,6 +121,13 @@ try {
   }, lockSourceForEnable);
   assert.equal(await enableOriginal("2468"), true);
   assert.deepEqual(events, ["enabled"], "Solo el guardado confirmado emite la activación, no una preferencia genérica");
+  const saveBiometricPreference = handlerOriginal(lockFileForEnable, "guardarUsaHuella", {
+    KEY_HUELLA: "biometric-preference", write: async (key, value) => storage.set(key, value),
+    notifyLockConfiguration: change => events.push(change),
+  }, lockSourceForEnable);
+  await saveBiometricPreference(false);
+  assert.equal(storage.get("biometric-preference"), "0");
+  assert.deepEqual(events, ["enabled", "authentication-method"], "La preferencia biométrica se distingue de encender o apagar el candado");
 
   env = mount({}, false); await env.flush();
   assert.equal(env.requests.length, 0, "No pedir huella mientras Fino todavía carga los datos");

@@ -74,6 +74,7 @@ export default function AppLockGate() {
   const lockErrorRef = useRef(false);
   const mounted = useRef(true);
   const authVersion = useRef(0);
+  const preferenceVersion = useRef(0);
   const autoPrompted = useRef(false);
   const verifyingPin = useRef(false);
   const appActive = useRef(AppState.currentState !== "background");
@@ -86,6 +87,7 @@ export default function AppLockGate() {
       mounted.current = false;
       activation.current = null;
       authVersion.current += 1;
+      preferenceVersion.current += 1;
       if (prompting.current) void cancelBiometrics();
     };
   }, []);
@@ -174,6 +176,21 @@ export default function AppLockGate() {
   // Encender o apagar el candado en Ajustes debe surtir efecto en esta misma
   // sesión. Antes se leía una sola vez al montar la app.
   useEffect(() => subscribeLockConfiguration((change) => {
+    if (change === "authentication-method") {
+      // Cambiar entre huella y PIN solo afecta al siguiente desbloqueo. No
+      // debe volver a poner la cubierta mientras la persona sigue dentro.
+      const version = ++preferenceVersion.current;
+      void Promise.all([usaHuella(), biometricKind()]).then(([useBiometrics, nextKind]) => {
+        if (!mounted.current || version !== preferenceVersion.current) return;
+        setKind(useBiometrics ? nextKind : "none");
+      }).catch(() => {
+        if (!mounted.current || version !== preferenceVersion.current) return;
+        // Ante una lectura fallida, mantener el acceso con el PIN propio.
+        setKind("none");
+      });
+      return;
+    }
+    preferenceVersion.current += 1;
     activation.current = change === "enabled" && !lockedRef.current && !lockErrorRef.current && appActive.current
       ? { at: Date.now() } : null;
     // Se cierran también los paneles nativos; al volver a crearlos React

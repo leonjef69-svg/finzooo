@@ -26,7 +26,7 @@ const KEY_SALT = "finzo.lock.salt";
 const KEY_LEGACY_ALTERNATE_PIN = "finzo.lock.alt";
 const KEY_FAILED_ATTEMPTS = "finzo.lock.failedAttempts";
 const KEY_LOCK_UNTIL = "finzo.lock.lockUntil";
-type LockConfigurationChange = "changed" | "enabled";
+type LockConfigurationChange = "changed" | "enabled" | "authentication-method";
 const configurationListeners = new Set<(change: LockConfigurationChange) => void>();
 
 export function subscribeLockConfiguration(listener: (change: LockConfigurationChange) => void): () => void {
@@ -331,5 +331,5 @@ export async function usaHuella(): Promise<boolean> {
 
 export async function guardarUsaHuella(valor: boolean): Promise<void> {
   await write(KEY_HUELLA, valor ? "1" : "0");
-  notifyLockConfiguration();
+  notifyLockConfiguration("authentication-method");
 }

@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## Bloqueo — 22/10/2026 — cambiar método sin volver a bloquear dentro de Fino
+
+Se confirmó un fallo al cambiar entre huella y PIN: el ajuste avisaba un cambio
+genérico, el guardián lo interpretaba como una orden de volver a comprobar y
+tapaba Fino con el PIN aunque la sesión siguiera abierta. La preferencia ahora
+se notifica por separado y solo actualiza el método para el siguiente
+desbloqueo. Activar/apagar el candado y los cambios de seguridad siguen usando
+la comprobación completa; las lecturas atrasadas no pueden pisar el método más
+reciente. PIN existente, huella, margen de dos minutos y protección al salir se
+conservan. Marca `22oct-bloqueo-metodo-sin-rebloqueo`.
+
+La nueva regresión falla contra `ecae5063` y pasa con el arreglo; también
+comprueba que guardar la preferencia emita el aviso correcto. TypeScript,
+ESLint, `git diff --check` y el lote completo (257 pruebas, 8 auditores)
+aprobados. Sin PIN real, credenciales ni datos financieros. Sin cambios
+nativos. **Sigue/falta:** comprobar el ajuste en Android; la herramienta visual
+no expuso una ventana nativa del emulador, así que no cambié su configuración.
+
 ## Reportes — 22/10/2026 — comparativa mensual táctil
 
 La gráfica mensual de gastos ahora muestra una cuadrícula de los doce meses del
