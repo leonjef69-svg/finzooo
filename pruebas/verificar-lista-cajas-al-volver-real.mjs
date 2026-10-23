@@ -116,9 +116,11 @@ assert.equal(memory.leerCajasCompartidasEnMemoria(), null);
 memory.guardarCajasCompartidasEnMemoria(boxes, { j: 3 }, "A", 2);
 memory.limpiarCajasEnMemoria(); assert.equal(memory.leerCajasCompartidasEnMemoria(), null);
 
-// Sin copia todavía no se presenta una lista privada como si fuera la lista completa.
-const waiting = find(node => ts.isConditionalExpression(node) && node.condition.getText(tree).includes("!compartidasConocidas"));
+// Sin copia se indica consulta pendiente JUNTO a la lista, sin ocultar privadas.
+const waiting = find(node => ts.isConditionalExpression(node) && ts.isJsxSelfClosingElement(node.whenTrue)
+  && node.whenTrue.tagName.getText(tree) === "ActivityIndicator"
+  && node.condition.getText(tree).includes("!compartidasConocidas"));
 assert.ok(waiting);
-assert.equal(run(waiting.condition.getText(tree), { accountUid: "A", verArchivadas: false, compartidasConocidas: false, cargandoCompartidas: true }), true);
-assert.equal(run(waiting.condition.getText(tree), { accountUid: "A", verArchivadas: false, compartidasConocidas: true, cargandoCompartidas: true }), false);
+assert.equal(run(waiting.condition.getText(tree), { ready: true, accountUid: "A", compartidasConocidas: false, cargandoCompartidas: true }), true);
+assert.equal(run(waiting.condition.getText(tree), { ready: true, accountUid: "A", compartidasConocidas: true, cargandoCompartidas: true }), false);
 console.log("Lista original al volver: compartidas y saldos desde la primera imagen, red lenta/fallida sin vaciado, cierre y cuentas/sesiones aisladas. Sin IO ni dinero reales.");

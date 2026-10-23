@@ -1,5 +1,14 @@
 # Pruebas y auditores
 
+23/10 Entrada sin bloqueo: `verificar-entrada-espacios-sin-bloqueo.mjs` ejecuta
+las condiciones originales que rodean la lista de Cajas y los controles de
+Familia, con consulta remota pendiente. Guardar espera lectura local. La prueba
+de selección de Familia ahora retiene historiales y comprueba nombres tempranos
+sin confirmar dinero. Ambas fallan contra `72822ea2` (variables de revisión:
+`FINO_TEST_ENTRY_BASELINE` y `FINO_TEST_FAMILY_WAIT_BASELINE`). El indicador
+pendiente se comprueba junto a la lista en la regresión de regreso de Cajas.
+Medición y ciclo reales en emulador documentados en ESTADO.md; no prueba FPS.
+
 23/10 Espacios ligeros: cinco regresiones con fuentes originales y datos
 sintéticos. `verificar-avisos-espacios-ligeros-real` comprueba aviso/errores y
 función de detalle estables sin notificar datos financieros; cambios reales

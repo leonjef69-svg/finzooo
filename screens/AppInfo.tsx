@@ -28,7 +28,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? "1.0.8";
  * La versión comercial no sirve para distinguir dos ajustes de la misma entrega.
  * Esta sí.
  */
-const CODE_MARKER = "23oct-espacios-recarga-dirigida-ligeros";
+const CODE_MARKER = "23oct-entrada-espacios-sin-bloqueo";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();

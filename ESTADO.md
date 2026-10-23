@@ -1,5 +1,51 @@
 # Estado actual de Fino
 
+## Entrada Familia/Cajas — 23/10/2026 — medición en emulador habitual
+
+Marca `23oct-entrada-espacios-sin-bloqueo`, base `72822ea2`. La lista de Cajas
+ocultaba privadas ya leídas hasta terminar la consulta compartida. Ahora muestra
+los datos conocidos y un indicador pequeño junto a «Mis cajas» mientras consulta;
+no anuncia vacío antes de terminar. Crear/Unirme aparecen durante la lectura
+local, pero Guardar espera esa lectura. Familia muestra Crear/Unirme sin esperar
+historias e integrantes, y publica nombres al llegar la lista. La confirmación
+financiera sigue esperando datos completos; no se concilia dinero con una lista
+parcial ni se eliminan comprobaciones de seguridad/red.
+
+Medición real en `Medium_Phone`/`emulator-5554`, desarrollo Metro, con sonda
+temporal retirada: desde atender el toque en JavaScript hasta el efecto React
+tras publicar contenido/controles. Primera Familia: 4123 ms antes hasta publicar
+contenido, 206 ms después para controles (NO confirma saldos en 206 ms). Primera
+Cajas: 1915 ms antes para contenido, 963 ms después para la privada; la lectura
+local original ya terminaba a 506 ms pero la lista seguía escondida. No mejora
+la velocidad del disco: elimina la espera remota que ocultaba lo disponible.
+Reentradas después: Familia 196 ms, Cajas 316 ms, Personal 71–94 ms.
+Son muestras individuales, no percentiles, tiempo nativo de animación, FPS ni
+promesa de rendimiento en teléfono físico. Evidencia y perfiles privados en
+`.tmp/entrada-{base-completa,nuevo-completa}-23oct.json`, sin datos publicados.
+
+Ciclo manual real con Caja nueva de prueba: alta externa S/20, Miembros,
+aporte Personal S/5 con fecha anterior disponible, devolución, anulación de
+devolución (20→25), conversión/invitación con código, anulación del aporte
+(25→20), borrado del externo y cierre. Familia nueva: crear sin saldo, ingreso
+externo S/7, Miembros/código, borrar el ingreso y cerrar. No se envió invitación
+a terceros. Originales conservados: 60 transacciones, presupuestos, metas,
+arrastre y Caja WWW/S/1; quedan marcas de anulación y recibos de cierre de las
+pruebas. Falta segundo participante/dispositivo, reinicio frío físico y medir
+FPS en compilación de producción; no se certifica aquí toda la auditoría previa.
+Tras cerrar el proceso del emulador, volver a abrir el servidor de desarrollo
+y desbloqueo por el dueño: Crear/Unirme de Familia presentes durante consulta;
+Cajas muestra WWW/S/1 a la vez que consulta compartidas. Detalle WWW conserva
+S/1. Comprobado mediante controles nativos/accessibilidad: la captura protegida
+sale negra y NO se desactivó esa protección. Marca nueva verificada en Acerca.
+
+Regresión: `verificar-entrada-espacios-sin-bloqueo.mjs` ejecuta condiciones
+originales de render y guardado; ampliada selección de Familia con historial
+retenido. Ambas fallan contra `72822ea2` por las esperas originales. Sin datos,
+permisos ni servicios nuevos; no cambia ficha de Play ni requiere APK nativo.
+Validación final: `npx tsc --noEmit`, ESLint y `node pruebas/correr.mjs` correctos
+(264 pruebas y 8 auditores). Única expectativa antigua incompatible adaptada:
+el aviso de consulta pendiente acompaña la lista, no la sustituye.
+
 ## Personal/Familia/Cajas — 23/10/2026 — menos recargas y cálculo repetido
 
 Marca `23oct-espacios-recarga-dirigida-ligeros`, base `c23efdd2`. Se conserva el

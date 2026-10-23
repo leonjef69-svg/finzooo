@@ -61,6 +61,19 @@ function harness() {
   return { s, a, b, ma, mb, memory };
 }
 
+// Primera entrada: publica nombres sin esperar historiales, pero NO confirma dinero.
+{
+  const { s, a, b, ma } = harness(), slow = deferred();
+  s.familias = []; s.cargando = true;
+  s.listarMovimientosFamilia = () => slow.promise;
+  const work = s.recargar(undefined, true); await tick();
+  assert.deepEqual(plain(s.familias), [a, b], "los nombres no esperan los historiales");
+  assert.equal(s.cargando, false, "la lista ya se puede usar");
+  assert.equal(s.familiasSincronizadas, false, "una lista NO confirma saldos ni concilia Personal");
+  slow.resolve(ma); await work; await tick();
+  assert.equal(s.familiasSincronizadas, true);
+}
+
 // Ejecutar el botón original anterior/nuevo: el fallo rojo no es un auxiliar ausente.
 {
   const { s, b, mb } = harness(), network = deferred(); s.listarFamilias = () => network.promise;

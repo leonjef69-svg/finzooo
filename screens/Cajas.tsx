@@ -1206,7 +1206,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           {linkCandidates.length > linkLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setLinkLimit(value => value + 20)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("common.show")}</Text></TouchableOpacity> : null}
           <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => setLinkReview(null)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("common.cancel")}</Text></TouchableOpacity>
         </View> : null}
-        {!ready || (compartiendo && !caja) ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja || cajasOcultas.has(caja.id) ? (
+        {compartiendo && !caja ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja || cajasOcultas.has(caja.id) ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
             <View className="mb-3 flex-row gap-3">
@@ -1217,7 +1217,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               <View className="mb-3 gap-2">
                 <View className="flex-row items-center gap-2">
                 <TextInput disableFullscreenUI editable={!guardando} value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
-                <TouchableOpacity accessibilityLabel={t("common.save")} accessibilityState={{ busy: guardando }} disabled={guardando} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel={t("common.save")} accessibilityState={{ busy: guardando }} disabled={guardando || !ready} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
                 <TouchableOpacity accessibilityLabel={t("common.cancel")} disabled={guardando} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
                 </View>
                 <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
@@ -1248,8 +1248,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </View>
             </View> : null}
             {cajasArchivadas.length > 0 ? <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => { setVerArchivadas(value => !value); setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} className="mb-2 min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t(verArchivadas ? "boxes.activeList" : "boxes.archivedList", { count: cajasArchivadas.length })}</Text></TouchableOpacity> : null}
-            {accountUid && !verArchivadas && !compartidasConocidas && cargandoCompartidas ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : <>
-            {(cajasEnLista.length > 0 || compartidasEnLista.length > 0) && !verArchivadas ? <View className="mb-2 flex-row items-center justify-between">
+            {(cajasEnLista.length > 0 || compartidasEnLista.length > 0 || !ready || (accountUid && !compartidasConocidas && cargandoCompartidas)) && !verArchivadas ? <View className="mb-2 flex-row items-center justify-between">
               {seleccionandoCajas ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{cajasSeleccionadas.length} {cajasSeleccionadas.length === 1 ? "seleccionada" : "seleccionadas"}</Text>
                 <View className="flex-row items-center gap-3">
@@ -1258,7 +1257,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                   <TouchableOpacity onPress={() => { setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
                 </View>
               </> : <>
-                <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.myBoxes")}</Text>
+                <View className="flex-row items-center gap-2"><Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.myBoxes")}</Text>{!ready || (accountUid && !compartidasConocidas && cargandoCompartidas) ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#64748b" /> : null}</View>
                 {cajasEnLista.length > 0 ? <TouchableOpacity accessibilityLabel={t("common.select")} onPress={() => { setSeleccionandoCajas(true); setCajasSeleccionadas([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity> : null}
               </>}
             </View> : null}
@@ -1282,13 +1281,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               <View className="ml-2.5 flex-1"><Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text><Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{saldosCompartidas[item.id] === undefined ? "…" : formatAmount(saldosCompartidas[item.id], currencySymbolFor(item.currency), item.currency)}</Text></View><ArrowLeftRight size={17} color="#64748b" />
             </TouchableOpacity>) : null}
             {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={actualizarListaCajas} className="min-h-11 justify-center"><Text className="text-sm text-slate-500">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
-            {cajasEnLista.length === 0 && (verArchivadas || (!compartidasEnLista.length && !cargandoCompartidas && !errorCompartidas)) && !creando ? (
+            {ready && cajasEnLista.length === 0 && (verArchivadas || (!compartidasEnLista.length && !cargandoCompartidas && !errorCompartidas)) && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
                 <Boxes size={28} color="#94a3b8" />
                 <Text className="mt-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.empty")}</Text>
               </View>
             ) : null}
-            </>}
           </>
         ) : caja.archivadaLocal ? (
           <View className="gap-3 py-3">

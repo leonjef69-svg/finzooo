@@ -40,7 +40,7 @@ function button(file, label) {
   s.compartiendo = false; assert.equal(run(condition, s), true, "un resultado realmente incierto conserva recuperación/cancelación");
 }
 {
-  const { node, tree } = find(main, node => ts.isConditionalExpression(node) && node.condition.getText().startsWith("!ready"));
+  const { node, tree } = find(main, node => ts.isConditionalExpression(node) && node.condition.getText().includes("compartiendo && !caja"));
   assert.equal(run(node.condition.getText(tree), { ready: true, compartiendo: true, caja: undefined }), true,
     "tras retirar la privada y mientras llega el código no se muestra fugazmente otra lista");
   assert.equal(run(node.condition.getText(tree), { ready: true, compartiendo: false, caja: undefined }), false);

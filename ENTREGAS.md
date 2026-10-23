@@ -1,5 +1,20 @@
 # Entregas de Fino
 
+## 23/10/2026 — entrada sin ocultar listas por consultas pendientes (desarrollo)
+
+Marca `23oct-entrada-espacios-sin-bloqueo`, base `72822ea2`. Cajas muestra las
+privadas sin esperar la consulta compartida; Familia muestra controles y nombres
+sin esperar todos los historiales. Guardado y conciliación siguen protegidos.
+Medido en emulador habitual: primera Familia 4123 ms de espera anterior frente
+a controles disponibles en 206 ms; primera Caja visible 1915→963 ms. Muestras
+de desarrollo JS→publicación React, no FPS ni garantía de latencia física.
+Ciclo real de Caja/Familia de prueba completado y cerrado, registros anteriores
+conservados. Alcance y pruebas pendientes en ESTADO.md. Solo JavaScript, sin APK
+nuevo ni publicación OTA/Play.
+Validación final: TypeScript y ESLint sin errores; 264 pruebas y 8 auditores
+en verde. Tras reiniciar el emulador se confirmaron los controles disponibles
+durante consulta y WWW/S/1 visible. Tus 60 transacciones anteriores idénticas.
+
 ## 23/10/2026 — espacios con recargas dirigidas (desarrollo)
 
 Marca `23oct-espacios-recarga-dirigida-ligeros`, base `c23efdd2`. Familia
