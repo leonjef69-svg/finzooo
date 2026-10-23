@@ -30,7 +30,7 @@ const find = predicate => { let found; function visit(node) { if (!found && pred
 const reload = find(node => ts.isVariableDeclaration(node) && node.name.getText(tree) === "recargar").initializer.arguments[0].getText(tree);
 function screen(network, cache = new Map(), detail = false) {
   const state = {}, scope = { ...reader, ...mutations, auth, accountUid: uid, accountSession: session, getAccountStorageSession, captureAccountTask,
-    mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, familiaElegida: { current: null },
+    mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, familiaConfirmada: { current: null }, familiaElegida: { current: null },
     listaFamiliasVisible: { current: !detail }, cierresPendientes: { current: new Set() },
     tRef: { current: key => key }, toastRef: { current() {} }, familiaEnMemoria: cache, VENTANA_CAMBIO_RAPIDO_MS: 2_000,
     listarFamilias: network.list, listarMovimientosFamilia: network.movements, listarMiembrosFamilia: network.members };

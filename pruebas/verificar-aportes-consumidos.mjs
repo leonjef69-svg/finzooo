@@ -135,11 +135,11 @@ const explicitDeleted = repairPrivate.planPrivateBoxRepair(cajaScope.datos, pers
 assert.equal(explicitDeleted.upserts.length, 0, "marca antigua sin la pareja no borra ni devuelve dinero automáticamente");
 assert.equal(explicitDeleted.data, cajaScope.datos);
 assert.ok(explicitDeleted.conflicts.some(issue => issue.personalId === 12), "pide revisión de la contraparte ausente");
-const familyScope = { familias: [{ id: "familia-activa" }], transactions: [
+const familyScope = { familiaConfirmada: { current: null }, familias: [{ id: "familia-activa" }], transactions: [
   { id: 1, internalTransfer: "family", internalTransferSpaceId: "familia-cerrada", internalTransferLink: "cerrado" },
   { id: 2, internalTransfer: "family", internalTransferSpaceId: "familia-activa", internalTransferLink: "eliminado" },
 ], validMovementIds: [], orphanedPersonalTransferIds: local.orphanedPersonalTransferIds };
-const familyDeleted = execute(declarations("screens/Family.tsx", ["familiasActivas", "conciliables", "orphanIds"]), familyScope, "orphanIds");
+const familyDeleted = execute(declarations("screens/Family.tsx", ["familiasAConciliar", "familiasActivas", "conciliables", "orphanIds"]), familyScope, "orphanIds");
 assert.deepEqual(Array.from(familyDeleted), [2], "Familia cerrada no convierte su ausencia en devolución ficticia");
 
 const closeScope = { datos: { cajas: [{ id: "caja-local" }], movimientos: [contribution, { ...spent, monto: 60 }, returned], cajasBorradas: [], movimientosBorrados: [] },

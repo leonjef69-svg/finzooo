@@ -1,5 +1,58 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 23/10/2026 — menos recargas y cálculo repetido
+
+Marca `23oct-espacios-recarga-dirigida-ligeros`, base `c23efdd2`. Se conserva el
+selector de tres espacios y el Inicio retenido. Los avisos breves usan un
+contexto separado: aparecer/cerrar «Guardado» no cambia el objeto financiero.
+La acción de detalle de Personal conserva su identidad para no invalidar todas
+sus filas por un cambio ajeno.
+
+Familia concilia con índices efímeros y calcula una distribución de devoluciones
+por Familia, conservando primera coincidencia, asignaciones y guardas. Guardar,
+aportar/editar, devolver y borrar movimientos refrescan solo la Familia afectada.
+La confirmación lleva alcance explícito y la conciliación/orfandad se limita a
+esa Familia: las copias de las demás son únicamente visuales. Crear/unirse,
+cerrar/salir, foco y Actualizar conservan lectura completa; invitación ya evita
+recarga financiera. Cajas calcula sus saldos en una pasada y reutiliza el
+disponible de Personal mientras sus fuentes no cambien. Volver de una compartida
+renueva su lista sin releer/descargar las privadas. Registrar/devolver no vuelve
+a descargar integrantes; se consultan por separado al abrir/actualizar Miembros.
+La escucha y confirmación financiera, conversión y recuperación siguen intactas.
+
+Evidencia sintética con fuentes originales y React/red adaptados: ocho Familias
+con 416 movimientos y 403 Personal pasan de 160 distribuciones a 8 y de 170.560
+accesos de ID a 2.752; mismos importes y asignaciones. Una operación pasa de
+lista + ocho historiales + miembros (10 llamadas) a historial afectado + miembros
+(2), incluyendo finalización y observadores. Con 25 Cajas/10.000 movimientos y
+21 dibujos, visitas al historial de 5.250.000 a 10.000. El disponible de Personal
+se calcula una vez, en vez de 21, con recálculo ante cambios reales. Volver de
+compartida realiza cero lecturas/descargas privadas y mantiene lista fresca.
+Son menos trabajo/consultas demostrados, NO una subida de FPS medida.
+
+Emulador habitual Medium_Phone, Metro 8081, misma cuenta: navegación y formularios
+Crear/Unirme abiertos y cancelados, sin guardar. Información muestra la marca
+nueva. Primera comparación de ocho campos financieros locales idéntica: 60
+movimientos, 281 marcas, presupuestos, arrastres, metas y Cajas conservados.
+Durante la revisión el usuario creó una Caja (autoría confirmada); se conservó.
+Se comprobó que todos los datos anteriores permanecieran exactos y, al retomar,
+que los ocho campos completos, incluida esa Caja, fueran idénticos tras abrirla,
+consultar su saldo y abrir/cancelar Agregar dinero. No se convirtió ni invitó esa
+Caja privada. Guardar/devolver/invitar se comprueban con datos sintéticos, no se
+presenta esta revisión como otro ciclo real de dinero compartido en Android.
+Evidencias privadas en `.tmp`, fuera de Git.
+
+TypeScript, ESLint, `git diff --check`, 263 pruebas y ocho auditores aprobados.
+Las cinco regresiones nuevas fallan contra la base por trabajo/consultas
+repetidas. La prueba anterior de invitación conserva sus comprobaciones con
+el disponible memorizado y la consulta independiente de integrantes.
+
+**Sigue/falta:** probar versión final en teléfono y recorridos compartidos
+poblados/segundo participante para valorar
+fluidez y red reales. No cierra pendientes financieros previos ni acredita
+60 FPS. Sin datos nuevos, permisos, dependencias, cambio nativo, APK/AAB/OTA,
+publicación o despliegue Firebase. PLAYSTORE.md no requiere cambios.
+
 ## Meses de Personal y Reportes — 22/10/2026 — conteo visible y saldo libre
 
 El selector mensual ahora cuenta las mismas tarjetas que aparecen en Personal:

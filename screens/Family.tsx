@@ -58,6 +58,7 @@ type FamiliaEnMemoria = {
 const VENTANA_CAMBIO_RAPIDO_MS = 2_000;
 
 type FamilyActionWait = AccountTaskWait & { reload: (preferred?: string) => Promise<void> };
+type FamilyReloadScope = { familyId: string; visual: FamiliaEnMemoria };
 
 // Familia vive en Firebase, pero no debe volver a aparecer vacía cada vez que
 // se cambia de espacio. Esta copia dura únicamente mientras Fino está abierto;
@@ -159,6 +160,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const accountSession = useRef(getAccountStorageSession()).current;
   const [moneyRevision, setMoneyRevision] = useState(() => familyMutationVersion(accountUid, accountSession));
   const confirmedReload = useRef(0);
+  // null corresponde a una lectura completa; un ID autoriza conciliar solo
+  // esa Familia. Las copias de las demás nunca prueban un borrado en Personal.
+  const familiaConfirmada = useRef<string | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -170,7 +174,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   tRef.current = t;
   toastRef.current = showToast;
 
-  const recargar = useCallback(async (preferida?: string, forzar = false) => {
+  const recargar = useCallback(async (preferida?: string, forzar = false, parcial?: FamilyReloadScope) => {
     if (cierresPendientes.current.size) return;
     if (familyMutationPending(accountUid, accountSession)) return;
     const pedido = ++reloadId.current;
@@ -194,28 +198,29 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     // Capturar la selección ANTES de esperar. La caché de otra consulta no
     // decide qué familia abrir cuando llegan respuestas en distinto orden.
     const elegida = preferida ?? familiaElegida.current;
+    const alcance = parcial?.familyId === elegida && parcial.visual.familias.some(item => item.id === elegida) ? parcial : undefined;
     const consultarMiembros = Boolean(preferida) || !listaFamiliasVisible.current;
     const leer = <T,>(key: string, work: () => Promise<T>) =>
       shareSpaceRead({ uid, session: accountSession, revision: moneyVersion, key }, work, forzar);
     let completing = false;
     try {
       // listarFamilias ya incorpora el índice antiguo: no consultarlo otra vez.
-      const lista = await task.wait(() => leer("family:list", () => listarFamilias(uid)));
+      const lista = alcance ? alcance.visual.familias : await task.wait(() => leer("family:list", () => listarFamilias(uid)));
       const activa = elegida ? lista.find(item => item.id === elegida) ?? null : lista[0] ?? null;
       // Empezar los demás saldos ahora, no después de esperar el detalle activo.
       // Capturar también el rechazo evita una promesa sin atender si se sale
       // de la pantalla mientras termina otra lectura.
-      const otrasPendientes = Promise.all(lista.filter(item => item.id !== activa?.id).map(async item =>
+      const otrasPendientes = Promise.all((alcance ? [] : lista.filter(item => item.id !== activa?.id)).map(async item =>
         [item.id, await task.wait(() => leer(`family:movements:${item.id}`, () => listarMovimientosFamilia(item.id, true)))] as const))
         .then(value => ({ ok: true as const, value }), error => ({ ok: false as const, error }));
-      const previa = familiaEnMemoria.get(uid);
+      const previa = alcance?.visual ?? familiaEnMemoria.get(uid);
       const [movements, people] = activa ? await task.wait(() => Promise.all([
         leer(`family:movements:${activa.id}`, () => listarMovimientosFamilia(activa.id, true)),
         consultarMiembros ? leer(`family:members:${activa.id}`, () => listarMiembrosFamilia(activa.id))
           : Promise.resolve(previa?.familia?.id === activa.id ? previa.miembros : []),
       ])) : [[], []];
       if (!task.current()) return;
-      const previous = familiaEnMemoria.get(uid);
+      const previous = alcance?.visual ?? familiaEnMemoria.get(uid);
       const nextMovements: Record<string, MovimientoFamilia[]> = Object.fromEntries(lista.flatMap(item =>
         item.id === activa?.id ? [[item.id, movements]] : previous?.movimientosFamilias[item.id] ? [[item.id, previous.movimientosFamilias[item.id]]] : []));
       const nextBalances = Object.fromEntries(Object.entries(nextMovements).map(([id, items]) =>
@@ -227,8 +232,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       setFamilia(activa);
       setMiembros(people); setMovimientos(movements);
       if (!activa) setVerTodas(true);
-      // La familia elegida está lista. Las demás se comprueban en segundo
-      // plano; Personal solo se concilia cuando TODAS estén confirmadas.
+      // La lectura completa confirma todas; tras una operación local, la
+      // dirigida confirma solo su Familia y conserva las demás como vista.
       familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: nextBalances,
         movimientosFamilias: nextMovements, miembros: people, movimientos: movements, actualizadaEn: 0 });
       const completar = async () => {
@@ -240,9 +245,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         const saldos = Object.fromEntries(Object.entries(completas).map(([id, items]) =>
           [id, items.reduce((total, item) => total + (item.tipo === "ingreso" ? item.monto : -item.monto), 0)]));
         confirmedReload.current = pedido;
+        familiaConfirmada.current = alcance ? activa!.id : null;
         setMovimientosFamilias(completas); setSaldosFamilias(saldos);
         familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: saldos,
-          movimientosFamilias: completas, miembros: people, movimientos: movements, actualizadaEn: Date.now() });
+          movimientosFamilias: completas, miembros: people, movimientos: movements, actualizadaEn: alcance ? 0 : Date.now() });
         setFamiliasSincronizadas(true);
       };
       completing = true;
@@ -367,26 +373,49 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     const revision = reloadId.current;
     const task = captureAccountTask(uid, () => mounted.current && revision === reloadId.current && !actionLock.current && getAccountStorageSession() === accountSession);
     if (!task.current() || cargando || !familiasSincronizadas || confirmedReload.current !== revision || familyMutationPending(uid, accountSession)) return;
-    const todosLosMovimientos = Object.values(movimientosFamilias).flat();
+    const familiasAConciliar = familiaConfirmada.current ? familias.filter(item => item.id === familiaConfirmada.current) : familias;
+    const movimientosConfirmados = familiaConfirmada.current
+      ? { [familiaConfirmada.current]: movimientosFamilias[familiaConfirmada.current] || [] } : movimientosFamilias;
+    const todosLosMovimientos = Object.values(movimientosConfirmados).flat();
     const validMovementIds = todosLosMovimientos
       .filter(item => item.personalOwnerUid === uid && item.personalTransactionId != null)
       .map(item => item.id);
     // Una Familia cerrada ya no aparece en la lista activa. Su aporte gastado
     // no se borra de Personal: hacerlo devolvería dinero que ya no existe.
-    const familiasActivas = new Set(familias.map(item => item.id));
+    const familiasActivas = new Set(familiasAConciliar.map(item => item.id));
     const conciliables = transactions.filter(tx => !tx.internalTransferSettled
       && !!tx.internalTransferSpaceId && familiasActivas.has(tx.internalTransferSpaceId));
     const orphanIds = orphanedPersonalTransferIds(conciliables, "family", validMovementIds, true);
     const nombresPorFamilia = new Map(familias.map(item => [item.id, item.nombre]));
+    // Una lectura confirmada concilia TODOS los aportes. Preparar los índices
+    // una vez evita buscar cada movimiento en todas las familias y volver a
+    // ordenar el mismo historial por cada devolución. Solo viven en esta pasada.
+    const familiasPorMovimiento = new Map<string, [string, MovimientoFamilia[]]>();
+    for (const entry of Object.entries(movimientosConfirmados)) {
+      for (const item of entry[1]) {
+        if (!familiasPorMovimiento.has(item.id)) familiasPorMovimiento.set(item.id, entry);
+      }
+    }
+    const personalesPorId = new Map<number, (typeof transactions)[number]>();
+    for (const tx of transactions) {
+      if (!Number.isNaN(tx.id) && !personalesPorId.has(tx.id)) personalesPorId.set(tx.id, tx);
+    }
+    const repartosPorFamilia = new Map<string, ReturnType<typeof linkedTransferLedger>["allocationsByReturnId"]>();
     const upserts = todosLosMovimientos.flatMap(item => {
       if (item.personalOwnerUid !== uid || item.personalTransactionId == null) return [];
       const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
-      const familiaDelMovimiento = Object.entries(movimientosFamilias).find(([, items]) => items.some(movimiento => movimiento.id === item.id));
+      const familiaDelMovimiento = familiasPorMovimiento.get(item.id);
       const spaceId = familiaDelMovimiento?.[0] || "";
       const nombreFamilia = nombresPorFamilia.get(spaceId) || "Familia";
-      const allocations = esRetorno
-        ? linkedTransferLedger(familiaDelMovimiento?.[1] || [], uid).allocationsByReturnId.get(item.id) || []
-        : undefined;
+      let allocations: (typeof transactions)[number]["internalTransferAllocations"];
+      if (esRetorno) {
+        let repartos = repartosPorFamilia.get(spaceId);
+        if (!repartos) {
+          repartos = linkedTransferLedger(familiaDelMovimiento?.[1] || [], uid).allocationsByReturnId;
+          repartosPorFamilia.set(spaceId, repartos);
+        }
+        allocations = repartos.get(item.id) || [];
+      }
       const canonical = {
         id: item.personalTransactionId, type: esRetorno ? "income" as const : "expense" as const,
         amount: esRetorno ? item.personalReturnAmount! : item.monto, category: "otros", date: item.fecha,
@@ -396,7 +425,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         internalTransferSpaceId: spaceId, internalTransferSpaceName: nombreFamilia,
         ...(allocations ? { internalTransferAllocations: allocations } : {}),
       };
-      const current = transactions.find(tx => tx.id === item.personalTransactionId);
+      const current = personalesPorId.get(item.personalTransactionId);
       // Un ID ya presente no basta: una versión antigua podía dejar una
       // contraparte incompleta. Solo se corrige si no representa este mismo
       // enlace y así se evita reescribir en cada render.
@@ -441,12 +470,17 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }
   }, [accountSession, accountUid, cargando, familia, familias, familiasSincronizadas, movimientos, movimientosFamilias, moneyRevision, ocupado, owner, recargar, repairLinkedTransferTransactions, t, transactions]);
 
-  async function ejecutar(action: (wait: FamilyActionWait) => Promise<void>, onError?: (error: unknown) => void, financial = true) {
+  async function ejecutar(action: (wait: FamilyActionWait) => Promise<void>, onError?: (error: unknown) => void, financial = true, affectedFamilyId?: string) {
     if (actionLock.current) return;
     const task = captureAccountTask(accountUid, () => mounted.current && getAccountStorageSession() === accountSession);
     if (!task.current()) return;
     actionLock.current = true;
     setOcupado(true);
+    // Captura solo visual, ANTES de invalidar. Para corregir Personal se usa
+    // exclusivamente la Familia releída del servidor, nunca estas otras copias.
+    const knownVisual = affectedFamilyId ? familiaEnMemoria.get(accountUid) : undefined;
+    const alcance: FamilyReloadScope | undefined = affectedFamilyId && knownVisual
+      ? { familyId: affectedFamilyId, visual: knownVisual } : undefined;
     let mutationRevision: number | undefined;
     let finishMutation: (() => void) | undefined;
     function finishFinancial() {
@@ -476,7 +510,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }
     const wait = Object.assign(guarded, { reload: (preferred?: string) => {
       finishFinancial();
-      return task.wait(() => recargar(preferred, true));
+      return task.wait(() => recargar(preferred ?? alcance?.familyId, true, alcance));
     } });
     try { await action(wait); }
     catch (error) {
@@ -490,7 +524,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       actionLock.current = false;
       if (task.current()) {
         setOcupado(false);
-        if (!cierresPendientes.current.size && mutationRevision !== undefined && (needsReload || mutationRevision === reloadId.current)) void recargar(undefined, true);
+        if (!cierresPendientes.current.size && mutationRevision !== undefined && (needsReload || mutationRevision === reloadId.current)) void recargar(alcance?.familyId, true, alcance);
       }
     }
   }
@@ -645,7 +679,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (!await wait(confirm)) throw new Error("personal-save-failed");
     pendingDebit.current = null;
     setMonto(""); setDescripcion(""); setNotes(""); setMovementDate(fechaHoy()); setOrigenDinero("externo"); setTipo(null); await wait.reload(); showToast(t("family.movementSaved"));
-  });
+  }, undefined, true, familia?.id);
 
   const devolverAPersonal = () => ejecutar(async wait => {
     const uid = auth.currentUser?.uid;
@@ -657,7 +691,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       currency: userCurrency, fecha: fechaHoy(), description: t("family.returnToPersonal") })));
     if (!saved) return;
     await wait.reload();
-  });
+  }, undefined, true, familia?.id);
   const salir = () => {
     const uid = auth.currentUser?.uid;
     if (!uid || !familia || owner) return;
@@ -780,7 +814,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }
     setSeleccionados([]); setSeleccionando(false); await wait.reload();
     });
-  });
+  }, undefined, true, familia?.id);
   const confirmarBorrarTodo = () => {
     const currentUid = auth.currentUser?.uid;
     const borrables = owner ? visibles : visibles.filter(item => item.creadoPor === currentUid);

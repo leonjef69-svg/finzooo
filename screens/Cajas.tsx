@@ -253,7 +253,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   function volverDeCompartida(retiradaId?: string) {
     if (!cuentaActual()) return;
     if (retiradaId) setCompartidas(previous => previous.filter(item => item.id !== retiradaId));
-    setCompartidaAbierta(null); setInvitacionInicialCompartida(""); setRefreshVersion(value => value + 1);
+    // Cambiar el detalle ya vuelve a confirmar la lista compartida. El libro
+    // privado no cambió por volver y conserva su confirmación independiente.
+    setCompartidaAbierta(null); setInvitacionInicialCompartida("");
   }
   const reportSyncError = useCallback((error: unknown) => {
     if (!cuentaActual()) return;
@@ -289,6 +291,16 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [cajasOcultas, setCajasOcultas] = useState(new Set<string>());
   const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
   const cajasEnLista = datos.cajas.filter(box => Boolean(box.archivadaLocal) === verArchivadas && !cajasOcultas.has(box.id));
+  // La lista enseña todos los saldos a la vez: una sola pasada, sin volver a
+  // recorrer el historial por cada tarjeta o cada tecla del formulario.
+  const saldosPrivadas = useMemo(() => {
+    const saldos = new Map<string, number>();
+    for (const item of datos.movimientos) {
+      const { cajaId: id } = item;
+      saldos.set(id, (saldos.get(id) ?? 0) + (item.tipo === "ingreso" ? item.monto : -item.monto));
+    }
+    return saldos;
+  }, [datos.movimientos]);
   // El destino y el origen pendiente son la MISMA conversión, no dos Cajas.
   // La fuente sigue intacta hasta comprobar el recibo y guardar sus enlaces.
   const compartidasEnLista = compartidas.filter(item => !datos.cajas.some(box => box.sharingPending && item.id === `${accountUid}_${box.id}`));
@@ -482,7 +494,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     }),
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
-  const saldoActual = caja ? saldoCaja(caja.id, datos.movimientos) : 0;
+  const saldoActual = caja ? saldosPrivadas.get(caja.id) ?? 0 : 0;
   const devolvibleAPersonal = useMemo(() => returnableToPersonal(movimientos), [movimientos]);
 
   // Recuperación comprobada: Personal, Caja y marcas se guardan juntos.
@@ -1260,7 +1272,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
                 <View className="ml-2.5 flex-1">
                   <Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text>
-                  <Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{fmt(saldoCaja(item.id, datos.movimientos))}</Text>
+                  <Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{fmt(saldosPrivadas.get(item.id) ?? 0)}</Text>
                 </View>
                 {seleccionandoCajas ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : <ArrowLeftRight size={17} color="#64748b" />}
               </TouchableOpacity>

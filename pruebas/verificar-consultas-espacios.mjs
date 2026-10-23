@@ -44,7 +44,7 @@ function familyHarness() {
   uid = "A"; session = 1;
   const state = {}, calls = [], cache = new Map(); let networkReads = 0;
   const scope = { ...spaceReadOriginal(), ...familyMutationOriginal(cache), auth, accountUid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
-    mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, actionLock: { current: false },
+    mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, familiaConfirmada: { current: null }, actionLock: { current: false },
     familiaElegida: { current: null }, listaFamiliasVisible: { current: false },
     cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },
     tRef: { current: key => key }, toastRef: { current: key => calls.push(key) }, showToast: key => calls.push(key),
@@ -159,6 +159,7 @@ for (const nextUid of ["B", "A"]) {
 
 const boxes = ast("screens/SharedBoxes.tsx");
 const listen = effect(boxes, "escucharMovimientosCaja");
+const loadBoxMembers = effect(boxes, "listarMiembrosCaja");
 const reconcile = effect(boxes, "const upserts = movimientos.flatMap");
 const ledger = { exports: {} };
 vm.runInNewContext(transpile(read("utils/linkedTransfers.ts")), { module: ledger, exports: ledger.exports });
@@ -169,14 +170,18 @@ function boxHarness() {
   const scope = { auth, uid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     caja: { id: "box-a", nombre: "Caja" }, cajaId: "box-a", mounted: { current: true },
     selectedBoxId: { current: "box-a" }, movementEpoch: { current: 0 }, confirmedSource: { current: null },
-    ...familyMutationOriginal(), borradosConfirmados: { current: new Map() }, loadedBoxId: { current: undefined }, setCargandoCaja() {}, setActualizandoCaja() {}, setErrorCargaCaja() {},
+    ...familyMutationOriginal(), borradosConfirmados: { current: new Map() }, loadedBoxId: { current: undefined }, loadedMembersBoxId: { current: undefined }, membersEpoch: { current: 0 }, setCargandoCaja() {}, setActualizandoCaja() {}, setErrorCargaCaja() {},
     lock: { current: false }, moneyLock: { current: false }, errorRef: { current: error => { state.error = error; } },
     listarMiembrosCaja: () => members.promise, confirmarCajaAbierta: () => confirmation.promise,
     escucharMovimientosCaja: (_id, callback) => { receive = callback; return () => stopCount++; },
     setMovimientos: items => { state.movimientos = items; }, setMiembros: items => { state.miembros = items; },
     setMovimientosConfirmados: value => { state.confirmado = value; } };
-  vm.runInNewContext(transpile(`globalThis.listen = (${listen}); globalThis.reconcile = (${reconcile});`), scope);
-  const stop = scope.listen();
+  vm.runInNewContext(transpile(`globalThis.listen = (${listen}); globalThis.loadMembers = (${loadBoxMembers}); globalThis.reconcile = (${reconcile});`), scope);
+  const stopListener = scope.listen();
+  // En la versión anterior ambos nombres localizan el mismo efecto. La nueva
+  // versión conserva ambas protecciones en consultas independientes.
+  const stopMembers = loadBoxMembers === listen ? undefined : scope.loadMembers();
+  const stop = () => { stopListener?.(); stopMembers?.(); };
   return { scope, state, members, confirmation, stop, receive: (...args) => receive(...args), stops: () => stopCount };
 }
 // No vuelven miembros/snapshots de la Caja anterior tras cambiar de pantalla.

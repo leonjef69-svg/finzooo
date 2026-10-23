@@ -1,5 +1,33 @@
 # Entregas de Fino
 
+## 23/10/2026 — espacios con recargas dirigidas (desarrollo)
+
+Marca `23oct-espacios-recarga-dirigida-ligeros`, base `c23efdd2`. Familia
+consulta solo el historial afectado tras guardar/devolver/borrar, y concilia
+Personal únicamente para esa Familia confirmada. Crear/unir/cerrar/foco/manual
+siguen comprobando la lista completa. Invitación no recarga dinero. Volver de
+Caja compartida no relee ni descarga las privadas; miembros se consultan aparte
+del dinero. Cálculos de saldos reutilizados y avisos aislados de las pantallas.
+
+Pruebas sintéticas originales: diez llamadas por acción en ocho Familias pasan
+a dos; las distribuciones de devoluciones de 160 a 8, mismos importes/asignaciones.
+Lista de 25 Cajas con 10.000 movimientos/21 dibujos: 5.250.000 visitas a 10.000.
+No son mediciones de FPS. Detalles y límites en ESTADO.md.
+
+Medium_Phone habitual, Metro 8081 y misma cuenta: marca visible en Información,
+navegación y formularios cancelados. Campos financieros locales previos intactos
+(60 movimientos/281 marcas). Una Caja que el usuario creó durante la revisión
+quedó conservada; su consulta y formulario Agregar dinero cancelado no alteraron
+ninguno de los ocho campos comparados. Acciones monetarias compartidas e
+invitación se verifican con datos sintéticos, no con dinero real ni conversión.
+
+TypeScript, ESLint, `git diff --check`, 263 pruebas y ocho auditores aprobados;
+las cinco regresiones nuevas fallan contra la base por la conducta anterior.
+
+**Sigue/falta:** prueba representativa de versión final/teléfono/espacios
+compartidos poblados. Sin cambios nativos,
+APK/AAB/OTA/Play, despliegue Firebase ni cambios en PLAYSTORE.md.
+
 ## 22/10/2026 — conteo y saldo del selector mensual (desarrollo)
 
 Personal cuenta las tarjetas visibles de cada mes, sin recibos internos de

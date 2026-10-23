@@ -13,7 +13,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import "react-native-reanimated";
 import "../global.css";
-import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { AppDataProvider, useAppData, useAppToast } from "@/contexts/AppDataContext";
 import { flushPendingSaves } from "@/utils/storage";
 import { getPendingImport, setPendingImport } from "@/utils/pendingImport";
 import { isAppLocked, useAppLocked } from "@/utils/lockState";
@@ -52,7 +52,8 @@ Notifications.setNotificationHandler({
 });
 
 function GlobalOverlays() {
-  const { celebrateGoal, clearCelebration, toast } = useAppData();
+  const { celebrateGoal, clearCelebration } = useAppData();
+  const toast = useAppToast();
   return (
     <>
       <CelebrationOverlay goalName={celebrateGoal} onClose={clearCelebration} />

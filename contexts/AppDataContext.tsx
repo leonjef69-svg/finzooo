@@ -438,11 +438,13 @@ type AppDataContextValue = {
   celebrateGoal: string | null;
   clearCelebration: () => void;
 
-  toast: string;
   showToast: (msg: string) => void;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
+// Un aviso breve cambia al aparecer y al desaparecer. Su texto no pertenece
+// a los datos financieros: solo la capa que lo muestra necesita recibirlo.
+const AppToastContext = createContext<string | null>(null);
 
 function currentRealMonth(): Month {
   const now = new Date();
@@ -3494,11 +3496,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.moneyWithdrawn"));
   }
 
-  /* EL VALOR, ESTABILIZADO. Ver utils/valorEstable: hasta el 20/08/2026 esto era un objeto
-     literal, o sea uno NUEVO en cada dibujado del proveedor, y como React compara los
-     contextos por identidad, cualquier cambio de aquí dentro —un aviso, el mes, el mensajito
-     de "guardado"— redibujaba TODAS las pantallas montadas aunque ninguna usara lo que había
-     cambiado. Ahora solo se despierta a quien de verdad tiene algo nuevo que enseñar. */
+  /* Las funciones conservan su identidad y el objeto solo cambia cuando
+     cambia un dato público. El texto de los avisos va por otro contexto:
+     mostrar/cerrar "Guardado" no debe redibujar las pantallas financieras. */
   const valor = useValorEstable({
     ready,
     authReady,
@@ -3638,12 +3638,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     respaldoFallo: respaldoFallo && respaldoFallo !== "pendiente" ? respaldoFallo : respaldoNegocioFallo && respaldoNegocioFallo !== "pendiente" ? respaldoNegocioFallo : respaldoFallo ?? respaldoNegocioFallo,
     celebrateGoal,
     clearCelebration: () => setCelebrateGoal(null),
-    toast,
     showToast,
   });
 
   return (
     <AppDataContext.Provider value={valor}>
+      <AppToastContext.Provider value={toast}>
       <View style={[{ flex: 1 }, visualStyleVariables]}>{children}</View>
       <Modal visible={storageReadBlocked} transparent animationType="fade" onRequestClose={() => undefined}>
         <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.72)" }}>
@@ -3657,6 +3657,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           </View>
         </View>
       </Modal>
+      </AppToastContext.Provider>
     </AppDataContext.Provider>
   );
 }
@@ -3665,4 +3666,10 @@ export function useAppData() {
   const ctx = useContext(AppDataContext);
   if (!ctx) throw new Error("useAppData debe usarse dentro de AppDataProvider");
   return ctx;
+}
+
+export function useAppToast(): string {
+  const toast = useContext(AppToastContext);
+  if (toast === null) throw new Error("useAppToast debe usarse dentro de AppDataProvider");
+  return toast;
 }

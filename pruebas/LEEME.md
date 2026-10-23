@@ -1,5 +1,20 @@
 # Pruebas y auditores
 
+23/10 Espacios ligeros: cinco regresiones con fuentes originales y datos
+sintéticos. `verificar-avisos-espacios-ligeros-real` comprueba aviso/errores y
+función de detalle estables sin notificar datos financieros; cambios reales
+siguen notificando. `verificar-familia-conciliacion-ligera-real` conserva
+importes/asignaciones y cuenta índices/distribuciones. La recarga dirigida
+`verificar-familia-recarga-dirigida-real` ejecuta guardar/devolver/borrar,
+observadores/finalización, errores, sesión y conciliación limitada al espacio
+confirmado; manual/estructural conserva completa. `verificar-saldos-cajas-ligeros-real`
+ejecuta saldos y formulario reales con fuentes renovadas, sin mutar filas.
+`verificar-recarga-localizada-cajas-real` verifica regreso sin lecturas privadas,
+consulta de miembros independiente y confirmación monetaria protegida. Las
+cinco fallan en `FINO_TEST_BASELINE=c23efdd2` por trabajo/consulta redundante
+observado. React/IO/tiempo adaptados; no son un benchmark de FPS ni dinero real.
+Android habitual y límites de la entrega: ESTADO.md/ENTREGAS.md.
+
 22/10 Reportes: `verificar-comparativa-mensual.ts` verifica que los doce meses
 se agreguen por año y tipo, incluye meses vacíos y excluye transferencias
 internas; también comprueba que Reportes conecte la tarjeta, permita deslizar

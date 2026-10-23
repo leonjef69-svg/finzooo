@@ -38,7 +38,7 @@ function harness() {
     listaFamiliasVisible: { current: true },
     withImmediateRemoval, setMovimientosOcultos() {},
     useCallback: callback => callback,
-    mounted: { current: true }, reloadId: { current: 0 }, familiaElegida: { current: "a" }, confirmedReload: { current: 0 },
+    mounted: { current: true }, reloadId: { current: 0 }, familiaElegida: { current: "a" }, confirmedReload: { current: 0 }, familiaConfirmada: { current: null },
     actionLock: { current: false }, pendingDebit: { current: null }, cierresPendientes: { current: new Set() }, familiaEnMemoria: memory, VENTANA_CAMBIO_RAPIDO_MS: 2000,
     familia: a, familias: [a, b], miembros: [{ uid: "old-member" }], movimientos: ma, verTodas: true,
     seleccionandoFamilias: false, seleccionarFamilia() {}, invitacion: "old-invite", filter: "ingreso",

@@ -3,6 +3,9 @@ import { irUnaVez } from "@/utils/nav";
 import Home from "@/screens/Home";
 import { useAppData } from "@/contexts/AppDataContext";
 
+// La fila memorizada conserva su acción aunque cambie un aviso o el respaldo.
+const abrirDetalleMovimiento = (id: number) => irUnaVez(`/transaction/${id}`);
+
 export default function HomeTab() {
   const {
     userName,
@@ -27,7 +30,7 @@ export default function HomeTab() {
         income={income}
         prevBalance={prevBalance}
         transactions={transactions}
-        onOpenDetail={(id) => irUnaVez(`/transaction/${id}`)}
+        onOpenDetail={abrirDetalleMovimiento}
         onBulkDelete={deleteTransactions}
       />
     </View>
