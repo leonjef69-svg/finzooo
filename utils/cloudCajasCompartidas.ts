@@ -8,7 +8,7 @@ import { guardarMovimientoCompartido, borrarMovimientoCompartido, type SharedMov
 import { assertSharedContentAccepted, writeWithAcceptedSharedContent } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
-import { subirCajas } from "@/utils/cloudCajas";
+import { origenCajaConfirmado, subirCajas } from "@/utils/cloudCajas";
 import { copiaPrivadaCoincide, validarCajas } from "@/utils/cajas";
 import { confirmarConversionCaja, huellaCaja } from "@/utils/boxMigration";
 import { copiedBoxMovementMatches, sharedBoxMovement } from "@/functions/src/private-box-source";
@@ -87,7 +87,34 @@ export async function compartirCajaExistente(
 ): Promise<CajaCompartida & { conversion: ConversionCaja }> {
   const task = captureAccountTask(uid);
   const digest = await task.wait(() => huellaCaja(caja, movimientos, currency));
-  const completed = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "status"));
+  let started = false;
+  // begin ya comprueba recibo, cuenta, Pro, consentimiento, dueño, intento y
+  // huella del origen. Si la nube tiene la copia exacta, no hace falta pedir
+  // antes status y volver a subir esa misma Caja. No confirma dinero todavía.
+  if (allowNew && caja.sharingAttempt && origenCajaConfirmado(uid, caja, movimientos)) {
+    try { await task.wait(() => assertSharedContentAccepted(uid)); }
+    catch (error) {
+      // Recuperar una conversión YA terminada sigue permitido aunque ahora
+      // falte la elección local/Pro. No autoriza contenido nuevo ni escrituras.
+      const completed = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "status"));
+      if (completed) return { id: completed.targetId, nombre: completed.name, ownerUid: uid, creadaEn: completed.createdAt, currency, conversion: completed };
+      throw error;
+    }
+    try {
+      const completed = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "begin", caja.sharingAttempt, nombrePersona));
+      if (completed) return { id: completed.targetId, nombre: completed.name, ownerUid: uid, creadaEn: completed.createdAt, currency, conversion: completed };
+      started = true;
+    } catch (error) {
+      const reason = (error as { details?: { reason?: string } })?.details?.reason;
+      // Solo un rechazo confirmado del origen permite la ruta de respaldo.
+      // Red, permiso, cancelación o resultado incierto se conservan para
+      // reintentar el MISMO intento; no se confunden con «no se guardó».
+      if (reason !== "migration-source-missing" && reason !== "migration-source-changed") throw error;
+    }
+  }
+  // Ante un origen desactualizado, status sigue evitando resucitar una Caja
+  // ya convertida en otro equipo. Un recibo incompatible falla antes de subir.
+  const completed = started ? null : await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "status"));
   if (completed) return { id: completed.targetId, nombre: completed.name, ownerUid: uid, creadaEn: completed.createdAt, currency, conversion: completed };
   const finish = async () => {
     try { return await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "finish", caja.sharingAttempt)); }
@@ -99,9 +126,11 @@ export async function compartirCajaExistente(
     return { id: conversion.targetId, nombre: conversion.name, ownerUid: uid, creadaEn: conversion.createdAt, currency, conversion };
   }
   // Confirma el origen privado antes de copiar devoluciones históricas.
-  await task.wait(() => assertSharedContentAccepted(uid));
-  const sourceSaved = await task.wait(() => subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] }, undefined, undefined, protectedBoxIds));
-  if (!sourceSaved) throw new Error("permission-denied");
+  if (!started) {
+    await task.wait(() => assertSharedContentAccepted(uid));
+    const sourceSaved = await task.wait(() => subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] }, undefined, undefined, protectedBoxIds));
+    if (!sourceSaved) throw new Error("permission-denied");
+  }
   const privateCopy = await task.wait(() => getDocFromServer(doc(db, "cajas", uid)));
   if (!privateCopy.exists() || !copiaPrivadaCoincide(caja, movimientos, validarCajas(privateCopy.data()))) throw new Error("cajas-sync-conflict");
   const sourceIndices = new Map<string, number>((privateCopy.data()?.movimientos || []).map((item: MovimientoCaja, index: number) => [item.id, index]));
@@ -109,7 +138,7 @@ export async function compartirCajaExistente(
     throw new Error("return-invalid-data");
   }
   const ref = doc(db, "boxSpaces", `${uid}_${caja.id}`);
-  const alreadyFinished = caja.sharingAttempt ? await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "begin", caja.sharingAttempt, nombrePersona)) : null;
+  const alreadyFinished = caja.sharingAttempt && !started ? await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "begin", caja.sharingAttempt, nombrePersona)) : null;
   if (alreadyFinished) return { id: alreadyFinished.targetId, nombre: alreadyFinished.name, ownerUid: uid, creadaEn: alreadyFinished.createdAt, currency, conversion: alreadyFinished };
   const migrationState = caja.sharingAttempt ? (await task.wait(() => getDocFromServer(ref))).data()! : await task.wait(() => runTransaction(db, async transaction => {
     const actual = await task.wait(() => transaction.get(ref));

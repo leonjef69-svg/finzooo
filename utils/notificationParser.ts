@@ -218,17 +218,27 @@ function localDate(ms: number): string {
  * ("20.00"): un número suelto sin decimales suele ser un número de
  * operación o los últimos dígitos de una tarjeta, no un monto.
  */
+function notificationAmount(raw: string): number | null {
+  // La puntuación final pertenece a la frase, no cambia los centavos:
+  // «6.5.» antes llegaba como 65 al lector genérico de estados de cuenta.
+  const token = raw.replace(/[.,]+$/, "");
+  const valid = /^(?:\d+|\d+[.,]\d{1,2}|[1-9]\d{0,2}(?:,\d{3})+(?:\.\d{1,2})?|[1-9]\d{0,2}(?:\.\d{3})+(?:,\d{1,2})?)$/;
+  if (token.length > 32 || !valid.test(token)) return null;
+  const value = parseAmount(token);
+  return value !== null && value !== 0 ? Math.abs(value) : null;
+}
+
 function findAmount(text: string): number | null {
+  // Conservar el candidato completo permite rechazar «6..50» en vez de
+  // cortarlo a 6 o saltar a otra cifra de la notificación.
   const withSymbol = text.match(new RegExp(`${patronDeMoneda()}\\s*([0-9][\\d.,]*)`, "i"));
   if (withSymbol) {
-    const value = parseAmount(withSymbol[1]);
-    if (value !== null && value !== 0) return Math.abs(value);
+    return notificationAmount(withSymbol[1]);
   }
 
-  const withCents = text.match(/(?:^|\s)([0-9][\d,]*[.,]\d{2})(?:\s|$)/);
+  const withCents = text.match(/(?:^|\s)([0-9][\d.,]*[.,]\d{2})(?=\s|$|[.,](?!\d)|[!;:?)\]])/);
   if (withCents) {
-    const value = parseAmount(withCents[1]);
-    if (value !== null && value !== 0) return Math.abs(value);
+    return notificationAmount(withCents[1]);
   }
 
   return null;

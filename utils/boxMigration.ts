@@ -17,8 +17,11 @@ export async function confirmarConversionCaja(uid: string, sourceId: string, dig
   const task = captureAccountTask(uid);
   const call = httpsCallable(functions, "privateBoxMigration", { timeout: 120_000 });
   const { data } = await task.wait(() => call({ action, sourceId, digest, currency, ...(attemptId ? { attemptId } : {}), ...(memberName ? { memberName } : {}) }));
-  const value = data as { complete?: unknown; receipt?: ConversionCaja };
-  if (value?.complete === false && action !== "finish") return null;
+  const value = data as { complete?: unknown; receipt?: ConversionCaja; started?: unknown; attemptId?: unknown };
+  if (value?.complete === false && action !== "finish") {
+    if (action === "begin" && (value.started !== true || value.attemptId !== attemptId)) throw new Error("cajas-sync-conflict");
+    return null;
+  }
   if (value?.complete !== true || !value.receipt || value.receipt.uid !== uid || value.receipt.sourceId !== sourceId
     || value.receipt.digest !== digest || value.receipt.currency !== currency) throw new Error("cajas-sync-conflict");
   validarCajas({ cajas: [], movimientos: [], syncFormat: 3, conversiones: { [sourceId]: value.receipt } });

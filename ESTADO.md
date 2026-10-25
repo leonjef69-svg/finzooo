@@ -1,5 +1,70 @@
 # Estado actual de Fino
 
+## Céntimos de Yape e inicio de compartir Caja — 25/10/2026 — desarrollo
+
+Marca `25oct-centimos-cajas`, base `c7dd2ae3`. Se priorizó el reporte del
+propietario: un Yape de S/6,50 apareció como S/65 en una versión anterior de
+su celular. No conservaba el aviso original: no se afirma cuál fue su texto
+exacto ni se corrige el historial por suposiciones.
+
+Fallo REPRODUCIDO en el código base: `S/ 6.5.` devolvía 65 y `S/ 6.50.`
+devolvía 650. El lector confundía puntuación final con separador decimal.
+Ahora un lector exclusivo de notificaciones retira esa puntuación y valida
+enteros, uno/dos decimales y agrupaciones de miles regulares antes de convertir.
+Punto/coma conservan el mismo valor. Un candidato explícito ambiguo devuelve
+`noAmount`, sin tomar otra cifra de la notificación. No se cambia el lector
+genérico de archivos bancarios, los importes manuales ni la precisión del
+Negocio. Ambos destinos usan el mismo lector automático corregido.
+
+Validación de céntimos:
+
+- 31 casos iniciales, 1.422 combinaciones (incluye los 99 importes de céntimos,
+  enteros/miles y puntuación) y ocho formatos ambiguos rechazados. Ejecutan
+  lector, captura, diagnóstico, reparto Personal/Negocio y formato originales.
+- El recorrido original de captura/almacenamiento sin pantalla tiene 29
+  escenarios: incluye los céntimos en ambos destinos, fallo del ACK y reinicio
+  sin duplicar dinero. IO adaptado; no se presentan como un pago Android real.
+- En el Hermes ya cargado del emulador se ejecutaron los originales con cuatro
+  avisos ficticios EN MEMORIA: Personal/Negocio/diagnóstico = 6.5 y texto
+  `S/ 6.50`, también con punto final/coma. Sin drain, ACK, setters ni guardar.
+  Los 20 conjuntos financieros/diagnóstico anteriores y posteriores idénticos.
+
+Compartir Cajas:
+
+- Una sola referencia de RAM a la última copia confirmada, vinculada por la
+  autorización ya existente a cuenta/sesión/revisión y excluyendo Cajas
+  protegidas. Es una pista de rendimiento, no autoriza dinero ni añade datos
+  a disco o Firebase. `begin` SIEMPRE vuelve a validar el origen en servidor.
+- Si esa copia coincide, se evita `status` redundante y volver a subir el mismo
+  origen. Se conservan lectura del origen, revisión del intento/copia y
+  `finish`. Un origen aún no respaldado mantiene la ruta anterior, sin sondeo
+  fallido adicional. Origen cambiado/ausente vuelve al respaldo solo tras el
+  rechazo confirmado y comprobar recibo; red/permisos/cancelación no se tratan
+  como ausencia. Recuperar una conversión terminada conserva el acceso sin
+  exigir una aceptación local nueva ni renovar Pro.
+- El ACK de `begin` exige `started` e ID del mismo intento. Pruebas originales
+  cubren cuenta, origen, intento, miembros/Pro, consentimiento, respuestas
+  inciertas, recuperación y la pista invalidada. No se cambia el servidor.
+- Prueba REAL en Medium_Phone, misma cuenta, Caja `PRUEBA RAPIDA 25OCT` con S/0:
+  pista confirmada verdadera, llamadas `begin` + `finish` (antes tres), sin
+  volver a subir el origen dentro de compartir. Preparación ~14,3 s frente a
+  ~18,3 s; primera invitación completa ~23,5 s frente a ~26,9 s. Una muestra de
+  desarrollo con variación de red: sigue siendo lenta, no se da por instantánea
+  ni se presenta como medición de FPS. El código apareció y la Caja se cerró.
+
+Datos: los 19 conjuntos ajenos al libro de Cajas, TODAS las Cajas/movimientos
+originales, recibos anteriores e historiales remotos siguen idénticos. Cero
+movimientos financieros nuevos; solo marca/recibo de la propia prueba. Se
+confirmó la marca en Información; se retiró la instrumentación temporal.
+TypeScript/ESLint sin errores; 280 pruebas + 8 auditores verdes, tarjetas fuera.
+Las dos regresiones nuevas fallan contra `c7dd2ae3` por el comportamiento real.
+
+Qué falta: entregar una actualización para el celular y comprobar un Yape real
+con ella; el APK anterior del teléfono no cambia por subir código a Git. No
+se publicó APK/OTA ni Firebase, y no hubo cambios nativos. Reducir más la espera
+inicial de Cajas (aún ~23,5 s), red fría/lenta, unión desde otra cuenta y FPS de
+producción siguen pendientes. Telegram y tarjetas de crédito siguen excluidos.
+
 ## Invitación de Caja comprobada — 25/10/2026 — sin cambiar la app
 
 Prueba manual autorizada sobre `80ff9241`, mismo Medium_Phone y misma cuenta.

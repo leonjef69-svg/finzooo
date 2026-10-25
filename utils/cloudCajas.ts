@@ -1,9 +1,21 @@
 import { deleteDoc, doc, getDocFromServer, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
-import { cajaNombreCoincide, fusionarCajasProtegidas, normalizarCajas, validarCajas, type DatosCajas, type RevisionNombreCaja } from "@/utils/cajas";
+import { cajaNombreCoincide, copiaPrivadaCoincide, fusionarCajasProtegidas, normalizarCajas, validarCajas, type Caja, type MovimientoCaja, type DatosCajas, type RevisionNombreCaja } from "@/utils/cajas";
 import { captureAccountTask } from "@/utils/accountTask";
 import { hasUnreadableLocalData } from "@/utils/storage";
-import { withPrivateBoxCloudOperation } from "@/utils/privateBoxSync";
+import { privateBoxCloudResponseCurrent, withPrivateBoxCloudOperation } from "@/utils/privateBoxSync";
+
+// Una sola referencia, sin disco ni consultas nuevas. Es una pista para elegir
+// la ruta rápida; begin SIEMPRE vuelve a verificar el origen en el servidor.
+let ultimaCopiaConfirmada: { uid: string; data: DatosCajas; protegidas: readonly string[] } | null = null;
+export function origenCajaConfirmado(uid: string, caja: Caja, movimientos: MovimientoCaja[]): boolean {
+  const copy = ultimaCopiaConfirmada;
+  if (!copy || copy.uid !== uid || !privateBoxCloudResponseCurrent(uid, copy.data)) {
+    ultimaCopiaConfirmada = null;
+    return false;
+  }
+  return !copy.protegidas.includes(caja.id) && copiaPrivadaCoincide(caja, movimientos, copy.data);
+}
 
 function documento(uid: string) {
   return doc(db, "cajas", uid);
@@ -25,7 +37,9 @@ export async function bajarCajas(uid: string): Promise<DatosCajas | null> {
   const task = captureAccountTask(uid);
   const snap = await task.wait(() => getDocFromServer(documento(uid)));
   if (snap.metadata.fromCache || snap.metadata.hasPendingWrites) throw new Error("cajas-unconfirmed");
-  return snap.exists() ? lease.remember(servidor(snap.data())) : null;
+  const data = snap.exists() ? lease.remember(servidor(snap.data())) : null;
+  ultimaCopiaConfirmada = data ? { uid, data, protegidas: [] } : null;
+  return data;
   });
 }
 
@@ -62,6 +76,7 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
       return merged.local;
     }));
     lease.remember(saved);
+    ultimaCopiaConfirmada = { uid, data: saved, protegidas: [...cajasProtegidas] };
     onConfirmed?.(saved);
     return true;
     });

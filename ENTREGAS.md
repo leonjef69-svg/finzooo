@@ -1,5 +1,26 @@
 # Entregas de Fino
 
+## 25/10/2026 — céntimos Yape e inicio de compartir Caja (desarrollo)
+
+Marca `25oct-centimos-cajas`, base `c7dd2ae3`. Corregido el caso reproducido
+`S/ 6.5.`→65: la puntuación final ya no cambia los céntimos, y agrupaciones
+ambiguas no se registran. Mismo lector para captura abierta/cerrada y Negocio;
+sin modificar importes antiguos ni el importador bancario. 31 casos iniciales,
+1.422 combinaciones y ocho rechazos; guardado/reinicio sintético comprobado.
+Hermes del emulador devuelve 6.5 y muestra `S/ 6.50` sin guardar dinero ficticio.
+
+Compartir reutiliza únicamente una copia confirmada como pista: `begin` valida
+siempre el origen, `finish` sigue obligatorio y las recuperaciones conservan
+sus barreras. En una Caja temporal de S/0 se redujeron tres llamadas a dos y
+se evitó subir de nuevo el origen. Medición de desarrollo ~26,9→23,5 s: mejora
+parcial, aún pendiente reducir la espera. Prueba cerrada, originales intactos,
+sin movimientos financieros nuevos. Detalle y limitaciones en ESTADO.md.
+
+TypeScript/ESLint sin errores; 280 pruebas y 8 auditores verdes, tarjetas fuera.
+Solo código JavaScript/pruebas; no se publicó APK/OTA ni servicio de Firebase.
+El celular con APK anterior todavía necesita actualización y un Yape real de
+comprobación. Telegram y tarjetas siguen fuera.
+
 ## 25/10/2026 — comprobación de invitación de Caja, sin entrega de código
 
 Validado `80ff9241` en Medium_Phone, misma cuenta: Caja temporal con S/0,

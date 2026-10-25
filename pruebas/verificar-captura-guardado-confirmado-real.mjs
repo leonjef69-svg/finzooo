@@ -234,4 +234,17 @@ await check("captura apagada o sin permiso no drena ni cambia datos", async () =
     assert.deepEqual([...s.data], before); assert.equal(s.drains, 0); assert.equal(s.acks, 0);
   }
 });
+for (const business of [false,true]) for (const amount of ["6.50","6.5.","6.50.","6,50."]) {
+  await check(`céntimos ${amount} guardados en ${business?"Negocio":"Personal"} también con la app cerrada`, async () => {
+    const n={...aviso(`centimos-${business}-${amount}`),text:`PERSONA SINTETICA te envió un pago por S/ ${amount}`};
+    const s=state([n]);if(business)withBusiness(s);
+    const destination=business?BUSINESS:PERSONAL,field=business?"monto":"amount";
+    s.onAck=()=>{assert.equal(stored(s,destination).length,1);assert.equal(stored(s,destination)[0][field],6.5);assert.equal(stored(s,LOG)[0].amount,6.5)};
+    s.failAck=true;await assert.rejects(phone(s).capturarEnFondo());
+    assert.equal(stored(s,destination)[0][field],6.5);s.failAck=false;
+    assert.equal(await phone(s).capturarEnFondo(),0,"reiniciar/reintentar no vuelve a guardar el mismo Yape");
+    assert.equal(stored(s,destination).length,1);assert.equal(s.acks,1);
+    assert.equal(stored(s,business?PERSONAL:BUSINESS).length,0);
+  });
+}
 console.log(`${passed} escenarios: captura/almacenamiento originales, IO sintético; ningún dato real ni Android modificado`);
