@@ -6,7 +6,6 @@ import { useColorScheme } from "nativewind";
 import Anuncio from "@/components/Anuncio";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
-import SavingsMovementRow from "@/components/SavingsMovementRow";
 import { visiblePersonalMovement } from "@/utils/personalHistory";
 import { matchesPersonalMovementFilter, type PersonalMovementFilter } from "@/utils/savingsActions";
 import MonthSelector from "@/components/MonthSelector";
@@ -59,12 +58,11 @@ const Fila = memo(function Fila({
   onOpenTransferGroup: () => void;
   timeLabel?: string;
 }) {
-  if (tx.internalTransfer === "goal") return <SavingsMovementRow transaction={tx} fmt={fmt} t={t} onPress={() => onOpenDetail(tx.id)} timeLabel={timeLabel} />;
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
   const title = transferGroup
-    ? t("transfer.groupTitle", { name: spaceName })
+    ? spaceName
     : isTransfer
     ? t(tx.type === "expense" ? "transfer.personalToSpace" : "transfer.spaceToPersonal", { name: spaceName })
     : tx.description || t(c.label);
@@ -92,30 +90,47 @@ const Fila = memo(function Fila({
         >
           {title}
         </Text>
-        {/* Solo hora/estado; el día se muestra una vez fuera de las tarjetas. */}
-        {isTransfer || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
-          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : timeLabel ?? tx.time}
-        </Text> : null}
-        {isTransfer && (timeLabel || tx.time) ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{timeLabel ?? tx.time}</Text> : null}
+        {transferGroup ? <View className="mt-1 gap-1">
+          {transferGroup.sent > 0 ? <View className="flex-row items-center justify-between gap-2">
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-[11px] font-semibold text-blue-600 dark:text-blue-300">
+              {t(tx.internalTransfer === "family" ? "transfer.sentToFamily" : "transfer.sentToBox")}
+            </Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-xs font-bold text-blue-700 dark:text-blue-200">{fmt(transferGroup.sent)}</Text>
+          </View> : null}
+          {transferGroup.returned > 0 ? <View className="flex-row items-center justify-between gap-2">
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">{t("transfer.returned")}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-xs font-bold text-slate-700 dark:text-slate-200">{fmt(transferGroup.returned)}</Text>
+          </View> : null}
+          {(transferGroup.consumed ?? 0) > 0 ? <View className="flex-row items-center justify-between gap-2">
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">{t("transfer.consumed")}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-xs font-bold text-slate-700 dark:text-slate-200">{fmt(transferGroup.consumed ?? 0)}</Text>
+          </View> : null}
+          {timeLabel ? <Text className="text-[10px] text-slate-500 dark:text-slate-300">{timeLabel}</Text> : null}
+        </View> : <>
+          {/* Solo hora/estado; el día se muestra una vez fuera de las tarjetas. */}
+          {isTransfer || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
+            {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : timeLabel ?? tx.time}
+          </Text> : null}
+          {isTransfer && (timeLabel || tx.time) ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{timeLabel ?? tx.time}</Text> : null}
+        </>}
       </View>
-      <View className="items-end self-stretch justify-start">
+      {!transferGroup ? <View className="items-end self-stretch justify-start">
         <Text
           className={`text-sm font-extrabold ${isTransfer ? "text-blue-600 dark:text-blue-300" : tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.72}
         >
-          {transferGroup ? "↔ " : isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
-          {fmt(transferGroup?.status === "consumed" ? transferGroup.consumed || 0 : transferGroup?.pending ?? tx.amount)}
+          {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
+          {fmt(tx.amount)}
         </Text>
         {!isTransfer && tx.description !== t(c.label) ? (
           <Text className="mt-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300" numberOfLines={1}>
             {t(c.label)}
           </Text>
         ) : null}
-        {transferGroup ? <Text className="mt-1 max-w-[150px] text-right text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={2}>{t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })}</Text> : null}
         {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
-      </View>
+      </View> : null}
     </TouchableOpacity>
   );
 });
@@ -151,11 +166,11 @@ export default function History({
   const insets = useSafeAreaInsets();
   const mk = monthKey(month.y, month.m);
   const allMonthTx = useMemo(
-    () => transactions.filter((t) => t.date.startsWith(mk)),
+    () => transactions.filter((t) => t.internalTransfer !== "goal" && t.date.startsWith(mk)),
     [transactions, mk]
   );
   const availableMonths = useMemo(
-    () => Array.from(new Set(transactions.filter((transaction) => /^\d{4}-\d{2}-\d{2}$/.test(transaction.date)).map((transaction) => transaction.date.slice(0, 7)))).sort().reverse(),
+    () => Array.from(new Set(transactions.filter((transaction) => transaction.internalTransfer !== "goal" && /^\d{4}-\d{2}-\d{2}$/.test(transaction.date)).map((transaction) => transaction.date.slice(0, 7)))).sort().reverse(),
     [transactions],
   );
   const categoriesForMonth = useMemo(
@@ -206,7 +221,7 @@ export default function History({
     const query = search.trim().toLowerCase();
     // Al buscar se recorre todo el historial. Sin búsqueda, el selector de mes
     // conserva su comportamiento normal y los totales siguen siendo mensuales.
-    const searchScope = (query ? transactions : allMonthTx).filter(visiblePersonalMovement);
+    const searchScope = (query ? transactions : allMonthTx).filter(transaction => transaction.internalTransfer !== "goal" && visiblePersonalMovement(transaction));
     const monthTx = searchScope
       .filter((t) => matchesPersonalMovementFilter(t, filter))
       .filter((tx) => !categoryFilter || tx.category === categoryFilter)

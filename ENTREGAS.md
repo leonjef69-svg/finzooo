@@ -1,5 +1,12 @@
 # Entregas de Fino
 
+## 25/10/2026 — limpiar Reportes e Historial de movimientos de ahorro antiguos (desarrollo)
+
+Marca `25oct-reportes-historial-ahorro-legacy-fuera`, base `e1942b0a`. Se quitó
+«Porciones pequeñas ampliadas» debajo de la rueda. Historial deja de mostrar los
+recibos antiguos separados de aportes y devoluciones, sin borrar datos. Las
+transferencias se ven agrupadas con sus importes separados, como la referencia.
+
 ## 25/10/2026 — texto más pequeño en transferencias de Personal (desarrollo)
 
 Marca `25oct-personal-texto-espacios-moderado`, base `c51e0fa1`. El nombre de

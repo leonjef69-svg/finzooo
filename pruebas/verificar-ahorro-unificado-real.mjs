@@ -117,7 +117,7 @@ assert.match(home, /personalMovementRowsByDay\(monthTx\)/);
 assert.match(personalRows, /showInPersonalRecent\(row\) && visiblePersonalMovement\(row\)/);
 assert.match(home, /personalSavingsSummaries/); assert.match(home, /personal-savings-summary-/,
   "Personal muestra una tarjeta acumulada por meta, fuera de la selección y borrado de movimientos reales");
-assert.match(history, /if \(tx\.internalTransfer === "goal"\) return[\s\S]*?<SavingsMovementRow/);
+assert.doesNotMatch(history, /SavingsMovementRow|if \(tx\.internalTransfer === "goal"\) return/);
 const savingsListSource = fs.readFileSync("screens/SavingsList.tsx", "utf8"), historySource = fs.readFileSync("screens/History.tsx", "utf8");
 const summaryCardSource = fs.readFileSync("components/SavingsFlowSummaryCard.tsx", "utf8");
 assert.match(summaryCardSource, /savings\.receivedFromPersonal/); assert.match(summaryCardSource, /savings\.sentToSavings/);
@@ -126,7 +126,7 @@ assert.match(summaryCardSource, /#7c3aed/); assert.match(summaryCardSource, /#05
 assert.doesNotMatch(savingsListSource, /recent\.map\(tx/, "Ahorro muestra las metas sin repetir los movimientos");
 assert.doesNotMatch(savingsListSource, /savings\.historyLink|params: \{ savings: "1" \}/, "Ahorro no muestra un acceso separado al historial");
 assert.doesNotMatch(home, /savings\.historyLink|personalHistoryHint|params: \{ savings: "1" \}/, "Inicio tampoco muestra el acceso separado al historial de ahorro");
-assert.match(historySource, /id: "savings"/, "los registros antiguos siguen disponibles en el filtro general de Historial");
+assert.match(historySource, /transaction\.internalTransfer !== "goal"/, "Historial oculta los movimientos antiguos separados de aporte y devolución");
 const translations = fs.readFileSync("constants/i18n.ts", "utf8");
 for (const language of ["es", "en", "pt"]) assert.ok(translations.includes(`  ${language}: {`));
 for (const key of ["savings.tabGoals", "savings.tabMovements", "savings.movementSummary", "savings.personalSavingsTitle",

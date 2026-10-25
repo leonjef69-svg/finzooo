@@ -1,5 +1,16 @@
 # Estado actual de Fino
 
+## Reportes e Historial: texto del gráfico y recibos antiguos — 25/10/2026 — desarrollo
+
+Marca `25oct-reportes-historial-ahorro-legacy-fuera`, base `e1942b0a`. En
+Reportes se quitó solo «Porciones pequeñas ampliadas». En Historial se ocultan
+los recibos separados antiguos de aportes/devoluciones de metas; sus datos
+siguen guardados. Las tarjetas agrupadas de Familia/Cajas muestran el destino,
+cada importe en su propia esquina y el rango horario; al filtrar Transferencias
+siguen disponibles los registros individuales. No cambia ningún saldo.
+PLAYSTORE.md no requiere cambios. Falta comprobar en emulador; sin APK/OTA ni
+publicación.
+
 ## Transferencias y montos de ahorro en Personal, Historial y Ahorro — 25/10/2026 — desarrollo
 
 Marca `25oct-personal-texto-espacios-moderado`, base `c51e0fa1`. En los

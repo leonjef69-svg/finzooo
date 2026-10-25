@@ -104,7 +104,7 @@ assert.ok(texts(nodes).includes(formatValue(total)), "el resumen usa el total re
 assert.equal(bubbles(nodes).length, data.length, "ninguna categoría pequeña se oculta o se agrupa");
 assert.equal(nodes.filter(node => node.type === "Path" && node.props.fill === "none").length, data.length,
   "cada categoría, incluso la más pequeña, conserva su propio conector");
-assert.ok(texts(nodes).includes("Porciones pequeñas ampliadas"), "el ajuste de tamaño se explica y no se presenta como una proporción exacta");
+assert.ok(!texts(nodes).includes("Porciones pequeñas ampliadas"), "el gráfico no muestra el texto pequeño debajo de la rueda");
 
 const small = categoryButton(nodes, 7);
 assert.ok(small, "la categoría menor a 1% sigue teniendo un botón propio");
@@ -146,7 +146,7 @@ for (let index = 0; index < arcs.length; index++) {
   const dash = Number(String(arc.strokeDasharray).split(/[ ,]+/)[0]);
   assert.ok(dash >= 16, `el bloque ${index} tiene un arco visible y deja de ser una raya microscópica`);
 }
-assert.ok(texts(nodes).includes("Porciones pequeñas ampliadas"));
+assert.ok(!texts(nodes).includes("Porciones pequeñas ampliadas"));
 categoryButton(nodes, 4)?.props.onPress();
 nodes = render(extremeData);
 assert.ok(texts(nodes).includes(formatValue(1)), "ampliar el bloque no amplía el dinero");

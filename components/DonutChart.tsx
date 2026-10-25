@@ -30,7 +30,7 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
   const selectedItem = items.find(item => item.id === selected);
   const selectedId = selectedItem?.id ?? null;
   const circumference = 2 * Math.PI * radius;
-  const { sectors, enlarged } = useMemo(() => crearSectoresVisibles(items.map(item => item.value)), [items]);
+  const { sectors } = useMemo(() => crearSectoresVisibles(items.map(item => item.value)), [items]);
   const toggle = (id: string) => setSelected(current => current === id ? null : id);
   const centerLabel = selectedItem?.name ?? t("reports.allCategories");
   const amountLabel = selectedItem?.name ?? totalLabel;
@@ -103,7 +103,6 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
         );
       })}
       </View>
-      {enlarged ? <Text className="text-slate-500 dark:text-slate-300" style={{ fontFamily: ENTRY_FONT.regular, fontSize: 11, textAlign: "center", marginTop: 4 }}>{t("reports.smallSlicesEnlarged")}</Text> : null}
       <View accessible accessibilityLiveRegion="polite" accessibilityLabel={`${amountLabel}: ${centerValue}`}
         className="bg-slate-50 dark:bg-noche rounded-2xl" style={{ width: "100%", padding: 12, marginTop: 10 }}>
         <Text className="text-slate-500 dark:text-slate-300" style={{ fontFamily: ENTRY_FONT.medium, fontSize: 13, textAlign: "center", marginBottom: 4 }}>{amountLabel}</Text>
