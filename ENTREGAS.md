@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 25/10/2026 — importes de ahorro a la derecha en Personal (desarrollo)
+
+Marca `25oct-ahorro-montos-derecha`, base `3eb19d42`. Solo presentación:
+etiqueta a la izquierda e importe al extremo derecho en las filas «Enviado a
+Ahorro» y «Devuelto a Personal». Mismos colores, mensajes y cálculos; la tarjeta
+de Ahorro con objetivo/ahorrado conserva su distribución. Sin cambios nativos,
+APK/OTA ni despliegue. Falta incluirlo en la actualización del celular.
+Distribución comprobada en una tarjeta existente del emulador habitual, sin
+acciones financieras ni edición de la meta. El aviso «Devuelto por completo»
+comparte la fila del nombre y el borde derecho cuando cabe; si el nombre ocupa
+demasiado ancho queda debajo. Medición del espacio real, sin cortar el nombre
+para forzar el aviso a su lado. Regresión ampliada con medidas adaptadas de
+nombres cortos/anchos y tarjetas estrechas; caso corto comprobado en Android.
+
 ## 25/10/2026 — copia en la nube sin repeticiones (desarrollo)
 
 Marca `25oct-copia-sin-repeticiones`, base `2540ef20`. Receptor de nube compara

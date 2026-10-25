@@ -1,5 +1,36 @@
 # Estado actual de Fino
 
+## Ahorro: montos a la derecha en Personal — 25/10/2026 — desarrollo
+
+Marca `25oct-ahorro-montos-derecha`, base `3eb19d42`. El propietario decidió
+conservar la tarjeta y pidió solo alinear los dos montos al extremo derecho:
+«Enviado a Ahorro» y «Devuelto a Personal», cada uno en la fila de su etiqueta.
+Después pidió «Devuelto por completo» arriba a la derecha si queda espacio
+junto al nombre; con nombre ancho permanece debajo. Se mide el ancho real
+del texto/tarjeta (incluye idioma y escala de letra), no una cantidad fija de
+caracteres. Solo se mide cuando aparece el aviso en Personal: copia de texto
+invisible, fuera del flujo y de accesibilidad, sin recorte de líneas para que
+Android no mida una versión ya truncada del nombre.
+Se conservan violeta/verde, textos, cálculos, registros
+y comportamiento de ahorro/gasto/borrado. La variante de Ahorro con objetivo y
+saldo mantiene sus columnas. Cambio exclusivamente de presentación, sin datos
+ni permisos nuevos; no requiere cambio en PLAYSTORE.md ni código nativo.
+
+Comprobado sobre una tarjeta existente en el emulador habitual: etiquetas a
+la izquierda, importes en su misma fila y alineados al borde derecho; con nombre
+corto, el aviso comparte la fila superior y el mismo borde derecho. No se
+registró dinero, borró un movimiento ni modificó la meta para esta revisión.
+
+281 pruebas y ocho auditores verdes en la pasada general. La regresión de
+Ahorro se amplió y repitió tras el segundo ajuste: JSX original comprueba nombre
+corto/ancho, varias líneas, cambio de ancho, variante de Ahorro y aviso ausente.
+`FINO_SAVINGS_HEADER_BASELINE=3eb19d42` falla por seguir poniendo el aviso debajo
+del nombre corto. Las medidas de esos casos son adaptadas, no fuente Android.
+
+No aplica las alternativas de funcionamiento discutidas antes: la última orden
+fue «déjalo como está». No hay APK/OTA ni servicios publicados. Falta entregar
+esta presentación al celular junto con las correcciones pendientes.
+
 ## Copia en la nube sin subidas por datos idénticos — 25/10/2026 — desarrollo
 
 Marca `25oct-copia-sin-repeticiones`, base `2540ef20`. Auditoría autorizada

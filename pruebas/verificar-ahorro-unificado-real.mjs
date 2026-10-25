@@ -4,6 +4,8 @@ import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { build } from "esbuild";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
+import ts from "typescript";
+import vm from "node:vm";
 
 const revision = process.env.FINO_TEST_BASELINE || "c6f6a407";
 if (revision && !/^[a-f0-9]{7,40}$/.test(revision)) throw Error("Hash inválido");
@@ -194,4 +196,47 @@ assert.equal(find(render({ goals: [emptyGoal], apartado: 0, libre: 500 }), node 
 const readonly = render({ soloLectura: true });
 assert.equal(find(readonly.children[0], node => node.type === "Button"), undefined, "sin Premium conserva consulta, no ofrece crear");
 assert.equal(find(readonly, node => node.type === "ReadOnly")?.type, "ReadOnly");
-console.log("Ahorro: una tarjeta acumulada por meta en Personal y Ahorro, aporte/devolución/gasto diferenciados y sin movimientos ficticios; saldos, filtros y compras preservados. Datos sintéticos.");
+// Componente real: el espacio disponible, no un límite de caracteres, decide
+// si el aviso cabe junto al nombre. El reloj/fuente nativos se miden en Android.
+const headerBase = process.env.FINO_SAVINGS_HEADER_BASELINE;
+if (headerBase && !/^[a-f0-9]{7,40}$/.test(headerBase)) throw Error("Hash inválido");
+const cardSource = headerBase ? execFileSync("git", ["show", `${headerBase}:components/SavingsFlowSummaryCard.tsx`], {encoding:"utf8"}) : summaryCardSource;
+let headerHooks = [], headerCursor = 0;
+const createElement = (type, props, ...children) => typeof type === "function" ? type({...props,children}) : ({type,props:props||{},children});
+const cardModule={exports:{}};
+vm.runInNewContext(ts.transpile(cardSource,{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}),{
+  module:cardModule,exports:cardModule.exports,React:{createElement},require:name=>{
+    if(name==="react-native")return {Text:"Text",View:"View"};
+    if(name==="react")return {useState:initial=>{const i=headerCursor++;if(!(i in headerHooks))headerHooks[i]=initial;return [headerHooks[i],value=>{headerHooks[i]=typeof value==="function"?value(headerHooks[i]):value;}];}};
+    throw Error("Dependencia no adaptada: "+name);
+  },
+});
+const cardProps={goal:{...goal,name:"Laptop",saved:0},summary:{received:30,returned:30},view:"personal",fmt:v=>`S/${v}`,t:key=>key};
+const renderCard=(extra={})=>{headerCursor=0;return cardModule.exports.default({...cardProps,...extra});};
+const textNode=(tree,value)=>all(tree).find(n=>n.type==="Text"&&n.children.includes(value));
+const parentOf=(tree,node)=>all(tree).find(n=>n.children.includes(node));
+function measureCard(tree,width,nameWidth,labelWidth,nameLines=1){
+  all(tree).find(n=>n.props.onLayout)?.props.onLayout({nativeEvent:{layout:{width}}});
+  all(tree).find(n=>n.type==="Text"&&n.children.includes("Laptop")&&n.props.onTextLayout)?.props.onTextLayout({nativeEvent:{lines:Array.from({length:nameLines},()=>({width:nameWidth}))}});
+  all(tree).find(n=>n.type==="Text"&&n.children.includes("savings.fullyReturned")&&n.props.onTextLayout)?.props.onTextLayout({nativeEvent:{lines:[{width:labelWidth}]}});
+  return renderCard();
+}
+let card=measureCard(renderCard(),320,60,105);
+assert.match(parentOf(card,textNode(card,"savings.fullyReturned")).props.className||"",/flex-row/,"un nombre corto deja el aviso en la esquina derecha de su fila");
+card=measureCard(card,320,250,105);
+assert.doesNotMatch(parentOf(card,textNode(card,"savings.fullyReturned")).props.className||"",/flex-row/,"un nombre que ocupa mucho ancho conserva el aviso debajo");
+card=measureCard(card,420,250,105);
+assert.match(parentOf(card,textNode(card,"savings.fullyReturned")).props.className||"",/flex-row/,"al ganar espacio, el aviso vuelve a la esquina");
+card=measureCard(card,180,100,105);
+assert.doesNotMatch(parentOf(card,textNode(card,"savings.fullyReturned")).props.className||"",/flex-row/,"al estrechar la tarjeta se reserva la fila del nombre");
+card=measureCard(card,420,60,105,2);
+assert.doesNotMatch(parentOf(card,textNode(card,"savings.fullyReturned")).props.className||"",/flex-row/,"un nombre que ocupa más de una línea conserva el aviso debajo");
+card=renderCard({view:"savings"});
+assert.doesNotMatch(parentOf(card,textNode(card,"savings.fullyReturned")).props.className||"",/flex-row/,"la distribución de la variante de Ahorro permanece igual");
+card=renderCard({summary:{received:30,returned:10}});
+assert.equal(textNode(card,"savings.fullyReturned"),undefined,"el ajuste visual no inventa una devolución completa");
+card=renderCard();
+const measurements=all(card).filter(n=>n.type==="Text"&&n.props.onTextLayout);
+assert.equal(measurements.length,2,"se miden únicamente los dos textos necesarios");
+assert.ok(measurements.every(n=>n.props.numberOfLines===undefined),"la medida no recorta los nombres largos antes de decidir la distribución");
+console.log("Ahorro: resumen único y saldos preservados; aviso junto al nombre si cabe o debajo con nombre ancho, varias líneas o tarjeta estrecha. JSX/medidas adaptados; Android por separado.");

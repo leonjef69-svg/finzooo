@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+25/10 Resumen de ahorro: `verificar-ahorro-unificado-real.mjs` también ejecuta
+el JSX de la tarjeta con medidas adaptadas de nombre/tarjeta. Aviso arriba a
+la derecha cuando cabe, debajo si el nombre ocupa más espacio o varias líneas,
+y respuesta al cambio de ancho. La variante de Ahorro y la condición financiera
+del aviso se conservan. `FINO_SAVINGS_HEADER_BASELINE=3eb19d42` falla por el caso
+de nombre corto. Revisión Android del caso existente documentada en ESTADO.md.
+
 25/10 Copia sin repeticiones: `verificar-respaldo-sin-repeticiones-real.mjs`
 ejecuta `applyNewerCloudFields` y ambos efectos de subida originales con
 uniones financieras reales. Cubre claves reordenadas, cambio real, espera/ACK
