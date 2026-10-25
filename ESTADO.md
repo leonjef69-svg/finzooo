@@ -1,5 +1,12 @@
 # Estado actual de Fino
 
+## Presupuestos: etiqueta corta para más de 999% — 25/10/2026 — desarrollo
+
+Marca `25oct-presupuesto-etiqueta-999-corta`, base `c4a906e0`. La etiqueta
+«Más de 999% usado» se acorta a «>999% usado» en español e inglés y «>999%
+usado» en portugués. Solo cambia el texto; colores, barra y cálculo siguen
+iguales. Falta confirmar en emulador; sin APK/OTA ni publicación.
+
 ## Reportes e Historial: texto del gráfico y recibos antiguos — 25/10/2026 — desarrollo
 
 Marca `25oct-reportes-historial-ahorro-legacy-fuera`, base `e1942b0a`. En

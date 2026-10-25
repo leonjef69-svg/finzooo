@@ -1,5 +1,11 @@
 # Entregas de Fino
 
+## 25/10/2026 — acortar etiqueta de presupuesto superior a 999% (desarrollo)
+
+Marca `25oct-presupuesto-etiqueta-999-corta`, base `c4a906e0`. «Más de 999%
+usado» se muestra como «>999% usado», en sus tres idiomas. Sin otros cambios
+visuales o financieros.
+
 ## 25/10/2026 — limpiar Reportes e Historial de movimientos de ahorro antiguos (desarrollo)
 
 Marca `25oct-reportes-historial-ahorro-legacy-fuera`, base `e1942b0a`. Se quitó
