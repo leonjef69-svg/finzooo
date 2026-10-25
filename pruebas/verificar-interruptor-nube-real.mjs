@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import ts from "typescript";
 import vm from "node:vm";
+import { createRequire } from "node:module";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
 import { createSourceReader } from "./helpers/source-reader.mjs";
+const { canonical } = createRequire(import.meta.url)("../functions/src/private-box-money-shared.js");
 
 const source = createSourceReader({ revision: process.env.FINO_CLOUD_TOGGLE_BASELINE ?? "" })("contexts/AppDataContext.tsx");
 const saved = [], state = [], failures = [];
@@ -91,7 +93,7 @@ function immediate() {
    setRespaldoFallo:value=>statuses.push(value),setRespaldoNegocioFallo:value=>statuses.push(value),
    setTimeout:callback=>{timer=callback;return 1;},clearTimeout(){},datosParaLaNube:()=>({}),
    saveCloudData:()=>{state.starts++;return pending.promise;},subirNegocio:()=>{state.starts++;return pending.promise;},
-   datosNegocio:business,datosNegocioLive:{current:business},mergeBusinessData:()=>business,setDatosNegocio:()=>{state.applied++;},
+   datosNegocio:business,datosNegocioLive:{current:business},mergeBusinessData:()=>business,canonical,setDatosNegocio:()=>{state.applied++;},
    privateBoxCloudResponseCurrent:()=>true,applyNewerCloudFields:()=>{state.applied++;}};
   vm.runInNewContext(ts.transpile(`globalThis.run=(${effects[kind]});`,{target:ts.ScriptTarget.ES2022}),scope);scope.run();
   assert.equal(statuses.at(-1),'pendiente','programar la copia no equivale a confirmarla');

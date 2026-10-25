@@ -1,5 +1,13 @@
 # Pruebas y auditores
 
+25/10 Copia sin repeticiones: `verificar-respaldo-sin-repeticiones-real.mjs`
+ejecuta `applyNewerCloudFields` y ambos efectos de subida originales con
+uniones financieras reales. Cubre claves reordenadas, cambio real, espera/ACK
+tardío, dos reintentos transitorios, permisos y limpieza por pausa/sesión.
+`FINO_BACKUP_LOOP_BASELINE=2540ef20` falla por 60 escrituras innecesarias de
+Goals. IO/reloj adaptados; no escribe en el emulador ni prueba un corte físico
+de conexión. La comprobación real de nube se documenta en ESTADO.md.
+
 23/10 Entrada sin bloqueo: `verificar-entrada-espacios-sin-bloqueo.mjs` ejecuta
 las condiciones originales que rodean la lista de Cajas y los controles de
 Familia, con consulta remota pendiente. Guardar espera lectura local. La prueba

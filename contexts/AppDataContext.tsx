@@ -836,7 +836,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const photos = (local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:"));
     merged.iconosFavoritos = [...photos, ...(merged.iconosFavoritos ?? [])];
     cloudFieldsRef.current = merged;
-    const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
+    // Firestore no conserva el orden de las claves de los objetos. Ese orden
+    // no es una edición: tratarlo como tal reiniciaba la subida de las metas.
+    const changed = (a: unknown, b: unknown) => canonical(a) !== canonical(b);
     if (changed(cloudGroupValue(local, "profile"), cloudGroupValue(merged, "profile"))) {
       setUserName(merged.userName);
       setUserPhoto(merged.userPhoto);
@@ -1698,25 +1700,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
+    let retries = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let waitingTimer: ReturnType<typeof setTimeout> | undefined;
     const version = localSessionVersion.current;
     const preferenceRevision = cloudBackupPreference.current.revision;
     const current = () => alive && version === localSessionVersion.current && auth.currentUser?.uid === uid
       && cloudBackupPreference.current.enabled && cloudBackupPreference.current.revision === preferenceRevision;
     setRespaldoNegocioFallo("pendiente");
-    const timer = setTimeout(() => {
+    const guardar = () => {
       if (!current()) return;
+      if (retries) setRespaldoNegocioFallo("pendiente");
+      waitingTimer = setTimeout(() => { if (current()) setRespaldoNegocioFallo("demora"); }, 15_000);
       void subirNegocio(uid, datosNegocio, () => current() && datosNegocioLive.current === datosNegocio).then((confirmed) => {
         if (!current()) return;
         const combined = mergeBusinessData(datosNegocioLive.current, confirmed);
-        if (JSON.stringify(combined) !== JSON.stringify(datosNegocioLive.current)) setDatosNegocio(combined, true);
+        if (canonical(combined) !== canonical(datosNegocioLive.current)) setDatosNegocio(combined, true);
         setRespaldoNegocioFallo(null);
       }).catch((error) => {
         if (!current()) return;
         const mensaje = String((error as Error)?.message ?? error);
-        setRespaldoNegocioFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : "negocio");
-      });
-    }, 1500);
-    return () => { alive = false; clearTimeout(timer); };
+        const transient = /unavailable|network|offline|deadline-exceeded/.test(String((error as { code?: string })?.code ?? mensaje));
+        setRespaldoNegocioFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : transient ? "sin-internet" : "negocio");
+        if (transient && retries < 2) retryTimer = setTimeout(guardar, [5_000, 15_000][retries++]);
+      }).finally(() => clearTimeout(waitingTimer));
+    };
+    const timer = setTimeout(guardar, 1500);
+    return () => { alive = false; clearTimeout(timer); clearTimeout(retryTimer); clearTimeout(waitingTimer); };
   }, [datosNegocio, ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, cloudBackupRevision, setDatosNegocio]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
@@ -1733,13 +1743,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
+    let retries = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let waitingTimer: ReturnType<typeof setTimeout> | undefined;
     const version = localSessionVersion.current;
     const preferenceRevision = cloudBackupPreference.current.revision;
     const current = () => alive && version === localSessionVersion.current && auth.currentUser?.uid === uid
       && cloudBackupPreference.current.enabled && cloudBackupPreference.current.revision === preferenceRevision;
     setRespaldoFallo("pendiente");
-    const timer = setTimeout(() => {
+    const guardar = () => {
       if (!current()) return;
+      if (retries) setRespaldoFallo("pendiente");
+      waitingTimer = setTimeout(() => { if (current()) setRespaldoFallo("demora"); }, 15_000);
       /* SE MIRA COMO FUE. Antes se lanzaba y se olvidaba, y el cartel de Ajustes decia
          "Tus datos estan respaldados" solo por haber iniciado sesion — aunque la subida
          llevara semanas fallando. Ver utils/cloudSync. */
@@ -1748,9 +1763,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (r.ok && !privateBoxCloudResponseCurrent(uid, r.data)) { setRespaldoFallo("revision-caja-pendiente"); return; }
         setRespaldoFallo(r.ok ? null : r.motivo);
         if (r.ok) applyNewerCloudFields(r.data);
-      });
-    }, 1500);
-    return () => { alive = false; clearTimeout(timer); };
+        else if (r.motivo === "sin-internet" && retries < 2) retryTimer = setTimeout(guardar, [5_000, 15_000][retries++]);
+      }).catch(() => { if (current()) setRespaldoFallo("fallo"); }).finally(() => clearTimeout(waitingTimer));
+    };
+    const timer = setTimeout(guardar, 1500);
+    return () => { alive = false; clearTimeout(timer); clearTimeout(retryTimer); clearTimeout(waitingTimer); };
     // datosParaLaNube se queda FUERA de esta lista a propósito. Es una función que
     // se crea de nuevo en cada dibujado, así que incluirla dispararía una subida
     // por dibujado — internet gastado en mandar lo mismo. La lista de abajo son

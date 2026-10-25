@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 25/10/2026 — copia en la nube sin repeticiones (desarrollo)
+
+Marca `25oct-copia-sin-repeticiones`, base `2540ef20`. Receptor de nube compara
+contenido sin confundir el orden de claves con una edición: deja de repetir
+subidas de las mismas metas y lo mismo se aplica a Negocio. Aviso de espera
+tras 15 s, dos reintentos solo para fallos de red y cancelación de temporizadores
+al pausar/cambiar de cuenta; sin dar éxito antes de confirmación.
+
+Emulador habitual/misma cuenta: tres intentos anteriores frente a un solo
+guardado Personal confirmado, Negocio confirmado y cartel «Copia al día».
+Copia descargada comparada sin restaurar sobre la cuenta: 59 movimientos,
+una meta y listas de Negocio iguales; 20 conjuntos locales y datos previos de
+Familia/Cajas intactos. No equivale a restaurar una instalación vacía ni a
+eliminar la latencia de internet. Detalle y pendientes en ESTADO.md.
+
+Corte real de Wi-Fi/datos del emulador: aviso de demora sin falso éxito;
+recuperada la conexión, ACK tardío de Personal y reintento de Negocio confirmados.
+Conexión original restablecida. TypeScript/ESLint y 281 pruebas/ocho auditores
+correctos (tarjetas excluidas).
+
+Sin APK/OTA ni servicios/reglas publicados. Falta entregar al celular y ampliar
+pruebas físicas de conexión/otro dispositivo. Telegram y tarjetas fuera.
+
 ## 25/10/2026 — céntimos Yape e inicio de compartir Caja (desarrollo)
 
 Marca `25oct-centimos-cajas`, base `c7dd2ae3`. Corregido el caso reproducido

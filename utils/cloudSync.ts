@@ -360,7 +360,7 @@ function motivoLegible(e: unknown): string {
   if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
   if (/cloud-field-invalid|cloud-field-duplicate-id|sync-clock-overflow/i.test(crudo)) return "datos-nube-invalidos";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";
-  if (/unavailable|network|offline/i.test(crudo)) return "sin-internet";
+  if (/unavailable|network|offline|deadline-exceeded/i.test(crudo)) return "sin-internet";
   return crudo;
 }
 

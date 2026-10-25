@@ -1,5 +1,66 @@
 # Estado actual de Fino
 
+## Copia en la nube sin subidas por datos idénticos — 25/10/2026 — desarrollo
+
+Marca `25oct-copia-sin-repeticiones`, base `2540ef20`. Auditoría autorizada
+del cartel «Guardando copia…», sin borrar respaldos, movimientos ni saldos.
+Telegram y tarjetas de crédito siguen excluidos.
+
+Fallo reproducido en el emulador habitual/misma cuenta: al reactivar la copia,
+Personal lanzaba tres intentos sin una edición del usuario. La lectura remota
+y la unión de `funding` devuelven objetos con otro orden de claves; comparar
+con `JSON.stringify` lo confundía con cambios de la meta, cancelaba el intento
+anterior y programaba otra subida. Se comprobó igualdad del contenido, sin
+cambios de campos ni importes. Se usa la comparación canónica existente, que
+ignora el orden de claves y conserva el orden de listas/cambios reales, tanto
+al aplicar Personal como al recibir Negocio. No se elimina ninguna validación
+financiera ni se cachea un permiso de nube.
+
+Una espera superior a 15 s ahora explica que la copia está tardando y permite
+seguir usando Fino; no anuncia éxito ni inicia otra copia mientras se desconoce
+el resultado. El ACK vigente todavía puede completarla. Una falla transitoria
+de red permite dos reintentos, a 5 y 15 s; después queda el botón de reintentar.
+Permisos, datos inválidos y errores desconocidos no entran en ese bucle. Al
+pausar/cambiar de elección/cuenta/desmontar se cancelan los temporizadores y
+se ignoran resultados viejos. `deadline-exceeded` se clasifica como conexión.
+Se corrigen los textos que prometían reintento automático indefinido.
+
+Regresión nueva ejecuta los receptores/efectos originales y las uniones reales:
+60 recepciones con claves reordenadas sin setters, cambio real incorporado,
+respuesta obsoleta, espera, ACK tardío, reintentos limitados, permisos y limpieza.
+Contra `2540ef20` falla por las escrituras repetidas de Goals. IO/reloj adaptados;
+no se presentan como corte de red físico ni restauración destructiva Android.
+
+Emulador: marca confirmada en Información. Al reactivar, un solo guardado de
+Personal con confirmación y uno de Negocio, sin otra subida durante la
+observación posterior. Ajustes termina en «Copia al día». Una muestra de red
+lenta: Personal tardó ~16,5 s y la lectura inicial ~20,9 s; no se declara que
+la latencia de internet esté solucionada. Se descargó la copia y comparó sin
+aplicarla: 11 campos de Personal y cuatro listas de Negocio iguales al teléfono,
+incluidos sus 59 movimientos y una meta. Los 20 conjuntos locales y los
+historiales originales de Familia/Cajas permanecen idénticos. Instrumentación
+temporal retirada; diagnósticos privados solo en `.tmp`, fuera de Git.
+
+Prueba adicional REAL de conexión: Wi-Fi y datos móviles de Android desactivados
+temporalmente, con sus preferencias originales restauradas en `finally`.
+Ajustes mostró el aviso de demora y NO «Copia al día» durante el corte. Negocio
+falló por red, reintentó una vez y confirmó tras recuperar conexión; Personal
+conservó un único intento pendiente y aceptó su ACK tardío (~31,4 s). Ajustes
+volvió a «Copia al día». No se fuerza un timeout como fracaso de una escritura
+incierta. La prueba previa con solo `disableNetwork` del SDK no aisló la red de
+las transacciones y no se contabiliza como corte de conexión.
+
+Validación final del código: TypeScript y ESLint sin errores; 281 pruebas y
+ocho auditores correctos, tarjetas excluidas. Nueva regresión roja en la base
+por el comportamiento anterior, no por falta de una dependencia de prueba.
+
+No añade datos, permisos, proveedor ni colección: PLAYSTORE.md no requiere un
+cambio de declaración. Sin cambios nativos, APK/OTA ni despliegue Firebase.
+Qué sigue/falta: entregar el arreglo al celular y probar red física inestable,
+reinstalación/restauración en otro dispositivo de prueba y concurrencia real
+entre teléfonos. La latencia de red y la preparación inicial de invitaciones
+siguen siendo trabajos pendientes, aparte de corregir estas repeticiones.
+
 ## Céntimos de Yape e inicio de compartir Caja — 25/10/2026 — desarrollo
 
 Marca `25oct-centimos-cajas`, base `c7dd2ae3`. Se priorizó el reporte del

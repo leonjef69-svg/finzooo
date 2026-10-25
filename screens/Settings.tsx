@@ -118,7 +118,7 @@ export default function Settings({
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 16, lineHeight: 22, color: colors.text }}>{t("settings.backupSwitch")}</Text>
                 <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 }}>
-                  {t(cloudBackupEnabled ? respaldoFallo === "pendiente" ? "settings.backupSaving" : respaldoAlDia ? "settings.backupDescription" : "settings.backupFailed" : "settings.backupPausedHint")}
+                  {t(cloudBackupEnabled ? respaldoFallo === "pendiente" ? "settings.backupSaving" : respaldoFallo === "demora" ? "settings.backupWaiting" : respaldoAlDia ? "settings.backupDescription" : "settings.backupFailed" : "settings.backupPausedHint")}
                 </Text>
               </View>
               <View accessible accessibilityLabel={t("settings.paidBadge")}
@@ -133,7 +133,7 @@ export default function Settings({
                 thumbColor="#ffffff"
               />
             </View>
-            {cloudBackupEnabled && !respaldoAlDia && respaldoFallo && respaldoFallo !== "pendiente" ? <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}><Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 19, color: colorScheme === "dark" ? "#fcd34d" : "#92400e" }}>
+            {cloudBackupEnabled && !respaldoAlDia && respaldoFallo && respaldoFallo !== "pendiente" && respaldoFallo !== "demora" ? <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}><Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 19, color: colorScheme === "dark" ? "#fcd34d" : "#92400e" }}>
               {t(
                 respaldoFallo === "permisos"
                   ? auth.currentUser?.emailVerified === false ? "settings.backupNoPermission" : "settings.backupPermissionDenied"
