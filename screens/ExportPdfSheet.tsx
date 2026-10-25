@@ -78,7 +78,7 @@ import {
   resumenFinanciero,
   type ExportSpace,
 } from "@/utils/exportSpaces";
-import { flushPendingSaves, loadJSON, STORAGE_KEYS } from "@/utils/storage";
+import { flushPendingSaves, getAccountStorageSession, loadJSON, STORAGE_KEYS } from "@/utils/storage";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
 // esto es solo lo que se ve antes de decidir. Con cincuenta ya se comprueba
@@ -170,22 +170,43 @@ export default function ExportPdfSheet({
   const [charts, setCharts] = useState(initialCharts ?? false);
   const [espacios, setEspacios] = useState<ExportSpace[]>([{ id: "personal", kind: "personal", name: t("spaces.personal"), currency: userCurrency, transactions }]);
   const [espacioId, setEspacioId] = useState(initialSpaceId || "personal");
-  const [espaciosCargando, setEspaciosCargando] = useState(true);
+  const [historialCargando, setHistorialCargando] = useState((initialSpaceId || "personal") !== "personal");
+  const [cortesCargando, setCortesCargando] = useState(true);
+  const espaciosCargando = historialCargando || cortesCargando;
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
 
   useEffect(() => {
     let vivo = true;
-    void Promise.all([
-      cargarEspaciosExportables(transactions, userCurrency, t("spaces.personal"), t("spaces.family"), t("spaces.boxes")),
-      loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []),
-    ]).then(([lista, cortes]) => {
-      if (!vivo) return;
-      setEspacios(lista);
+    const session = getAccountStorageSession();
+    setCortesCargando(true);
+    void loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []).then((cortes) => {
+      if (!vivo || getAccountStorageSession() !== session) return;
       setCarryoverCleared(cortes);
-      setEspaciosCargando(false);
+      setCortesCargando(false);
     });
     return () => { vivo = false; };
-  }, [transactions, userCurrency, t]);
+  }, [transactions]);
+
+  useEffect(() => {
+    let vivo = true;
+    const session = getAccountStorageSession();
+    // Personal ya está disponible. Su exportación espera solo los cortes
+    // locales del saldo anterior, nunca los historiales de otros espacios.
+    setHistorialCargando(espacioId !== "personal");
+    setEspacios((lista) => lista.map((item) => item.id === "personal"
+      ? { ...item, name: t("spaces.personal"), currency: userCurrency, transactions, transactionsLoaded: true }
+      : { ...item, transactions: [], transactionsLoaded: false }));
+    void cargarEspaciosExportables(transactions, userCurrency, t("spaces.personal"), t("spaces.family"), t("spaces.boxes"), espacioId, !silent && !autoExport)
+      .then((lista) => {
+        if (!vivo || getAccountStorageSession() !== session) return;
+        setEspacios(lista);
+        setHistorialCargando(false);
+      }).catch(() => {
+        if (!vivo || getAccountStorageSession() !== session) return;
+        setHistorialCargando(false);
+      });
+    return () => { vivo = false; };
+  }, [transactions, userCurrency, t, espacioId, silent, autoExport]);
 
   /**
    * CÓMO SE LLAMA EL ARCHIVO. Pedido suyo: *"agrégale 2 opciones: nombre automático o
@@ -408,7 +429,7 @@ export default function ExportPdfSheet({
   // elegirlo solo llevaría a un "0 movimientos" y a un botón que no hace
   // nada. Ojo: NO se filtra por el tipo elegido abajo (Gastos/Ingresos), o
   // los meses irían apareciendo y desapareciendo al cambiar ese selector.
-  const espacio = espacios.find((item) => item.id === espacioId);
+  const espacio = historialCargando ? undefined : espacios.find((item) => item.id === espacioId && item.transactionsLoaded !== false);
   const movimientosDelEspacio = useMemo(() => espacio?.transactions ?? [], [espacio]);
   const fmt = espacio ? formateadorDelEspacio(espacio) : (() => "-");
 
@@ -498,7 +519,7 @@ export default function ExportPdfSheet({
    */
   /** El HTML del reporte. Las cuentas viven en utils/reportePdfDatos. */
   function construirHtml(): string {
-    if (!espacio) throw new Error(t("exportPdf.spaceUnavailable"));
+    if (!espacio || espacio.transactionsLoaded === false) throw new Error(t("exportPdf.spaceUnavailable"));
     return htmlDelReporte({
       movimientos: monthTx,
       todos: movimientosDelEspacio,
@@ -609,6 +630,10 @@ export default function ExportPdfSheet({
 
   async function handleExport() {
     if (exportLock.current) return;
+    if (espaciosCargando || !espacio || espacio.transactionsLoaded === false) {
+      showToast(t(espaciosCargando ? "common.loading" : "exportPdf.spaceUnavailable"));
+      return;
+    }
     if (monthTx.length === 0) {
       showToast(t("exportPdf.noData"));
       return;
@@ -970,16 +995,15 @@ export default function ExportPdfSheet({
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
           {t("exportPdf.spaceLabel")}
         </Text>
-        {espaciosCargando ? (
-          <View className="bg-slate-50 dark:bg-noche-2 rounded-xl px-4 py-3 mb-4">
-            <Text className="text-xs text-slate-500 dark:text-slate-300">{t("common.loading")}</Text>
-          </View>
-        ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} className="mb-4">
             {espacios.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                onPress={() => setEspacioId(item.id)}
+                onPress={() => {
+                  if (item.id === espacioId) return;
+                  setHistorialCargando(item.id !== "personal");
+                  setEspacioId(item.id);
+                }}
                 className={`px-4 py-2.5 rounded-xl border-[1.5px] ${espacioId === item.id ? "bg-emerald-600 border-emerald-600" : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"}`}
               >
                 <Text numberOfLines={1} className={`max-w-40 text-sm font-bold ${espacioId === item.id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
@@ -988,7 +1012,6 @@ export default function ExportPdfSheet({
               </TouchableOpacity>
             ))}
           </ScrollView>
-        )}
 
         {!espaciosCargando && !espacio && (
           <View className="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-3 mb-4">
@@ -1005,7 +1028,7 @@ export default function ExportPdfSheet({
         {availableMonths.length === 0 ? (
           <View className="bg-slate-50 dark:bg-noche-2 rounded-xl px-4 py-3 mb-4">
             <Text className="text-xs text-slate-500 dark:text-slate-300">
-              {t("exportPdf.noMonths")}
+              {t(espaciosCargando ? "common.loading" : "exportPdf.noMonths")}
             </Text>
           </View>
         ) : (
@@ -1497,7 +1520,7 @@ export default function ExportPdfSheet({
             Enseña el MISMO HTML que se le da al generador del PDF, así que
             no es una aproximación: es el documento, antes de convertirlo.
             Solo en PDF — un Excel es una tabla de números y se mira en Excel. */}
-        {format === "pdf" && monthTx.length > 0 && (
+        {format === "pdf" && !espaciosCargando && monthTx.length > 0 && (
           <TouchableOpacity
             onPress={() => setPreviewHtml(construirHtml())}
             className="w-full mt-3 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
@@ -1511,9 +1534,9 @@ export default function ExportPdfSheet({
 
         <TouchableOpacity
           onPress={handleExport}
-          disabled={exporting}
+          disabled={exporting || espaciosCargando || !espacio}
           className={`w-full mt-3 py-4 rounded-2xl items-center flex-row justify-center gap-2 bg-emerald-600 ${
-            exporting ? "opacity-60" : ""
+            exporting || espaciosCargando || !espacio ? "opacity-60" : ""
           }`}
         >
           {exporting ? (

@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 25/10/2026 — guardados y consultas (integración de desarrollo)
+
+Marca `25oct-guardados-saldos-consultas`, base `1955c268`. Guardados manuales,
+importados/captura y pago del calendario confirmados; aportes respetan reserva
+de metas; recuperación de registro compartido tras respuesta perdida/reinicio.
+Menos consultas en selección de Familia/exportación y menos recorridos del
+selector mensual. Precisión de Negocio y respuestas tardías de Dropbox y
+programación corregidas. Alcance, pruebas y pendientes detallados en ESTADO.md.
+
+TypeScript y ESLint generales sin errores; 276 pruebas y 8 auditores verdes
+(tarjetas excluidas). Marca confirmada en el emulador habitual: gasto/borrado
+Personal 50→47→50, Familia de prueba con aporte/devolución 5 y cierre en cero,
+código disponible sin enviar a terceros; WWW conserva S/1. Los 57 movimientos
+anteriores y demás fuentes financieras originales quedan idénticos. Se conservan
+dos comprobantes y una marca de borrado de las pruebas, descritos en ESTADO.md.
+
+Solo JavaScript y pruebas, sin APK nuevo, OTA/Play ni despliegue de Firebase.
+Cola local nueva declarada en PLAYSTORE.md. Faltan más recorridos Cajas/Calendario,
+primera consulta/código de invitación, FPS de producción y otros puntos de
+auditoría. La recarga de desarrollo tuvo un error transitorio de causa no
+demostrada antes de quedar operativa. No es cierre de toda la auditoría.
+
 ## 23/10/2026 — entrada sin ocultar listas por consultas pendientes (desarrollo)
 
 Marca `23oct-entrada-espacios-sin-bloqueo`, base `72822ea2`. Cajas muestra las

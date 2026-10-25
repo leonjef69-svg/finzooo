@@ -1,6 +1,7 @@
 import type { DatosDelNegocio, LineaDeVenta, MovimientoNegocio, Negocio, Producto } from "@/utils/negocio";
 import { historialDelNegocio, productosVendidos } from "@/utils/negocioTotales";
 import { isSafeMoneyAmount } from "@/utils/amount";
+import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 
 export type BusinessPeriod = "hoy" | "mes" | "todo" | "rango";
 export type BusinessFilter = { tipo: "todos" | "ingreso" | "gasto"; origen: "todos" | "manual" | "automatico"; metodo: string; categoria: string; pendientes: boolean; buscar: string };
@@ -8,21 +9,21 @@ export const BUSINESS_FILTER: BusinessFilter = { tipo: "todos", origen: "todos",
 export function modoDelNegocio(negocio: Negocio, productos: Producto[]): "categorias" | "simple" {
   return negocio.modo ?? (productos.some(p => p.negocioId === negocio.id) ? "categorias" : "simple");
 }
-const cents = (n: number) => Math.round(n * 100);
+const units = (n: number) => Number(moneyUnits(n));
 export function importeCategoria(precio: number, cantidad: number): number {
   if(!Number.isInteger(cantidad)||cantidad<1||cantidad>50||!isSafeMoneyAmount(precio)||precio<=0)return 0;
-  const amount=Math.round(precio*cantidad*100)/100;
+  const amount=moneyFromUnits(moneyUnits(precio)*BigInt(cantidad));
   return isSafeMoneyAmount(amount)?amount:0;
 }
 
 /** Dos soluciones ya prueban ambigüedad. Los límites nunca se presentan como certeza. */
 export function coincidenciasNegocio(monto: number, productos: Producto[], combinaciones = true): { opciones: LineaDeVenta[][]; incompleto: boolean } {
-  const target = cents(monto);
-  const cats = productos.filter(p => p.activo && Number.isSafeInteger(cents(p.precio)) && p.precio > 0);
+  const target = units(monto);
+  const cats = productos.filter(p => p.activo && Number.isSafeInteger(units(p.precio)) && p.precio > 0);
   if (!Number.isSafeInteger(target) || target <= 0) return { opciones: [], incompleto: true };
-  if (!combinaciones) return { opciones: cats.filter(p => cents(p.precio) === target).map(p => [{ productoId:p.id,nombre:p.nombre,precio:p.precio,cantidad:1 }]), incompleto:false };
+  if (!combinaciones) return { opciones: cats.filter(p => units(p.precio) === target).map(p => [{ productoId:p.id,nombre:p.nombre,precio:p.precio,cantidad:1 }]), incompleto:false };
   if (!cats.length) return { opciones:[],incompleto:false };
-  if (cats.length > 12 || target > 200000 || target > Math.min(...cats.map(p=>cents(p.precio))) * 12) return { opciones:[],incompleto:true };
+  if (cats.length > 12 || target > 2000000 || target > Math.min(...cats.map(p=>units(p.precio))) * 12) return { opciones:[],incompleto:true };
   const opciones: LineaDeVenta[][] = [];
   let visits = 0, incompleto = false;
   function walk(index: number, remaining: number, lines: LineaDeVenta[], count: number) {
@@ -30,7 +31,7 @@ export function coincidenciasNegocio(monto: number, productos: Producto[], combi
     if (++visits > 18000) { incompleto = true; return; }
     if (remaining === 0) { opciones.push(lines); return; }
     if (index >= cats.length || count >= 12) return;
-    const p = cats[index], unit = cents(p.precio);
+    const p = cats[index], unit = units(p.precio);
     for (let qty=Math.min(Math.floor(remaining/unit),12-count); qty>=0 && opciones.length<2 && !incompleto; qty--) {
       walk(index+1,remaining-qty*unit,qty ? [...lines,{productoId:p.id,nombre:p.nombre,precio:p.precio,cantidad:qty}] : lines,count+qty);
     }
@@ -72,8 +73,8 @@ export function filtrarNegocio(rows: BusinessRow[], f: BusinessFilter): Business
     && (!f.pendientes || r.pendiente) && (!query || `${r.detalle} ${r.metodo}`.toLocaleLowerCase().includes(query)));
 }
 export function totalesWorkspace(rows: BusinessRow[]) {
-  return { ingresos: rows.filter(r=>r.tipo==="ingreso").reduce((s,r)=>s+cents(r.monto),0)/100,
-    gastos: rows.filter(r=>r.tipo==="gasto").reduce((s,r)=>s+cents(r.monto),0)/100 };
+  return { ingresos: moneyFromUnits(rows.filter(r=>r.tipo==="ingreso").reduce((sum,row)=>sum+moneyUnits(row.monto),0n)),
+    gastos: moneyFromUnits(rows.filter(r=>r.tipo==="gasto").reduce((sum,row)=>sum+moneyUnits(row.monto),0n)) };
 }
 /** Proyección solo para el desglose: no se guarda ni se suma otra vez al total mensual. */
 export function categoriasDelResumen(id: string, datos: Pick<DatosDelNegocio,"ventas"|"movimientos">) {
@@ -89,7 +90,7 @@ export function borrarFilasNegocio(datos: DatosDelNegocio, id: string, keys: str
 export function vincularCobroNegocio(datos: DatosDelNegocio, id: string, autoId: string, manualKey: string): DatosDelNegocio {
   const auto=datos.movimientos.find(m=>m.negocioId===id && m.id===autoId && m.tipo==="ingreso" && m.origen==="automatico" && m.metodo==="yape" && !m.vinculoManual);
   const manual=filasDelNegocio(id,datos).find(r=>r.key===manualKey && !r.automatico && r.tipo==="ingreso" && r.metodo==="yape");
-  if (!auto || !manual || cents(auto.monto)!==cents(manual.monto)) return datos;
+  if (!auto || !manual || units(auto.monto)!==units(manual.monto)) return datos;
   const next=borrarFilasNegocio(datos,id,[manualKey]);
   return {...next,movimientos:next.movimientos.map(m=>m.id===auto.id && m.negocioId===id ? {...m,vinculoManual:manualKey,...(manual.lineas.length ? {clasificacion:{estado:"confirmada" as const,lineas:manual.lineas}} : {})} : m)};
 }

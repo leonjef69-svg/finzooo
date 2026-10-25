@@ -51,6 +51,7 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
   const scope = { ...merge, ...fields, ...recordOriginOriginal(), ready: true, hasOnboarded: true, uid: "A", isPremium: true, cloudBackupEnabled: true,
     cloudBackupRevision: 0, cloudBackupPreference: { current: { enabled: true, revision: 0 } },
     goalWriteReserved: { current: false }, canonical: JSON.stringify, deletedGoalIdsRef: { current: state.deletedGoalIds },
+    paymentWriteReserved: { current: null }, pagosProgramadosLive: { current: initial.pagosProgramados ?? [] },
     cloudFieldsRef: { current: { ...emptyCloud, hasOnboarded: true, userName: "A", userPhoto: null, userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, ...initial } },
     cloudSyncMetaRef: { current: initial.syncUpdatedAt ?? {} }, privateBoxCloudResponseCurrent: () => accepted,
     userEmail: "fixture@example.com", userCountry: "PE", saveJSON() {}, STORAGE_KEYS: {}, setCloudSyncMeta() {},

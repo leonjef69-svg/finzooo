@@ -25,23 +25,31 @@ const commit = handlerOriginal("contexts/AppDataContext.tsx", "commitImport", {
   // y sus identidades reales se comprueban en verificar-identidad-creacion-real.
   issuedCreationId: () => undefined,
   assertPrivateBoxMoneyLocalIdle() {},
+  auth: { currentUser: { uid: "ficticio" } }, localSessionVersion: { current: 1 },
+  async commitTransactionMutation(upserts, ids, historyIds, legacyIds, prepare) {
+    const rows = prepare ? prepare(transactionsLive.current, deletion.current) : upserts;
+    const changed = new Map(rows.map(row => [row.id, row]));
+    transactionsLive.current = [...rows.filter(row => !transactionsLive.current.some(prior => prior.id === row.id)),
+      ...transactionsLive.current.map(row => changed.get(row.id) ?? row)];
+    return true;
+  },
   setTransactions(update) { transactionsLive.current = typeof update === "function" ? update(transactionsLive.current) : update; },
   showToast() {}, t: key => key,
 });
 const edited = { ...original, amount: 120 };
-commit([], [edited]);
+await commit([], [edited]);
 assert.ok(transactionsLive.current[0].updatedAt > original.updatedAt, "La importación real debe marcar su edición");
 const { mergeTransactions } = load("utils/mergeTransactions.ts");
 assert.equal(mergeTransactions([original], transactionsLive.current)[0].amount, 120, "Teléfono atrasado no revierte el importe");
 const fresh = { ...original, id: 2 };
-commit([fresh, fresh], []);
-commit([fresh], []);
+await commit([fresh, fresh], []);
+await commit([fresh], []);
 assert.equal(transactionsLive.current.filter(tx => tx.id === 2).length, 1, "Lote repetido no duplica IDs");
 const before = structuredClone(transactionsLive.current);
 assert.throws(() => commit([{ ...fresh, id: 3 }], [edited]), /import-source-changed/);
 assert.deepEqual(transactionsLive.current, before, "Conflicto no guarda la mitad del lote");
 deletion.current = [4];
-commit([{ ...fresh, id: 4 }], []);
+await commit([{ ...fresh, id: 4 }], []);
 assert.ok(!transactionsLive.current.some(tx => tx.id === 4), "No revive ID borrado");
 assert.throws(() => commit([], [{ ...fresh, id: 99 }]), /import-source-changed/);
 const { scoreMatch } = load("utils/duplicates.ts");

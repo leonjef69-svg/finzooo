@@ -248,9 +248,11 @@ export async function exportarEnFondo(
       t("spaces.personal"),
       t("spaces.family"),
       t("spaces.boxes"),
+      schedule.spaceId || "personal",
+      false,
     );
     const espacio = espacios.find((item) => item.id === (schedule.spaceId || "personal"));
-    if (!espacio) return await registrarResultado("espacio-no-disponible");
+    if (!espacio || espacio.transactionsLoaded === false) return await registrarResultado("espacio-no-disponible");
     const movimientos = espacio.transactions;
     const fmtEspacio = formateadorDelEspacio(espacio);
 

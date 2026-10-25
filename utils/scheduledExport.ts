@@ -136,6 +136,8 @@ const TAG = "finzo-export";
 // Se conserva SOLO para poder retirar los que quedaran puestos en celulares que
 // venían de una versión anterior. Ver donde se cancela.
 const TAG_VIEJO_REPESCA = "finzo-export-retry";
+// Una respuesta vieja nunca puede volver a encender lo que la persona apagó.
+let scheduleRevision = 0;
 
 export async function loadSchedule(): Promise<ScheduledExport> {
   const saved = await loadJSON<Partial<ScheduledExport>>(STORAGE_KEY, {});
@@ -177,9 +179,12 @@ export function saveSchedule(schedule: ScheduledExport): void {
 
 /** Retira avisos y el despertador nativo de la cuenta que cerró sesión. */
 export async function cancelarProgramacionAlCerrarSesion(): Promise<void> {
-  await cancelByTag(TAG);
-  await cancelByTag(TAG_VIEJO_REPESCA);
+  const revision = ++scheduleRevision;
   cancelarExportacion();
+  saveJSON(KEY_PROXIMA, 0);
+  const current = () => revision === scheduleRevision;
+  await cancelByTag(TAG, current);
+  await cancelByTag(TAG_VIEJO_REPESCA, current);
 }
 
 /**
@@ -257,24 +262,26 @@ export function buildFileName(opts: {
 // PROGRAMAR LOS AVISOS
 // ---------------------------------------------------------------------------
 
-async function cancelByTag(tag: string): Promise<void> {
+async function cancelByTag(tag: string, current: () => boolean = () => true): Promise<void> {
   const pending = await Notifications.getAllScheduledNotificationsAsync();
+  if (!current()) return;
   await Promise.all(
     pending
       .filter((n) => n.content.data?.tag === tag)
-      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+      .map((n) => current() ? Notifications.cancelScheduledNotificationAsync(n.identifier) : undefined)
   );
 }
 
 /** Retira el recordatorio previo en equipos que ahora pueden entregar el resultado real. */
 export async function retirarRecordatorioDeExportacionAnterior(): Promise<void> {
+  const revision = scheduleRevision;
   const schedule = await loadSchedule();
   const puedeCompletarEnFondo =
     schedule.enabled &&
     esDestinoAutomatico(schedule.destination) &&
     puedeExportarEnFondo() &&
     (schedule.format !== "pdf" || puedePdfEnFondo());
-  if (puedeCompletarEnFondo) await cancelByTag(TAG);
+  if (puedeCompletarEnFondo) await cancelByTag(TAG, () => revision === scheduleRevision);
 }
 
 /** Qué días de la semana dispara la programación. Vacío si no es semanal. */
@@ -297,102 +304,135 @@ export async function applySchedule(
   texts: { title: string; body: string },
   options: { notifyAtScheduledTime?: boolean } = {},
 ): Promise<boolean> {
-  await cancelByTag(TAG);
-  // Y se retiran los segundos avisos de "todavía no exportaste" que pudiera
-  // haber dejado programados una versión anterior. Ese aviso se quitó el
-  // 05/08/2026; sin esta línea, a quien lo tuviera puesto le seguiría sonando
-  // una vez y no habría forma de callarlo desde la app.
-  await cancelByTag(TAG_VIEJO_REPESCA);
-
+  const revision = ++scheduleRevision;
+  const current = () => revision === scheduleRevision;
+  const created = new Set<string>();
+  const createReminder = async (request: Parameters<typeof Notifications.scheduleNotificationAsync>[0]) => {
+    if (!current()) return;
+    const identifier = await Notifications.scheduleNotificationAsync(request);
+    if (!current()) {
+      // Esta llamada puede terminar después de Apagar u otra programación.
+      // Se retira SOLO su aviso: cancelar por etiqueta borraría también el nuevo.
+      await Notifications.cancelScheduledNotificationAsync(identifier);
+    } else created.add(identifier);
+  };
+  // Apagar no espera a un cuadro de permisos ni a lecturas de avisos anteriores.
   if (!schedule.enabled) {
     cancelarExportacion();
     saveJSON(KEY_PROXIMA, 0);
-    return true;
   }
+  try {
+    await cancelByTag(TAG, current);
+    if (!current()) return false;
+    // Y se retiran los segundos avisos de "todavía no exportaste" que pudiera
+    // haber dejado programados una versión anterior. Ese aviso se quitó el
+    // 05/08/2026; sin esta línea, a quien lo tuviera puesto le seguiría sonando
+    // una vez y no habría forma de callarlo desde la app.
+    await cancelByTag(TAG_VIEJO_REPESCA, current);
+    if (!current()) return false;
 
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== "granted") {
-    cancelarExportacion();
-    saveJSON(KEY_PROXIMA, 0);
-    return false;
-  }
+    if (!schedule.enabled) {
+      cancelarExportacion();
+      saveJSON(KEY_PROXIMA, 0);
+      return true;
+    }
 
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("finzo-export", {
-      name: texts.title,
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
-  }
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (!current()) return false;
+    if (status !== "granted") {
+      cancelarExportacion();
+      saveJSON(KEY_PROXIMA, 0);
+      return false;
+    }
 
-  // EL DESPERTADOR DE ANDROID, el que hace el reporte con la app cerrada.
-  //
-  // Va aquí y no en la pantalla porque este es el único sitio por el que pasan
-  // TODOS los cambios de la programación. Puesto en la pantalla, cualquier
-  // camino que no fuera tocar un botón —una restauración de la nube, un ajuste
-  // cambiado por voz— dejaría el aviso puesto y el despertador sin poner.
-  //
-  // Si el APK no trae el módulo nativo, estas dos funciones no hacen nada y
-  // queda el comportamiento de siempre. Ver modules/export-scheduler.
-  const cuando = proximaEjecucion(schedule, new Date());
-  programarExportacion(cuando);
-  // Se apunta PARA CUÁNDO quedó puesto, y la pantalla lo enseña.
-  saveJSON(KEY_PROXIMA, cuando.getTime());
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("finzo-export", {
+        name: texts.title,
+        importance: Notifications.AndroidImportance.DEFAULT,
+      });
+      if (!current()) return false;
+    }
 
-  // Si el archivo se genera solo, no adelantamos un aviso que pueda parecer
-  // confirmación. El trabajo de fondo avisará cuando tenga el resultado real.
-  // Solo los equipos que necesitan una acción a esa hora reciben el recordatorio.
-  if (options.notifyAtScheduledTime === false) return true;
+    // EL DESPERTADOR DE ANDROID, el que hace el reporte con la app cerrada.
+    //
+    // Va aquí y no en la pantalla porque este es el único sitio por el que pasan
+    // TODOS los cambios de la programación. Puesto en la pantalla, cualquier
+    // camino que no fuera tocar un botón —una restauración de la nube, un ajuste
+    // cambiado por voz— dejaría el aviso puesto y el despertador sin poner.
+    //
+    // Si el APK no trae el módulo nativo, estas dos funciones no hacen nada y
+    // queda el comportamiento de siempre. Ver modules/export-scheduler.
+    const cuando = proximaEjecucion(schedule, new Date());
+    programarExportacion(cuando);
+    // Se apunta PARA CUÁNDO quedó puesto, y la pantalla lo enseña.
+    saveJSON(KEY_PROXIMA, cuando.getTime());
 
-  const content = {
-    title: texts.title,
-    body: texts.body,
-    data: { tag: TAG, screen: "export" as const },
-  };
+    // Si el archivo se genera solo, no adelantamos un aviso que pueda parecer
+    // confirmación. El trabajo de fondo avisará cuando tenga el resultado real.
+    // Solo los equipos que necesitan una acción a esa hora reciben el recordatorio.
+    if (options.notifyAtScheduledTime === false) return true;
 
-  const { hour, minute } = schedule;
-  // El canal va DENTRO del disparador, no al lado del contenido. Puesto
-  // fuera, TypeScript lo acepta como propiedad de más y Android lo ignora:
-  // el aviso se programa igual pero sin canal, y en Android 8 en adelante un
-  // aviso sin canal no suena ni aparece.
-  const channelId = Platform.OS === "android" ? "finzo-export" : undefined;
+    const content = {
+      title: texts.title,
+      body: texts.body,
+      data: { tag: TAG, screen: "export" as const },
+    };
 
-  const dias = activeWeekdays(schedule);
-  if (dias.length > 0) {
-    // "Personalizado" son varios avisos semanales, uno por día elegido, y no
-    // un disparador de "cada N días". Es lo que hace que caigan siempre en el
-    // mismo día de la semana: un "cada 3 días" se cuenta desde el momento en
-    // que se programó, así que se corre por el calendario y además se
-    // reinicia cada vez que se cambia cualquier ajuste.
-    await Promise.all(
-      dias.map((weekday) =>
-        Notifications.scheduleNotificationAsync({
-          content,
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+    const { hour, minute } = schedule;
+    // El canal va DENTRO del disparador, no al lado del contenido. Puesto
+    // fuera, TypeScript lo acepta como propiedad de más y Android lo ignora:
+    // el aviso se programa igual pero sin canal, y en Android 8 en adelante un
+    // aviso sin canal no suena ni aparece.
+    const channelId = Platform.OS === "android" ? "finzo-export" : undefined;
+
+    const dias = activeWeekdays(schedule);
+    if (dias.length > 0) {
+      // "Personalizado" son varios avisos semanales, uno por día elegido, y no
+      // un disparador de "cada N días". Es lo que hace que caigan siempre en el
+      // mismo día de la semana: un "cada 3 días" se cuenta desde el momento en
+      // que se programó, así que se corre por el calendario y además se
+      // reinicia cada vez que se cambia cualquier ajuste.
+      await Promise.all(
+        dias.map((weekday) =>
+          createReminder({
+            content,
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+              channelId,
+              weekday,
+              hour,
+              minute,
+            },
+          })
+        )
+      );
+      return current();
+    }
+
+    const trigger =
+      schedule.frequency === "daily"
+        ? { type: Notifications.SchedulableTriggerInputTypes.DAILY as const, channelId, hour, minute }
+        : {
+            type: Notifications.SchedulableTriggerInputTypes.MONTHLY as const,
             channelId,
-            weekday,
+            day: Math.min(schedule.day, MAX_MONTH_DAY),
             hour,
             minute,
-          },
-        })
-      )
-    );
-    return true;
+          };
+
+    await createReminder({ content, trigger });
+    return current();
+  } catch (error) {
+    if (current()) {
+      scheduleRevision += 1;
+      cancelarExportacion();
+      saveJSON(KEY_PROXIMA, 0);
+    }
+    // Las otras escrituras semanales que aún esperan también se invalidan;
+    // createReminder retirará su propio identificador cuando terminen.
+    await Promise.all([...created].map(id => Notifications.cancelScheduledNotificationAsync(id)));
+    throw error;
   }
-
-  const trigger =
-    schedule.frequency === "daily"
-      ? { type: Notifications.SchedulableTriggerInputTypes.DAILY as const, channelId, hour, minute }
-      : {
-          type: Notifications.SchedulableTriggerInputTypes.MONTHLY as const,
-          channelId,
-          day: Math.min(schedule.day, MAX_MONTH_DAY),
-          hour,
-          minute,
-        };
-
-  await Notifications.scheduleNotificationAsync({ content, trigger });
-  return true;
 }
 
 // ---------------------------------------------------------------------------

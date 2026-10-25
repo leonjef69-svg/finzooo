@@ -5,10 +5,8 @@ import { CalendarDays, Check, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import type { Month } from "@/types";
 import { useAppData } from "@/contexts/AppDataContext";
-import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
 import { saldoLibre, totalApartado } from "@/utils/ahorro";
-import { presupuestoDelMes } from "@/utils/presupuestoMensual";
-import { saldoAnteriorDe } from "@/utils/saldoAnterior";
+import { personalMonthlyBalances } from "@/utils/personalMonthlyBalances";
 import { personalMonthlyMovementCounts } from "@/utils/personalMonthRows";
 
 type Props = {
@@ -45,13 +43,9 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
   const monthBalances = useMemo(() => {
     if (!open) return {};
     const reservedSavings = totalApartado(goals);
+    const personalBalances = personalMonthlyBalances(months, budgets, transactions, carryoverCleared);
     return Object.fromEntries(months.map((key) => {
-      const totals = totalsForMonth(transactions, key);
-      const personalBalance = availablePersonalBalance({
-        budget: presupuestoDelMes(budgets, key),
-        prevBalance: saldoAnteriorDe(key, budgets, transactions, carryoverCleared),
-        ...totals,
-      });
+      const personalBalance = personalBalances[key];
       return [key, saldoLibre(personalBalance, reservedSavings)];
     }));
   }, [open, months, transactions, budgets, carryoverCleared, goals]);

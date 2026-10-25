@@ -12,12 +12,19 @@ function load(file, require) {
 }
 const pure = new Map();
 function original(file) {
-  if (!pure.has(file)) pure.set(file, load(file, name => {
+  if (!pure.has(file)) {
+    const module = load(file, name => {
     if (name === "@/utils/recordOrigin") return { identityForExplicitEdit: (_original, candidate) => candidate };
     if (name.startsWith("@/utils/")) return original(name.slice(2) + ".ts");
     if (name === "@/constants/currencies") return { currencyDecimals: () => 2 };
     assert.fail(name);
-  }));
+    });
+    if (file === "utils/finances.ts") {
+      const totals = module.totalsForMonth;
+      module.totalsForMonth = (...args) => { totalsCalls++; return totals(...args); };
+    }
+    pure.set(file, module);
+  }
   return pure.get(file);
 }
 function hooks() {
@@ -66,8 +73,8 @@ function dependencies(name) {
   if (name === "nativewind") return { useColorScheme: () => ({ colorScheme: "light" }) };
   if (name === "react-native-safe-area-context") return { useSafeAreaInsets: () => ({ bottom: 0 }) };
   if (name.endsWith("AppDataContext")) return { useAppData: () => context };
-  if (name.endsWith("finances")) return { ...finances, totalsForMonth: (...args) => { totalsCalls++; return finances.totalsForMonth(...args); } };
-  if (["ahorro", "linkedTransfers", "presupuestoMensual", "saldoAnterior", "movementDates", "personalHistory", "recentMovementFilters", "personalMonthRows"].some(file => name.endsWith(file))) return original(name.slice(2) + ".ts");
+  if (name.endsWith("finances")) return finances;
+  if (["ahorro", "linkedTransfers", "presupuestoMensual", "saldoAnterior", "movementDates", "personalHistory", "recentMovementFilters", "personalMonthRows", "personalMonthlyBalances"].some(file => name.endsWith(file))) return original(name.slice(2) + ".ts");
   if (name.endsWith("categories")) return { ingresosDisponibles: () => { categoryCalls++; return []; }, gastosDisponibles: () => { categoryCalls++; return []; } };
   if (name.endsWith("countries")) return { COUNTRIES: [] };
   if (name.endsWith("currencies")) return { currencySymbolFor: () => "S/" };

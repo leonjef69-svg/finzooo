@@ -16,6 +16,7 @@ import { catInfo } from "@/constants/categories";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import { CARD_SHADOW } from "@/constants/style";
+import { getAccountStorageSession } from "@/utils/storage";
 import type { RawRow } from "@/utils/importEngine";
 import type { Transaction } from "@/types";
 
@@ -73,6 +74,8 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     useAppData();
   const insets = useSafeAreaInsets();
   const saveLock = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const [stage, setStage] = useState<Stage>("listening");
   // Mes del que se pidió el resumen ("AAAA-MM") y si se pidió de lo que
@@ -636,36 +639,43 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     start();
   }
 
-  function save() {
-    if (saveLock.current) return;
+  async function save() {
+    if (saveLock.current || !mounted.current) return;
     if (rows.length === 0) return;
+    const session = getAccountStorageSession();
+    const current = () => mounted.current && getAccountStorageSession() === session;
     saveLock.current = true;
-    rows.forEach((row, i) => {
-      const kind = kinds[i];
-      const category = categoryOf(row, kind);
-      const transaction: Transaction = {
-        id: nextId(),
-        type: kind,
-        amount: row.amount,
-        category,
-        date: row.date,
-        // El método que la persona sí dijo: "con tarjeta", "por Yape",
-        // "en efectivo". Si no dijo ninguno, efectivo sigue siendo el
-        // valor seguro de siempre.
-        method: row.methodRaw || "cash",
-        description: row.description || t(catInfo(category).label),
-        notes: "",
-        // La hora de ahora: es cuando se dicta.
-        time: horaDe(Date.now()),
-        merchant: row.merchant || undefined,
-        origin: "manual",
-      };
-      addOrUpdateTransaction(transaction);
-    });
-    // El aviso de addOrUpdateTransaction habla de un solo movimiento; si
-    // fueron varios, este lo reemplaza (el último gana).
-    if (rows.length > 1) showToast(t("voice.savedPlural", { count: rows.length }));
-    onClose();
+    try {
+      const batch = rows.map((row, i) => {
+        const kind = kinds[i];
+        const category = categoryOf(row, kind);
+        const transaction: Transaction = {
+          id: nextId(),
+          type: kind,
+          amount: row.amount,
+          category,
+          date: row.date,
+          // El método que la persona sí dijo: "con tarjeta", "por Yape",
+          // "en efectivo". Si no dijo ninguno, efectivo sigue siendo el
+          // valor seguro de siempre.
+          method: row.methodRaw || "cash",
+          description: row.description || t(catInfo(category).label),
+          notes: "",
+          // La hora de ahora: es cuando se dicta.
+          time: horaDe(Date.now()),
+          merchant: row.merchant || undefined,
+          origin: "manual",
+        };
+        return transaction;
+      });
+      // Todo el dictado se confirma en un lote: si falla, conserva las filas
+      // para reintentar y no deja solo parte de la frase guardada.
+      const saved = await addOrUpdateTransaction(batch);
+      if (!current()) return;
+      if (!saved) { saveLock.current = false; return; }
+      if (batch.length > 1) showToast(t("voice.savedPlural", { count: batch.length }));
+      onClose();
+    } catch { if (current()) { saveLock.current = false; showToast(t("toast.localSaveFailed")); } }
   }
 
   // La pantalla y su prueba comparten exactamente la misma cuenta.

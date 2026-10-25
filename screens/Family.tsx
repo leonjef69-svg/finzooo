@@ -15,7 +15,8 @@ import ContentReportButton from "@/components/ContentReportButton";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
-import { disponiblePersonalEnFecha } from "@/utils/finances";
+import { saldoLibrePersonalEnFecha } from "@/utils/finances";
+import { totalApartado } from "@/utils/ahorro";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
 import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
 import { canCloseLinkedSpace, canSpendFromSpace, countSelectedCompactRows, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
@@ -24,6 +25,7 @@ import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { devolverAportePersonal } from "@/utils/personalReturn";
+import { confirmarMovimientoCompartido, hayMovimientoCompartidoPendiente, nuevaOperacionMovimientoCompartido, recuperarMovimientoCompartido } from "@/utils/sharedMovements";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
 import { getAccountStorageSession } from "@/utils/storage";
@@ -78,7 +80,7 @@ export default function Family() {
 }
 
 function FamilyForAccount({ accountUid }: { accountUid: string }) {
-  const { t, fmt, monthNames, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, fmt, monthNames, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, goals, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaConocida = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
@@ -100,6 +102,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   // Si el servidor guardó el aporte pero el disco falló, el siguiente intento
   // confirma esa misma pareja; nunca crea otro aporte para compensarlo.
   const pendingDebit = useRef<{ confirm: () => Promise<boolean>; spaceId?: string; spaceName?: string; creating?: boolean } | null>(null);
+  const recoveryTried = useRef(new Set<string>());
+  const recoveryAction = useRef<(target: EspacioFamilia) => Promise<void>>(async () => {});
   // La reconciliación de Personal debe conocer los movimientos de TODAS las
   // familias. Mirar solo la activa hacía que una transferencia válida de otra
   // familia se interpretara como huérfana y se borrara de Personal.
@@ -130,9 +134,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [category, setCategory] = useState("otros");
   const [movementDate, setMovementDate] = useState(fechaHoy());
   const [notes, setNotes] = useState("");
+  const apartadoPersonal = useMemo(() => totalApartado(goals), [goals]);
   const saldoPersonalEn = useCallback((fecha: string) =>
-    disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared),
-  [budgets, transactions, carryoverCleared]);
+    saldoLibrePersonalEnFecha(fecha, budgets, transactions, carryoverCleared, apartadoPersonal),
+  [budgets, transactions, carryoverCleared, apartadoPersonal]);
   const hoyEnPantalla = fechaHoy();
   const disponibleHoy = useMemo(() => saldoPersonalEn(hoyEnPantalla), [saldoPersonalEn, hoyEnPantalla]);
   const disponibleMovimiento = useMemo(() => saldoPersonalEn(movementDate), [saldoPersonalEn, movementDate]);
@@ -174,7 +179,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   tRef.current = t;
   toastRef.current = showToast;
 
-  const recargar = useCallback(async (preferida?: string, forzar = false, parcial?: FamilyReloadScope) => {
+  const recargar = useCallback(async (preferida?: string, forzar = false, parcial?: FamilyReloadScope, seleccionExplicita = false) => {
     if (cierresPendientes.current.size) return;
     if (familyMutationPending(accountUid, accountSession)) return;
     const pedido = ++reloadId.current;
@@ -214,12 +219,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         setCargando(false);
       }
       const activa = elegida ? lista.find(item => item.id === elegida) ?? null : lista[0] ?? null;
-      // Empezar los demás saldos ahora, no después de esperar el detalle activo.
-      // Capturar también el rechazo evita una promesa sin atender si se sale
-      // de la pantalla mientras termina otra lectura.
-      const otrasPendientes = Promise.all((alcance ? [] : lista.filter(item => item.id !== activa?.id)).map(async item =>
-        [item.id, await task.wait(() => leer(`family:movements:${item.id}`, () => listarMovimientosFamilia(item.id, true)))] as const))
-        .then(value => ({ ok: true as const, value }), error => ({ ok: false as const, error }));
+      // Abrir una Familia de la lista comprueba de nuevo el catálogo, pero
+      // descarga dinero solo de la elegida. Las otras copias son visuales;
+      // foco, actualización manual y cambios de integrantes siguen globales.
+      const soloActiva = Boolean(alcance || (seleccionExplicita && preferida && activa));
       const previa = alcance?.visual ?? familiaEnMemoria.get(uid);
       const [movements, people] = activa ? await task.wait(() => Promise.all([
         leer(`family:movements:${activa.id}`, () => listarMovimientosFamilia(activa.id, true)),
@@ -244,18 +247,20 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: nextBalances,
         movimientosFamilias: nextMovements, miembros: people, movimientos: movements, actualizadaEn: 0 });
       const completar = async () => {
-        const resultado = await task.wait(() => otrasPendientes);
-        if (!resultado.ok) throw resultado.error;
-        const otras = resultado.value;
+        // La primera entrada confirma primero el espacio abierto. Descargar
+        // los otros historiales después evita que compitan con esa entrada;
+        // su lectura completa sigue siendo obligatoria para conciliar todos.
+        const otras = await task.wait(() => Promise.all((soloActiva ? [] : lista.filter(item => item.id !== activa?.id)).map(async item =>
+          [item.id, await task.wait(() => leer(`family:movements:${item.id}`, () => listarMovimientosFamilia(item.id, true)))] as const)));
         if (!task.current()) return;
         const completas = { ...nextMovements, ...Object.fromEntries(otras) };
         const saldos = Object.fromEntries(Object.entries(completas).map(([id, items]) =>
           [id, items.reduce((total, item) => total + (item.tipo === "ingreso" ? item.monto : -item.monto), 0)]));
         confirmedReload.current = pedido;
-        familiaConfirmada.current = alcance ? activa!.id : null;
+        familiaConfirmada.current = soloActiva ? activa!.id : null;
         setMovimientosFamilias(completas); setSaldosFamilias(saldos);
         familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: saldos,
-          movimientosFamilias: completas, miembros: people, movimientos: movements, actualizadaEn: alcance ? 0 : Date.now() });
+          movimientosFamilias: completas, miembros: people, movimientos: movements, actualizadaEn: soloActiva ? 0 : Date.now() });
         setFamiliasSincronizadas(true);
       };
       completing = true;
@@ -294,7 +299,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     setTipo(null); setInvitacion(""); setFilter(null);
     setSeleccionados([]); setSeleccionando(false);
     setCargando(conocidos === undefined); setVerTodas(false);
-    void recargar(item.id, true);
+    void recargar(item.id, true, undefined, true);
   }
 
   const retirarFamiliasConfirmadas = useCallback((ids: string[]) => {
@@ -536,6 +541,35 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }
   }
 
+  async function recuperarPendiente(target: EspacioFamilia): Promise<boolean> {
+    return recuperarMovimientoCompartido("family", target.id, accountUid, target.currency, async pending => {
+      const item = pending.movement;
+      return repairLinkedTransferTransactions([{
+        id: item.personalTransactionId!, type: "expense", amount: item.monto, category: "otros", date: item.fecha,
+        time: horaDe(pending.createdAt), method: "transfer", description: t("family.transferTo", { name: target.nombre }),
+        notes: item.notes || "", origin: "manual", internalTransfer: "family", internalTransferLink: pending.movementId,
+        internalTransferSpaceId: target.id, internalTransferSpaceName: target.nombre,
+      }]);
+    });
+  }
+  recoveryAction.current = async target => {
+    const task = captureAccountTask(accountUid, () => mounted.current && familiaElegida.current === target.id
+      && getAccountStorageSession() === accountSession && !actionLock.current);
+    const pending = await task.wait(() => hayMovimientoCompartidoPendiente("family", target.id, accountUid));
+    if (pending && task.current()) await ejecutar(async wait => {
+      await wait(() => recuperarPendiente(target));
+      await wait.reload();
+    }, undefined, true, target.id);
+  };
+  useEffect(() => {
+    if (!familia || ocupado || recoveryTried.current.has(familia.id)) return;
+    const target = familia;
+    recoveryTried.current.add(target.id);
+    void recoveryAction.current(target).catch(error => {
+      if (mounted.current && getAccountStorageSession() === accountSession) toastRef.current(tRef.current(spaceErrorKey(error)));
+    });
+  }, [accountSession, familia, ocupado]);
+
   const crear = () => ejecutar(async wait => {
     if (pendingDebit.current?.creating === false) {
       showToast(t("spaces.pendingPersonalContribution", { name: pendingDebit.current.spaceName || t("family.title") })); return;
@@ -642,6 +676,11 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       pendingDebit.current = null;
       setTipo(null); await wait.reload(); return;
     }
+    if (familia && await hayMovimientoCompartidoPendiente("family", familia.id, accountUid)) {
+      if (await wait(() => recuperarPendiente(familia))) {
+        await wait.reload(); showToast(t("spaces.pendingMovementRecovered")); return;
+      }
+    }
     const issue = amountInputError(monto, familia?.currency || userCurrency);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const uid = auth.currentUser?.uid; const value = parseAmountInput(monto, familia?.currency || userCurrency);
@@ -666,23 +705,26 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (desdePersonal && value > saldoPersonalEn(movementDate)) { showToast(t("family.notEnoughPersonal")); return; }
     if (tipo === "gasto" && !canSpendFromSpace(movimientos, value)) { showToast(t("family.notEnoughSpace")); return; }
     const personalTransactionId = desdePersonal ? nextId() : undefined;
+    const operation = nuevaOperacionMovimientoCompartido("family", familia.id, familia.currency);
     let movementId: string | undefined;
     const confirm = async () => {
       // Una respuesta perdida debe repetir el mismo ID de Personal y la misma
       // orden remota. Tras confirmarla, solo se reintenta el guardado local.
       try {
-        if (!movementId) movementId = await personalTask.wait(() => guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), ...(desdePersonal ? {} : { category }), notes: notes.trim(), fecha: movementDate, method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) }));
+        if (!movementId) movementId = await personalTask.wait(() => guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), ...(desdePersonal ? {} : { category }), notes: notes.trim(), fecha: movementDate, method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) }, operation));
       } catch (error) {
-        if (typeof (error as { details?: { reason?: unknown } })?.details?.reason === "string") pendingDebit.current = null;
+        if (typeof (error as { details?: { reason?: unknown } })?.details?.reason === "string"
+          || error instanceof Error && error.message === "shared-operation-pending") pendingDebit.current = null;
         throw error;
       }
       if (personalTransactionId != null) {
         const debit = { id: personalTransactionId, type: "expense", amount: value, category: "otros", date: movementDate, time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: familia.nombre }), notes: notes.trim(), origin: "manual", internalTransfer: "family", internalTransferLink: movementId, internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre } as const;
-        return personalTask.wait(() => repairLinkedTransferTransactions([debit]));
+        if (!await personalTask.wait(() => repairLinkedTransferTransactions([debit]))) return false;
+        return personalTask.wait(() => confirmarMovimientoCompartido(movementId!, uid));
       }
       return true;
     };
-    if (personalTransactionId != null) pendingDebit.current = { spaceId: familia.id, spaceName: familia.nombre, creating: false, confirm };
+    pendingDebit.current = { spaceId: familia.id, spaceName: familia.nombre, creating: false, confirm };
     if (!await wait(confirm)) throw new Error("personal-save-failed");
     pendingDebit.current = null;
     setMonto(""); setDescripcion(""); setNotes(""); setMovementDate(fechaHoy()); setOrigenDinero("externo"); setTipo(null); await wait.reload(); showToast(t("family.movementSaved"));
@@ -859,7 +901,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       {cargando && !verTodas ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : verTodas || (familia && familiasOcultas.has(familia.id)) ? <>
         <Text className="mt-3 text-sm text-slate-600 dark:text-slate-300">{t("family.listHelp")}</Text>
         <View className="mt-3 flex-row gap-3"><TouchableOpacity onPress={() => isPremium ? setModo("crear") : irUnaVez("/premium")} className={`min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl ${isPremium ? "bg-emerald-600" : "bg-amber-500"}`}><Plus size={18} color="#fff" /><Text className="font-bold text-white">{isPremium ? t("family.create") : t("family.createPremium")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setModo("unir")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-noche-2"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity></View>
-        {modo ? <View className="mt-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><View className="mt-2 flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => setModo(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.save")} onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
+        {modo ? <View className="mt-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI autoComplete="off" importantForAutofill="no" value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><View className="mt-2 flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => setModo(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.save")} onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
         {familias.length > 0 ? <View className="mb-2 mt-4 flex-row items-center justify-between">
           {seleccionandoFamilias ? <>
             <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{familiasSeleccionadas.length} {t("family.selectedLabel")}</Text>
@@ -890,7 +932,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       </> : !familia ? <>
         <View className="mt-3 items-center rounded-3xl border-[1.5px] border-emerald-200 bg-emerald-50 px-5 py-6 dark:border-emerald-800 dark:bg-emerald-950/30"><View className="h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600"><UsersRound size={27} color="#fff" /></View><Text className="mt-3 text-center text-lg font-extrabold text-slate-900 dark:text-slate-100">{t("family.startTitle")}</Text><Text className="mt-1 text-center text-sm leading-5 text-slate-600 dark:text-slate-300">{t("family.startBody")}</Text></View>
         <View className="mt-4 flex-row gap-3"><TouchableOpacity onPress={() => isPremium ? setModo("crear") : irUnaVez("/premium")} className={`min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl ${isPremium ? "bg-emerald-600" : "bg-amber-500"}`}><Plus size={18} color="#fff" /><Text className="font-bold text-white">{isPremium ? t("family.create") : t("family.createPremium")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setModo("unir")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-noche-2"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity></View>
-        {modo ? <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} autoCapitalize={modo === "crear" ? "sentences" : "characters"} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("family.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => { setModo(null); setMontoInicial(""); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.save")} onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
+        {modo ? <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} autoCapitalize={modo === "crear" ? "sentences" : "characters"} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI autoComplete="off" importantForAutofill="no" value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("family.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => { setModo(null); setMontoInicial(""); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.save")} onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
       </> : <>
         <View className="mt-2 flex-row items-center justify-between">
           <TouchableOpacity onPress={() => { setVerTodas(true); setModo(null); }} className="flex-row items-center gap-1 rounded-xl px-1 py-2">

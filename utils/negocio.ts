@@ -26,6 +26,7 @@
 import { sanitizeName } from "@/utils/categoryCustom";
 import { loadJSON, saveJSON, saveJSONBatchNow, STORAGE_KEYS } from "@/utils/storage";
 import { mergeBusinessData, type BusinessDeleted } from "@/utils/businessSync";
+import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 
 /** A dónde van los Yapes que entren mientras el negocio está activo. */
 export type DestinoDeLosYapes = "personal" | "negocio";
@@ -353,8 +354,7 @@ export function crearVenta(datos: {
 /**
  * Un movimiento del negocio.
  *
- * El monto se redondea a céntimos aquí y no en cada pantalla: con dos sitios redondeando, uno
- * acaba guardando 45.299999999999996 y ese número se imprime en un total.
+ * Conserva la precisión monetaria común, también en monedas de tres decimales.
  */
 export function crearMovimientoNegocio(datos: {
   negocioId: string;
@@ -373,7 +373,7 @@ export function crearMovimientoNegocio(datos: {
     id: nuevoId("mov"),
     negocioId: datos.negocioId,
     tipo: datos.tipo,
-    monto: Math.round(datos.monto * 100) / 100,
+    monto: moneyFromUnits(moneyUnits(datos.monto)),
     metodo: datos.metodo,
     descripcion: sanitizeName(datos.descripcion),
     fecha: datos.fecha,
@@ -412,7 +412,5 @@ export function ahoraDelNegocio(ms: number = Date.now()): { fecha: string; hora:
  * es un número que nadie puede explicar, y con cantidades es facilísimo que pase.
  */
 export function totalDeLineas(lineas: LineaDeVenta[]): number {
-  const suma = lineas.reduce((t, l) => t + l.precio * l.cantidad, 0);
-  // A dos decimales: 15.1 × 3 da 45.299999999999996 en coma flotante, y eso acaba impreso.
-  return Math.round(suma * 100) / 100;
+  return moneyFromUnits(lineas.reduce((sum, line) => sum + moneyUnits(line.precio * line.cantidad), 0n));
 }

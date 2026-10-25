@@ -237,9 +237,11 @@ ok(
   "y un recordatorio NO crea nada: no tiene monto y no puede tocar las cuentas"
 );
 const contextoPago = fs.readFileSync(path.join(process.cwd(), "contexts/AppDataContext.tsx"), "utf8");
-const alMarcarPago = contextoPago.slice(contextoPago.indexOf("function marcarPagoDelMes("), contextoPago.indexOf("function marcarPagoDelMes(") + 4300);
+const inicioMarcarPago = contextoPago.indexOf("function marcarPagoDelMes(");
+const alMarcarPago = contextoPago.slice(inicioMarcarPago, contextoPago.indexOf("\n  function guardarNegocio(", inicioMarcarPago));
 ok(
-  alMarcarPago.includes("movimientoDelPago(pago, mes, new Date())")
+  alMarcarPago.includes("const confirmedAt = new Date();")
+  && alMarcarPago.includes("movimientoDelPago(pago, mes, confirmedAt)")
   && alMarcarPago.includes("date: mov.date")
   && alMarcarPago.includes("time: mov.time"),
   "el gesto real guarda la fecha y hora de confirmación en el movimiento"

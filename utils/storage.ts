@@ -117,6 +117,8 @@ export const STORAGE_KEYS = {
   // Preferencias visuales de Inicio, cifradas por cuenta; no alteran dinero.
   homeVisibility: "finzo:homeVisibility",
   personalReturnPending: "finzo:personalReturnPending",
+  // ID y contenido de una operación compartida que aún espera confirmación.
+  sharedMovementPending: "finzo:sharedMovementPending",
 } as const;
 
 /** Retira automáticamente los datos falsos que dejaron versiones antiguas. */
@@ -171,6 +173,7 @@ export const ACCOUNT_STORAGE_KEYS = [
         STORAGE_KEYS.homeNotificationSeen,
         STORAGE_KEYS.homeVisibility,
         STORAGE_KEYS.personalReturnPending,
+        STORAGE_KEYS.sharedMovementPending,
         // Integraciones y tareas que pertenecen a la cuenta, aunque sus claves
         // vivan fuera del almacén principal.
         "finzo:scheduledExport",
@@ -235,6 +238,7 @@ export async function clearAccountData(): Promise<void> {
   }
   unreadableLocalData = false;
   failedWriteKeys.clear();
+  failedSingleWrites.clear();
 }
 
 // Un fallo de lectura no es una lista vacía. Conservamos el texto cifrado
@@ -315,6 +319,11 @@ const writeEpochs = new Map<string, number>();
 let writeQueue: Promise<unknown> = Promise.resolve();
 const inFlightWrites = new Set<Promise<unknown>>();
 const failedWriteKeys = new Set<string>();
+// Solo los guardados de UNA clave se pueden reintentar por separado. Se
+// conserva el texto que realmente se intentó escribir, no un objeto mutable.
+// Los lotes de dinero mantienen su propio reintento atómico en el llamador.
+type FailedSingleWrite = { json: string; epoch: number; version: number };
+const failedSingleWrites = new Map<string, FailedSingleWrite>();
 // Solo una prueba transitoria de la copia de Cajas ya autenticada o guardada.
 // Al volver de Personal/Familia la pantalla solicita guardar incluso sin
 // cambios: evitar ese AES/HMAC repetido, no las confirmaciones de dinero.
@@ -371,6 +380,16 @@ function cancelPendingKey(key: string): void {
   pendingTimers.delete(key); pendingValues.delete(key); pendingEpochs.delete(key);
 }
 
+function rememberFailedSingleWrite(key: string, json: string | undefined, epoch: number, version: number): void {
+  // Una respuesta tardía de la cuenta anterior nunca deja un reintento para
+  // la cuenta nueva, ni sobrevive a un lote confirmado más reciente.
+  if (version !== accountAccessVersion || !canAccessKey(key) || epoch !== (writeEpochs.get(key) ?? 0)) return;
+  failedWriteKeys.add(key);
+  if (!unreadableLocalData && json !== undefined) failedSingleWrites.set(key, { json, epoch, version });
+  else failedSingleWrites.delete(key);
+  reportStorageWriteError();
+}
+
 function writeNow(key: string, value: unknown, epoch = writeEpochs.get(key) ?? 0): Promise<void> {
   if (!canAccessKey(key)) return Promise.resolve();
   const version = accountAccessVersion;
@@ -380,8 +399,9 @@ function writeNow(key: string, value: unknown, epoch = writeEpochs.get(key) ?? 0
     return Promise.resolve();
   }
   return enqueueWrite(async () => {
+    let json: string | undefined;
     try {
-      const json = JSON.stringify(value);
+      json = JSON.stringify(value);
       const proof = key === STORAGE_KEYS.cajasDinero ? boxesWriteProof : null;
       if (proof && proof.version === version && proof.epoch === epoch && proof.json === json && !failedWriteKeys.has(key)) {
         // Un cambio de sesión o lote mientras se espera nunca cuenta como
@@ -399,10 +419,10 @@ function writeNow(key: string, value: unknown, epoch = writeEpochs.get(key) ?? 0
       if (unreadableLocalData) throw new Error("local-data-unreadable");
       await AsyncStorage.setItem(key, encrypted);
       failedWriteKeys.delete(key);
+      failedSingleWrites.delete(key);
       rememberBoxesWrite(key, json, encrypted, version, epoch);
     } catch {
-      failedWriteKeys.add(key);
-      reportStorageWriteError();
+      rememberFailedSingleWrite(key, json, epoch, version);
     }
   }).then(() => undefined);
 }
@@ -427,16 +447,17 @@ async function saveJSONNowUntracked(key: string, value: unknown): Promise<boolea
     reportStorageWriteError();
     return false;
   }
-  return enqueueWrite(async () => { try {
-    const encrypted = await encryptText(JSON.stringify(value));
+  return enqueueWrite(async () => { let json: string | undefined; try {
+    json = JSON.stringify(value);
+    const encrypted = await encryptText(json);
     if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion) || epoch !== (writeEpochs.get(key) ?? 0)) return false;
     if (unreadableLocalData) throw new Error("local-data-unreadable");
     await AsyncStorage.setItem(target, encrypted);
     failedWriteKeys.delete(target);
+    failedSingleWrites.delete(target);
     return true;
   } catch {
-    failedWriteKeys.add(target);
-    reportStorageWriteError();
+    rememberFailedSingleWrite(target, json, epoch, version);
     return false;
   } });
 }
@@ -488,6 +509,7 @@ export function saveJSONBatchNow(keys: string[], prepare: () => PreparedLocalBat
           for (const key of keys) {
             writeEpochs.set(key, (writeEpochs.get(key) ?? 0) + 1);
             cancelPendingKey(key); failedWriteKeys.delete(key);
+            failedSingleWrites.delete(key);
           }
           if (version !== accountAccessVersion || keys.some(key => !canAccessKey(key))) return false;
           batch.committed();
@@ -497,7 +519,13 @@ export function saveJSONBatchNow(keys: string[], prepare: () => PreparedLocalBat
       return false;
     } catch (error) {
       if (error instanceof Error && ["private-box-source-changed", "private-box-invalid-patch", "private-box-id-conflict"].includes(error.message)) return false;
-      for (const key of keys) failedWriteKeys.add(key);
+      if (version !== accountAccessVersion) return false;
+      for (const key of keys) {
+        failedWriteKeys.add(key);
+        // Nunca reparar por claves sueltas un lote que falló: el llamador
+        // tiene que volver a confirmar el conjunto completo.
+        failedSingleWrites.delete(key);
+      }
       reportStorageWriteError(); return false;
     }
   });
@@ -553,7 +581,21 @@ export async function flushPendingSaves(): Promise<void> {
 }
 
 export async function flushPendingSavesChecked(): Promise<boolean> {
+  // Un fallo nuevo no se repite en bucle. Un intento posterior puede reparar
+  // exactamente los guardados fallidos anteriores antes de leer su base.
+  const retries = [...failedSingleWrites];
   await flushPendingSaves();
+  if (!unreadableLocalData) {
+    for (const [key, failed] of retries) {
+      if (failedSingleWrites.get(key) !== failed) continue;
+      if (failed.version !== accountAccessVersion || !canAccessKey(key) || failed.epoch !== (writeEpochs.get(key) ?? 0)) {
+        failedSingleWrites.delete(key);
+        continue;
+      }
+      await writeNow(key, JSON.parse(failed.json), failed.epoch);
+    }
+    await waitForInFlightWrites();
+  }
   return !unreadableLocalData && failedWriteKeys.size === 0;
 }
 
@@ -566,4 +608,6 @@ export function discardPendingSaves(): void {
   pendingTimers.clear();
   pendingValues.clear();
   pendingEpochs.clear();
+  failedSingleWrites.clear();
+  failedWriteKeys.clear();
 }

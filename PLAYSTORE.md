@@ -1,5 +1,18 @@
 # Lo que hay que rellenar en Play Console
 
+25/10/2026 — Recuperación de registros compartidos: nueva cola local cifrada
+`finzo:sharedMovementPending`, separada por cuenta. Conserva temporalmente UID,
+tipo e ID del espacio, ID del movimiento, moneda y los datos del registro
+(monto, fecha, descripción, método, categoría/notas y vínculo Personal cuando
+corresponde). Se guarda antes de enviar la operación existente y se retira
+al comprobar su resultado; un fallo conserva el pendiente para recuperarlo
+sin duplicar dinero. No añade proveedor, permiso, colección remota ni envío
+distinto del registro que la persona pidió. Entra en el archivo cifrado local
+por cuenta y en su limpieza al salir/borrar, no en el respaldo remoto Pro.
+El archivo local pasa a formato 4, compatible con los formatos 1–3.
+No se publica esta ficha ni se cambia la política/huella de aceptación aquí.
+Actualizar y verificar la declaración final antes de distribuir.
+
 21/10/2026 — Una meta puede conservar una marca por operación de gasto anulada
 (`funding.cancelledExpenses`) dentro de su registro financiero existente. Permite
 identificar el importe que volvió a estar disponible en Personal al borrar el

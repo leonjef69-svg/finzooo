@@ -53,7 +53,7 @@ function screen(network, cache = new Map(), detail = false) {
 }
 
 // La lista necesita saldos, no la nómina de miembros de la familia activa.
-// Consultar las demás familias no tiene que esperar la más lenta.
+// La elegida tiene prioridad; las demás se confirman después, sin bloquearla.
 {
   const active = gate(), other = gate(); let members = 0; const started = [];
   const network = { list: async () => [{ id: "f" }, { id: "g" }],
@@ -61,10 +61,12 @@ function screen(network, cache = new Map(), detail = false) {
     members: async () => { members++; return [{ uid: "A" }]; } };
   const h = screen(network), load = h.scope.reload(); await tick();
   assert.equal(members, 0, "la lista no descarga miembros que no se muestran");
-  assert.deepEqual(started.sort(), ["f", "g"], "ambas familias se consultan en paralelo");
-  other.resolve([{ id: "g-1", tipo: "ingreso", monto: 12 }]); await tick();
+  assert.deepEqual(started, ["f"], "la entrada activa no compite con historiales ajenos");
   assert.notEqual(h.state.FamiliasSincronizadas, true, "una lista parcial no autoriza corregir dinero Personal");
   active.resolve([{ id: "f-1", tipo: "ingreso", monto: 100 }]); await load; await tick();
+  assert.deepEqual(started, ["f", "g"]); assert.equal(h.state.SaldosFamilias.f, 100);
+  assert.notEqual(h.state.FamiliasSincronizadas, true, "mostrar el espacio activo no confirma el resto");
+  other.resolve([{ id: "g-1", tipo: "ingreso", monto: 12 }]); await tick();
   assert.equal(h.state.SaldosFamilias.f, 100); assert.equal(h.state.SaldosFamilias.g, 12);
   assert.equal(h.state.FamiliasSincronizadas, true); assert.equal(h.state.Actualizando, false);
   h.scope.listaFamiliasVisible.current = false;
@@ -153,4 +155,4 @@ for (const changed of ["uid", "session", "money"]) {
   other.resolve([]); await before; assert.equal(query(scope, work), after);
   forced.resolve([]); await after;
 }
-console.log("Recargas originales Familia/Cajas: una consulta en vuelo por cuenta/sesión/revisión, actualización manual nueva, lista sin miembros, saldos paralelos, fallos/consulta colgada y confirmaciones protegidos. IO/React adaptados, no dinero real.");
+console.log("Recargas originales Familia/Cajas: una consulta en vuelo por cuenta/sesión/revisión, actualización manual nueva, lista sin miembros, entrada activa prioritaria, fallos/consulta colgada y confirmaciones protegidos. IO/React adaptados, no dinero real.");

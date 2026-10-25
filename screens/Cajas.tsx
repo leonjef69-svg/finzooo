@@ -35,7 +35,8 @@ import {
   type RevisionImporteCaja,
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
-import { disponiblePersonalEnFecha } from "@/utils/finances";
+import { saldoLibrePersonalEnFecha } from "@/utils/finances";
+import { totalApartado } from "@/utils/ahorro";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
 import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
@@ -82,7 +83,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, cloudBackupEnabled, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, goals, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, cloudBackupEnabled, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const copiaCompartidaInicial = useRef(leerCajasCompartidasEnMemoria()).current;
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
@@ -123,9 +124,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [category, setCategory] = useState("otros");
   const [movementDate, setMovementDate] = useState(fechaLocal());
   const [notes, setNotes] = useState("");
+  const apartadoPersonal = useMemo(() => totalApartado(goals), [goals]);
   const saldoPersonalEn = useCallback((fecha: string) =>
-    disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared),
-  [budgets, transactions, carryoverCleared]);
+    saldoLibrePersonalEnFecha(fecha, budgets, transactions, carryoverCleared, apartadoPersonal),
+  [budgets, transactions, carryoverCleared, apartadoPersonal]);
   const hoyEnPantalla = fechaLocal();
   const disponibleHoy = useMemo(() => saldoPersonalEn(hoyEnPantalla), [saldoPersonalEn, hoyEnPantalla]);
   const disponibleMovimiento = useMemo(() => saldoPersonalEn(movementDate), [saldoPersonalEn, movementDate]);
@@ -1221,7 +1223,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <TouchableOpacity accessibilityLabel={t("common.cancel")} disabled={guardando} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
                 </View>
                 <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
-                <TextInput disableFullscreenUI editable={!guardando} value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <TextInput disableFullscreenUI editable={!guardando} autoComplete="off" importantForAutofill="no" value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
                 <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
                 {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}

@@ -16,7 +16,7 @@ import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
   const {
     t, fmt, userCurrency, userLanguage, monthNames, showToast, categoryBudgets,
-    categorySpent, updateCategoryBudgets, categoriasPropias,
+    categorySpent, updateCategoryBudgets, categoriasPropias, month,
   } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -46,9 +46,8 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
   const filteredCategories = categories.filter((category) =>
     t(category.label).toLocaleLowerCase().includes(normalizedSearch),
   );
-  const now = new Date();
-  const month = monthNames[now.getMonth()] ?? "";
-  const monthLabel = `${month.charAt(0).toLocaleUpperCase(userLanguage)}${month.slice(1)} ${now.getFullYear()}`;
+  const monthName = monthNames[month.m] ?? "";
+  const monthLabel = `${monthName.charAt(0).toLocaleUpperCase(userLanguage)}${monthName.slice(1)} ${month.y}`;
 
   function save() {
     const issue = Object.values(amounts).map((value) => amountInputError(value, userCurrency)).find(Boolean);

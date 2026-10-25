@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { irUnaVez } from "@/utils/nav";
 import { queueExport } from "@/utils/pendingExport";
 import { ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
@@ -47,6 +47,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const insets = useSafeAreaInsets();
 
   const [schedule, setSchedule] = useState<ScheduledExport>(DEFAULT_SCHEDULE);
+  const updateRequest = useRef(0);
   const [loaded, setLoaded] = useState(false);
   // Si el permiso de avisos está dado. Va al resumen del final: es la única
   // línea que la persona no controla desde aquí, y sin ella nada de lo demás
@@ -89,7 +90,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    */
   const [probando, setProbando] = useState(false);
   const [espacios, setEspacios] = useState<ExportSpace[]>([{ id: "personal", kind: "personal", name: t("spaces.personal"), currency: userCurrency, transactions }]);
-  const espacio = espacios.find((item) => item.id === (schedule.spaceId || "personal"));
+  const espacio = espacios.find((item) => item.id === (schedule.spaceId || "personal") && item.transactionsLoaded !== false);
   /** Mes usado únicamente por "Probar ahora" cuando la frecuencia es mensual. */
   const availableMonths = useMemo(() => {
     const months = new Set((espacio?.transactions ?? []).map((tx) => tx.date.slice(0, 7)));
@@ -132,15 +133,16 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     proximaProgramada().then((p) => alive && setProxima(p));
     return () => {
       alive = false;
+      updateRequest.current += 1;
     };
   }, []);
 
   useEffect(() => {
     let alive = true;
-    void cargarEspaciosExportables(transactions, userCurrency, t("spaces.personal"), t("spaces.family"), t("spaces.boxes"))
+    void cargarEspaciosExportables(transactions, userCurrency, t("spaces.personal"), t("spaces.family"), t("spaces.boxes"), schedule.spaceId || "personal")
       .then((lista) => { if (alive) setEspacios(lista); });
     return () => { alive = false; };
-  }, [transactions, userCurrency, t]);
+  }, [transactions, userCurrency, t, schedule.spaceId]);
 
   /**
    * Lo que se escribe en las casillas de la hora.
@@ -215,6 +217,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
       return;
     }
 
+    const request = ++updateRequest.current;
     setSchedule(next);
     saveSchedule(next);
 
@@ -231,10 +234,22 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     // fija en el momento de programarlo y se queda así: hay que elegirlo con lo
     // que se sabe ahora, no cuando suene.
     const saldraSolo = enFondo && (next.format !== "pdf" || pdfEnFondo);
-    const ok = await applySchedule(next, {
-      title: t("schedExport.notifTitle"),
-      body: t(saldraSolo ? "schedExport.notifBodyFondo" : "schedExport.notifBody"),
-    }, { notifyAtScheduledTime: !saldraSolo });
+    let ok: boolean;
+    try {
+      ok = await applySchedule(next, {
+        title: t("schedExport.notifTitle"),
+        body: t(saldraSolo ? "schedExport.notifBodyFondo" : "schedExport.notifBody"),
+      }, { notifyAtScheduledTime: !saldraSolo });
+    } catch {
+      if (request !== updateRequest.current) return;
+      setNotifOk(false);
+      const off = { ...next, enabled: false };
+      setSchedule(off);
+      saveSchedule(off);
+      showToast(t("schedExport.scheduleFailed"));
+      return;
+    }
+    if (request !== updateRequest.current) return;
     setNotifOk(ok);
 
     if (!ok) {
@@ -325,6 +340,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * — porque entonces eso es exactamente lo que va a pasar a la hora.
    */
   async function probarAhora() {
+    if (!espacio || probando) return;
     const mesDePrueba = schedule.frequency === "monthly" ? testMonth : undefined;
     if (!saleSolo) {
       const intent = queueExport({
@@ -334,13 +350,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
         destination: schedule.destination,
         fileName: nombreArchivo,
         spaceId: schedule.spaceId || "personal",
+        charts: schedule.charts,
         auto: true,
       });
       irUnaVez({ pathname: "/export-pdf", params: { intent } });
       return;
     }
 
-    if (probando) return;
     setProbando(true);
     showToast(t("schedExport.testRunning"));
     // Los ajustes se guardan agrupados con un retardo corto, y el trabajo de
@@ -1106,17 +1122,17 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 más. */}
             <TouchableOpacity
               onPress={probarAhora}
-              disabled={probando}
+              disabled={probando || !espacio}
               className={`w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] ${
-                probando
+                probando || !espacio
                   ? "border-slate-300 bg-slate-100 dark:border-noche-borde dark:bg-noche-2"
                   : "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
               }`}
             >
-              <Play size={17} color={probando ? "#94a3b8" : "#059669"} />
+              <Play size={17} color={probando || !espacio ? "#94a3b8" : "#059669"} />
               <Text
                 className={`font-extrabold ${
-                  probando ? "text-slate-400" : "text-emerald-700 dark:text-emerald-300"
+                  probando || !espacio ? "text-slate-400" : "text-emerald-700 dark:text-emerald-300"
                 }`}
               >
                 {t(probando ? "schedExport.testRunning" : "schedExport.testNow")}

@@ -45,7 +45,7 @@ const visiblePersonalMovement = handlerOriginal("utils/personalHistory.ts", "vis
 const filasDelReporte = handlerOriginal("utils/reporteArchivo.ts", "filasDelReporte", { catInfo, methodLabel, fmtDate }, read("utils/reporteArchivo.ts"));
 // Elige espacio/mes con las expresiones originales de la pantalla, no una
 // segunda implementación del selector. Solo se adapta useMemo (sin React).
-function seleccionDePantalla(espacios, espacioId, selectedMk, exportType) {
+function seleccionDePantalla(espacios, espacioId, selectedMk, exportType, historialCargando = false) {
   const file = "screens/ExportPdfSheet.tsx", sourceText = read(file);
   const source = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const wanted = ["espacio", "movimientosDelEspacio", "monthTx"], found = new Map();
@@ -61,8 +61,8 @@ function seleccionDePantalla(espacios, espacioId, selectedMk, exportType) {
   const code = ts.transpileModule(wanted.map(name => found.get(name)).join("\n"), {
     fileName: file, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
   }).outputText;
-  return new Function("espacios", "espacioId", "selectedMk", "exportType", "useMemo", "movimientosParaReporte", `${code}\nreturn { espacio, movimientosDelEspacio, monthTx };`)
-    (espacios, espacioId, selectedMk, exportType, fn => fn(), movimientosParaReporte);
+  return new Function("espacios", "espacioId", "selectedMk", "exportType", "historialCargando", "useMemo", "movimientosParaReporte", `${code}\nreturn { espacio, movimientosDelEspacio, monthTx };`)
+    (espacios, espacioId, selectedMk, exportType, historialCargando, fn => fn(), movimientosParaReporte);
 }
 function efectoAutomaticoOriginal(dependencies) {
   const file = "screens/ExportPdfSheet.tsx", sourceText = read(file);
@@ -364,7 +364,10 @@ for (const type of ["expense", "income"]) {
     loadJSON: async (key, fallback) => stored[key] ?? fallback, STORAGE_KEYS: keys,
     loadPrueba: async () => null, pruebaVigente: () => false, esDestinoAutomatico: () => true,
     isScheduledDay: () => true, claveDeEjecucion: () => "prueba", monthForSchedule: () => "2026-10",
-    cargarEspaciosExportables: async () => [espacioReal],
+    cargarEspaciosExportables: async (...args) => {
+      assert.equal(args[5], schedule.spaceId); assert.equal(args[6], false, "el automático no necesita el catálogo ajeno");
+      return [espacioReal];
+    },
     formateadorDelEspacio, translations, monthNamesFor,
     movimientosParaReporte,
     buildFileName: () => "ejemplo.pdf", toDateKey: () => "2026-10-14", File, Paths: { cache: "file:///fake" },
@@ -397,7 +400,10 @@ async function reporteDeEspacioEnFondo(spaceId, format = "pdf", type = "all", sp
     loadJSON: async (key, fallback) => { reads.push(key); return stored[key] ?? fallback; }, STORAGE_KEYS: keys,
     loadPrueba: async () => null, pruebaVigente: () => false, esDestinoAutomatico: () => true,
     isScheduledDay: () => true, claveDeEjecucion: () => "prueba", monthForSchedule: () => "2026-10",
-    cargarEspaciosExportables: async () => spaces, formateadorDelEspacio, translations, monthNamesFor, movimientosParaReporte,
+    cargarEspaciosExportables: async (...args) => {
+      assert.equal(args[5], schedule.spaceId); assert.equal(args[6], false, "cada automático pide solo el historial guardado en su programación");
+      return spaces;
+    }, formateadorDelEspacio, translations, monthNamesFor, movimientosParaReporte,
     buildFileName: () => file.fileName, toDateKey: () => "2026-10-22", File, Paths: { cache: "file:///fake" },
     htmlDelReporte, resumenFinanciero, filasDelReporte,
     htmlAPdfEnFondo: async value => { html = value; return "file:///fake/espacio.pdf"; },
@@ -446,6 +452,12 @@ for (const chosen of exportSpaces) for (const goals of goalCases) {
 const unavailable = await reporteDeEspacioEnFondo("box:ya-no-disponible");
 assert.equal(unavailable.result.resultado, "espacio-no-disponible", "un espacio ausente no se sustituye por Personal");
 assert.equal(unavailable.saved, 0);
+const unloadedSpaces = exportSpaces.map(space => ({ ...space, transactionsLoaded: false }));
+const unloaded = await reporteDeEspacioEnFondo("personal", "pdf", "all", unloadedSpaces);
+assert.equal(unloaded.result.resultado, "espacio-no-disponible", "un nombre sin historial confirmado no se exporta como un libro vacío");
+assert.equal(unloaded.saved, 0);
+assert.equal(seleccionDePantalla(unloadedSpaces, "personal", "2026-10", "all").espacio, undefined);
+assert.equal(seleccionDePantalla(exportSpaces, "personal", "2026-10", "all", true).espacio, undefined, "durante recarga no se usa la copia anterior");
 const goalsOnly = await reporteDeEspacioEnFondo("personal", "pdf", "all", [{ ...legacyPersonal, transactions: legacyReceipts }]);
 assert.equal(goalsOnly.result.resultado, "sin-movimientos", "los recibos antiguos solos no generan un archivo automático vacío");
 assert.equal(goalsOnly.saved, 0);

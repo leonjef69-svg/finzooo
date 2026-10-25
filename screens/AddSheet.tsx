@@ -321,6 +321,7 @@ export default function AddSheet({
   }
 
   function handleClose() {
+    if (submittingRef.current) return;
     exitAfterKeyboardHidden(onClose);
   }
 

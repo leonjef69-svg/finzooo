@@ -1,6 +1,6 @@
-import { flushPendingSaves, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
+import { flushPendingSavesChecked, loadJSON, saveJSON, saveJSONNow, STORAGE_KEYS } from "@/utils/storage";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
-import { mergeTransactions } from "@/utils/mergeTransactions";
+import { mergeCaptureLog, mergeTransactions } from "@/utils/mergeTransactions";
 import { negocioQueRecibeYapesSegunPlan, separarLoDelNegocio } from "@/utils/negocioCaptura";
 import type { MovimientoNegocio, Negocio, Producto } from "@/utils/negocio";
 import { loadPrueba, pruebaVigente } from "@/utils/pruebaPremium";
@@ -36,17 +36,17 @@ import type { Profile, Transaction } from "@/types";
  * utils/mergeTransactions): sin ella, la app pisaba esto al reabrirse.
  */
 /**
- * Donde se dejan los avisos ya sacados del buzon pero todavia sin registrar.
- *
- * Es la red debajo del trapecio: entre vaciar el buzon y guardar el
- * movimiento hay un momento en el que el yapeo no esta en ningun sitio, y en
- * un trabajo de fondo Android puede cortar justo ahi.
+ * Respaldo de los avisos reclamados que todavía no se confirmaron.
+ * El servicio actual retiene el lote hasta ackDrain; esta lista conserva
+ * además avisos de intentos anteriores para recuperarlos al volver a abrir.
  */
 const CLAVE_PENDIENTES = "finzo:capturaPendiente";
 
 export async function guardarPendientes(items: unknown[]): Promise<void> {
-  saveJSON(CLAVE_PENDIENTES, items);
-  await flushPendingSaves();
+  if (!await saveJSONNow(CLAVE_PENDIENTES, items)) throw new Error("capture-backup-not-persisted");
+  // Conservar también los cambios de Personal/Negocio que ya estaban en cola
+  // antes de leer la base a la que se añadirá esta captura.
+  if (!await flushPendingSavesChecked()) throw new Error("capture-source-not-persisted");
 }
 
 /**
@@ -68,20 +68,19 @@ export async function capturarEnFondo(): Promise<number> {
   // Si la función está apagada o Android quitó el permiso, no se toca nada.
   if (!notificationReader.isEnabled() || !notificationReader.isPermissionGranted()) return 0;
 
-  const captured = await notificationReader.drain();
+  const delBuzon = await notificationReader.drain();
+  const anteriores = await pendientesDeCaptura() as typeof delBuzon;
+  const captured = [...new Map([...anteriores, ...delBuzon].map(item => [
+    item.captureId || `${item.package}|${item.postedAt}|${item.title}|${item.text}`, item,
+  ])).values()];
   if (captured.length === 0) return 0;
 
   // LO PRIMERO: dejarlo a buen recaudo.
   //
-  // drain() VACIA el buzon del servicio. A partir de esta linea, lo capturado
-  // solo existe aqui, en memoria. Si algo falla despues —o Android mata el
-  // proceso a media faena, que es lo normal en un trabajo de fondo— el yapeo
-  // desaparece: ni registrado ni en el buzon. No queda ni rastro de que
-  // llego.
-  //
-  // Se guarda en una lista aparte antes de tocar nada, y se borra solo cuando
-  // ya esta registrado. Si el proceso muere entremedias, la app lo encuentra
-  // ahi la proxima vez que se abre.
+  // El servicio actual conserva su lote hasta ackDrain. El respaldo también
+  // conserva avisos de un intento anterior, incluso si ya no están en ese
+  // lote. No se sustituye por los avisos nuevos ni se confía en una escritura
+  // que solo haya quedado en cola.
   await guardarPendientes(captured);
 
   const [guardadas, learned, logPrevio, perfil, negocios, cajaGuardada, premiumCuenta, inicioPrueba, productos] = await Promise.all([
@@ -134,31 +133,21 @@ export async function capturarEnFondo(): Promise<number> {
     Array.isArray(productos) ? productos : []
   );
 
-  // El registro de lo visto se guarda siempre, aunque no se añada nada: es lo
-  // que permite saber después por qué un Yape no entró.
-  saveJSON(STORAGE_KEYS.autoCaptureLog, [...logPrevio, ...log].slice(-40));
-
-  if (personales.length > 0) {
-    saveJSON(STORAGE_KEYS.transactions, mergeTransactions(personales, guardadas));
-  }
-  if (delNegocio.length > 0) {
-    // Se escribe sobre lo que se acaba de leer del disco, no sobre una lista de memoria: aquí
-    // no hay app viva que tenga una lista. Ver la explicación de arriba del archivo.
-    saveJSON(STORAGE_KEYS.movimientosNegocio, [...caja, ...delNegocio]);
-  }
-
-  // ESTO NO SE PUEDE OLVIDAR. saveJSON no escribe al instante: deja el dato
-  // en cola y lo escribe un momento despues, para no castigar el disco cuando
-  // se tocan varias cosas seguidas. Aqui no hay ese "momento despues": el
-  // trabajo de fondo termina y Android mata el proceso. Sin esta linea, el
-  // yapeo se registraria en memoria y no llegaria nunca al disco.
-  // Ya esta guardado: se puede soltar el respaldo.
-  saveJSON(CLAVE_PENDIENTES, []);
-
-  // ESTO NO SE PUEDE OLVIDAR. saveJSON no escribe al instante: deja el dato
-  // en cola y lo escribe un momento despues. Aqui no hay ese "momento
-  // despues" — Android mata el proceso al terminar.
-  await flushPendingSaves();
+  // Cada destino debe confirmar su guardado antes de liberar el respaldo o
+  // el lote nativo. Esperar la cola antigua no comunicaba los fallos del disco.
+  // Si solo se guardó un destino, el siguiente intento vuelve a leerlo y
+  // reconoce captureId en Personal y avisoId en Negocio, sin repetir dinero.
+  const guardados = await Promise.all([
+    saveJSONNow(STORAGE_KEYS.autoCaptureLog, mergeCaptureLog(logPrevio, log).slice(-40)),
+    personales.length > 0
+      ? saveJSONNow(STORAGE_KEYS.transactions, mergeTransactions(personales, guardadas))
+      : Promise.resolve(true),
+    delNegocio.length > 0
+      ? saveJSONNow(STORAGE_KEYS.movimientosNegocio, [...caja, ...delNegocio])
+      : Promise.resolve(true),
+  ]);
+  if (guardados.some(ok => !ok)) throw new Error("capture-not-persisted");
+  if (!await saveJSONNow(CLAVE_PENDIENTES, [])) throw new Error("capture-backup-not-cleared");
   await notificationReader.ackDrain();
   return personales.length + delNegocio.length;
 }

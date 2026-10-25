@@ -159,7 +159,9 @@ vm.runInNewContext(ts.transpile(read("utils/mergeTransactions.ts"), {
   assert.equal(name, "@/utils/ordenarMovimientos");
   return orderExports;
 } });
-const scope = { ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, deletedGoalIdsRef: { current: [] }, goalWriteReserved: { current: false }, canonical: JSON.stringify, assertPrivateBoxMoneyLocalMutation() {}, deletedTransactionIdsRef: { current: [] }, transactionsLive: { current: a.transactions }, goalsLive: { current: a.goals }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
+const scope = { ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, deletedGoalIdsRef: { current: [] }, goalWriteReserved: { current: false },
+  paymentWriteReserved: { current: null }, paymentWritePublishing: { current: false }, pagosProgramadosLive: { current: a.pagosProgramados },
+  canonical: JSON.stringify, assertPrivateBoxMoneyLocalMutation() {}, deletedTransactionIdsRef: { current: [] }, transactionsLive: { current: a.transactions }, goalsLive: { current: a.goals }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
   setCloudSyncMeta() {}, setRespaldoFallo() {}, userEmail: "test@example.com", userCountry: "PE",
   saveJSON() {}, STORAGE_KEYS: {}, getFavoritos: () => [], ready: true, hasOnboarded: true,
 };
@@ -264,6 +266,7 @@ const localHydrate = { ...a, transactions: [transaction(1)], deletedTransactionI
   iconosFavoritos: [localPhoto, "Home"] };
 const remoteHydrate = { ...b, isPremium: true, transactions: [transaction(2), transaction(3)] };
 const hydrateScope = { ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, assertPrivateBoxMoneyLocalMutation() {}, setRespaldoFallo() {}, auth: { currentUser: { uid: "test" } }, localSessionVersion: { current: 1 },
+  paymentWriteReserved: { current: null }, pagosProgramadosLive: { current: localHydrate.pagosProgramados }, canonical: JSON.stringify,
   transactionsLive: { current: localHydrate.transactions }, goalsLive: { current: a.goals }, deletedGoalIdsRef: { current: [] },
   cloudFieldsRef: { current: localHydrate }, cloudSyncMetaRef: { current: deleteProof },
   deletedTransactionIdsRef: { current: localHydrate.deletedTransactionIds },

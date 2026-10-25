@@ -83,6 +83,7 @@ function walk(node) {
 walk(tree); assert.ok(effect);
 const intent = { current: false }, contextCalls = [];
 const context = { solicitarPermisoDePagos: intent, pagosProgramados: [payment], ready: true, hasOnboarded: true,
+  paymentWriteReserved: { current: null }, pagosProgramadosLive: { current: [payment] },
   userCurrency: "PEN", tRef: { current: translate }, fmt: value => String(value),
   STORAGE_KEYS: { pagosProgramados: "payments" }, saveJSON() {},
   paymentNotificationFormatter: () => value => String(value),

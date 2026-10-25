@@ -18,7 +18,7 @@ const OWNER_KEY = "finzo:localAccountOwner:v1";
 const PREFIX = "finzo:localAccountVault:v1:";
 type Owner = { uid: string; mode: "active" | "archived" };
 type Snapshot = { version: 1; uid: string; entries: [string, string | null][] };
-type StoredSnapshot = { version: 1 | 2 | 3; uid: string; entries: [string, string | null][] };
+type StoredSnapshot = { version: 1 | 2 | 3 | 4; uid: string; entries: [string, string | null][] };
 type Manifest = { version: 1; current: string; previous?: string };
 type PreparationOptions = { recoverUnidentifiedLegacyFor?: NonNullable<typeof auth.currentUser> };
 type ReadDetail = "owner" | "profile" | "active-block" | "manifest" | "snapshot-missing"
@@ -155,8 +155,9 @@ async function readSnapshot(uid: string): Promise<Snapshot | null> {
     const snapshot = JSON.parse(text) as StoredSnapshot;
     const expectedKeys = keys.filter(key =>
       (snapshot.version !== 1 || key !== STORAGE_KEYS.personalReturnPending) &&
-      (snapshot.version === 3 || key !== STORAGE_KEYS.businessDeleted));
-    if (![1, 2, 3].includes(snapshot.version) || snapshot.uid !== uid || !Array.isArray(snapshot.entries) || snapshot.entries.length !== expectedKeys.length) throw new Error();
+      (snapshot.version >= 3 || key !== STORAGE_KEYS.businessDeleted) &&
+      (snapshot.version >= 4 || key !== STORAGE_KEYS.sharedMovementPending));
+    if (![1, 2, 3, 4].includes(snapshot.version) || snapshot.uid !== uid || !Array.isArray(snapshot.entries) || snapshot.entries.length !== expectedKeys.length) throw new Error();
     detail = "snapshot-block";
     const seen = new Set<string>();
     const entries: Snapshot["entries"] = [];
@@ -178,6 +179,7 @@ async function readSnapshot(uid: string): Promise<Snapshot | null> {
     }
     if (snapshot.version === 1) entries.push([STORAGE_KEYS.personalReturnPending, null]);
     if (snapshot.version < 3) entries.push([STORAGE_KEYS.businessDeleted, null]);
+    if (snapshot.version < 4) entries.push([STORAGE_KEYS.sharedMovementPending, null]);
     return { version: 1, uid, entries };
   } catch { throw new LocalAccountVaultError("read", undefined, detail); }
 }
@@ -208,7 +210,7 @@ async function saveSnapshot(uid: string): Promise<void> {
     if (await AsyncStorage.getItem(ref) !== value) throw new LocalAccountVaultError("write");
     refs.push([key, ref]);
   }
-  const text = JSON.stringify({ version: 3, uid, entries: refs } satisfies StoredSnapshot);
+  const text = JSON.stringify({ version: 4, uid, entries: refs } satisfies StoredSnapshot);
   const raw = await encryptText(text);
   await AsyncStorage.setItem(generation, raw);
   if (await decryptText(await AsyncStorage.getItem(generation) ?? "") !== text) throw new LocalAccountVaultError("write");

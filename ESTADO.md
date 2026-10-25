@@ -1,5 +1,105 @@
 # Estado actual de Fino
 
+## Guardados, saldos y consultas — 25/10/2026 — integración en desarrollo
+
+Marca `25oct-guardados-saldos-consultas`, base `1955c268`. Correcciones de la
+auditoría autorizadas por el propietario; misma cuenta/emulador habitual.
+Telegram y tarjetas de crédito siguen excluidos. No publicar APK/OTA ni
+servicios de Firebase como consecuencia de esta integración JavaScript.
+
+Cambios financieros:
+
+- Alta/edición manual, boleta, dictado e importación confirman el lote local
+  antes de cerrar o anunciar éxito. Dictado/importación se confirman completos;
+  el fallo conserva el formulario. Una edición atrasada no revive un borrado
+  ni pisa una revisión posterior. Salir/cambiar de cuenta mientras guarda no
+  cierra otra pantalla ni publica avisos de la operación vieja.
+- Captura en segundo plano confirma respaldo, destinos y limpieza antes de
+  liberar el aviso nativo. Reintenta escrituras individuales vigentes sin
+  olvidar manuales fallidos; un lote financiero nunca se reintenta por claves
+  sueltas. Corrupción/llave o lectura ilegible siguen bloqueadas.
+- Aportes a Familia/Cajas usan el libre de Personal, descontando metas como
+  Inicio. No se cambia el cálculo antiguo que utiliza el módulo excluido.
+- Calendario confirma «Pagado», vínculo y movimiento en el mismo lote SQLite.
+  Fallo/reinicio no dejan solo una mitad ni anuncian éxito. Crear/editar/borrar
+  la definición del recordatorio conservan su guardado previo: este cambio
+  no acredita todo el CRUD como durable.
+- Registros nuevos compartidos tienen intención local cifrada antes de enviar.
+  Perder respuesta/reiniciar reutiliza el ID y comprobante del servidor; la
+  recuperación enlazada comprueba el débito Personal antes de retirar la cola.
+  Dos operaciones iguales deliberadas y ya confirmadas conservan IDs distintos.
+  Archivo por cuenta v4, lectura v1–3 y limpieza incluidos. No se despliega
+  servidor. Crear Familia con aporte inicial sigue fuera de esta cola;
+  devoluciones/conversión/edición conservan sus protocolos existentes.
+- Negocio conserva tres decimales en montos, cantidades, ventas, clasificación,
+  panel y comparativas. Los acumulados usan unidades enteras; también se probó
+  una cifra de 10.000 millones más 10.000 importes de 0,001. No se reescriben
+  registros antiguos que ya hubieran perdido precisión.
+
+Menos trabajo y otros fallos:
+
+- Elegir una Familia conocida descarga solo su historial/miembros; foco,
+  crear/unir/cerrar/actualizar mantienen comprobación global. La primera entrada
+  prioriza el grupo abierto antes de empezar los restantes; no concilia otras
+  Familias con copias parciales. Android no propone un teléfono como importe.
+- Exportación manual/programada separa catálogo y dinero: solo carga el
+  historial elegido; Personal no espera historiales remotos. La automática de
+  Personal no consulta espacios remotos. Un historial sin cargar o fallido
+  nunca se exporta como vacío ni se sustituye por Personal.
+- Selector mensual calcula saldos en una pasada con arrastres/cortes y reserva
+  de metas iguales. Presupuestos muestra el mes seleccionado, no el del reloj.
+- Respuestas antiguas no reconectan Dropbox ni borran una conexión nueva;
+  apagar/reprogramar exportación invalida respuestas anteriores. El aviso
+  antiguo conserva espacio y gráficos. El fallo de Android permite reintentar.
+- El cargador de las pruebas de servidor reconoce dependencias .js del repo
+  además de .ts/.tsx, sin cambiar reglas ni lógica de servidor.
+
+Evidencia sintética original, NO FPS: selección de ocho Familias 8→1 historias;
+selector de 120 meses/10.000 movimientos 2.263.530→18.180 lecturas de fecha;
+automática Personal 5→0 consultas; selector de cien Cajas 0 historias al abrir
+y 1 al elegir. Los casos nuevos fallan contra el código anterior. SQLite y
+procesos separados cubren fallos de disco, respuesta perdida y reinicio;
+React/puentes Android/red se adaptan en estas pruebas.
+
+Validación: TypeScript y ESLint generales sin errores; batería final completa
+de 276 pruebas y 8 auditores, tarjetas excluidas. Resolver de pruebas de servidor
+3/3 con Node 22; no se repitió aquí toda la integración Auth/Functions/Firestore.
+
+Emulador habitual Medium_Phone/5554, mismo APK de desarrollo y misma cuenta:
+marca nueva visible en Información; gasto manual nuevo de prueba S/3, Personal
+50→47, borrado confirmado y regreso a 50. Familia nueva «PRUEBA AUD 25OCT» sin
+saldo inicial, aporte Personal 5 (Personal 45/Familia 5), devolución 5, misma
+tarjeta recibido/devuelto, cierre con cero. Invitación llegó y habilitó
+Compartir/Copiar; no se envió a terceros. Navegación Cajas conserva WWW/S/1.
+No se volvió a realizar todo el CRUD de Cajas/Calendario en esta versión:
+las pruebas sintéticas de esos bloques no equivalen a ensayos físicos.
+
+Comprobación solo lectura: los 14 conjuntos financieros anteriores a recargar
+contienen los mismos valores tras cargar (el cifrado cambia al reescribir).
+Tras las operaciones, los 57 movimientos anteriores son idénticos, también los
+otros 17 conjuntos locales y espacios/historiales remotos originales. Hay dos
+comprobantes nuevos del aporte/devolución de prueba y una marca nueva del gasto
+de prueba borrado. No se restauró una copia ni se modificó un registro previo.
+
+La recarga de desarrollo presentó errores transitorios del compilador antes
+de volver a Personal. Se comprobó JavaScript válido, respuesta/cache iguales y
+motor nativo del APK coincidente con RN 0.81.5; causa raíz no demostrada. No se
+atribuyó a datos ni se modificaron Babel, APK o protección de capturas para
+ocultarlo. La app quedó operativa con la marca nueva. La primera consulta y
+generación del código de invitación aún muestran espera de red: NO se declara
+eliminado todo el lag ni se presentan los recorridos UIAutomator como FPS.
+
+Qué sigue/falta de la auditoría: medir y reducir la espera de primera consulta
+y código de invitación, ampliar recorridos Cajas/Calendario de esta versión;
+primera creación compartida ante respuesta
+incierta; extender guardado confirmado al resto de formularios/preferencias;
+ventana de filas realmente virtualizada (hoy acumula filas al deslizar);
+evitar sumar el libro completo en cada operación del servidor con un protocolo
+y migración comprobados; copia nativa de archivos grandes fuera del hilo de
+interfaz (requiere APK nuevo); medir FPS/arranque en producción y teléfono
+físico, dos participantes y proveedores externos. No retirar protecciones de
+dinero ni introducir migraciones para mostrar una mejora aparente.
+
 ## Entrada Familia/Cajas — 23/10/2026 — medición en emulador habitual
 
 Marca `23oct-entrada-espacios-sin-bloqueo`, base `72822ea2`. La lista de Cajas

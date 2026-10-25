@@ -280,7 +280,7 @@ type AppDataContextValue = {
 
   transactions: Transaction[];
   deletedTransactionIds: number[];
-  addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean, requireExisting?: boolean) => boolean;
+  addOrUpdateTransaction: (t: Transaction | Transaction[], allowLinkedTransferUpdate?: boolean, requireExisting?: boolean) => boolean | Promise<boolean>;
   recordPersonalReturn: (receipt: PersonalReturnReceipt) => boolean;
   deleteTransaction: (id: number) => Promise<boolean>;
   /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
@@ -293,7 +293,7 @@ type AppDataContextValue = {
   stagePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   readPrivateBoxMoneyLocal: () => { transactions: Transaction[]; deletedIds: number[]; currency: string };
   deleteTransactions: (ids: number[]) => Promise<boolean>;
-  commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => number;
+  commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => number | Promise<number>;
 
   merchantLearned: Record<string, string>;
   learnMerchantCategory: (merchantText: string, category: string) => void;
@@ -325,7 +325,7 @@ type AppDataContextValue = {
   pagosProgramados: PagoProgramado[];
   guardarPagoProgramado: (pago: PagoProgramado) => void;
   quitarPagoProgramado: (id: string) => void;
-  marcarPagoDelMes: (id: string, mes: string, pagado: boolean) => void;
+  marcarPagoDelMes: (id: string, mes: string, pagado: boolean) => Promise<boolean>;
   /** Cuántos avisos quedaron puestos en la última reprogramación. null = todavía no corrió. */
   avisosProgramados: number | null;
   /** Y por qué falló, si falló. Se enseña en pantalla: ver ResultadoDeProgramar. */
@@ -523,7 +523,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     goalsLive.current = next;
     setRenderedGoals(next);
   }, []);
-  const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
+  const [pagosProgramados, setRenderedPagosProgramados] = useState<PagoProgramado[]>([]);
+  const pagosProgramadosLive = useRef(pagosProgramados);
+  // La reserva dura solo el lote nativo y deja de proteger al cambiar sesión.
+  const paymentWriteReserved = useRef<(() => boolean) | null>(null);
+  const paymentWritePublishing = useRef(false);
+  const setPagosProgramados = useCallback((update: SetStateAction<PagoProgramado[]>) => {
+    const next = typeof update === "function" ? update(pagosProgramadosLive.current) : update;
+    if (paymentWriteReserved.current?.() && !paymentWritePublishing.current
+      && canonical(next) !== canonical(pagosProgramadosLive.current)) throw new Error("payment-write-reserved");
+    pagosProgramadosLive.current = next;
+    setRenderedPagosProgramados(next);
+  }, []);
   const pagosEnCurso = useRef(new Set<string>());
   // Intención de un toque en Guardar, no de recuperar pagos al iniciar/sincronizar.
   const solicitarPermisoDePagos = useRef(false);
@@ -753,6 +764,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const local = cloudFieldsRef.current ?? { ...datosParaLaNube(), pagosProgramados, iconosFavoritos };
     const before = (cloudFieldsRef.current ? cloudGroupValue(local, group) : fallback) as T;
     const after = update(before);
+    if (group === CLOUD_SYNC_GROUPS.payments && paymentWriteReserved.current?.() && !paymentWritePublishing.current
+      && canonical(after) !== canonical(pagosProgramadosLive.current)) throw new Error("payment-write-reserved");
     cloudSyncMetaRef.current = recordCloudGroupChange(cloudSyncMetaRef.current, group, before, after);
     // Disponible inmediatamente: una respuesta de red o un segundo toque
     // no pueden adelantarse al siguiente dibujado y pisar esta edición.
@@ -807,7 +820,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       merged = { ...mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud),
         transactions: records.transactions, deletedTransactionIds: records.deletedIds, goals: goalCopies.goals, deletedGoalIds: goalCopies.deletedIds,
         syncUpdatedAt: mergeMutationMetadata(records.metadata, goalCopies.metadata) };
+      if (paymentWriteReserved.current?.() && canonical(merged.pagosProgramados ?? []) !== canonical(pagosProgramadosLive.current)) throw new Error("payment-write-reserved");
     } catch (error) {
+      // Una escritura breve en curso aplaza la copia; no indica datos dañados.
+      if (error instanceof Error && ["payment-write-reserved", "private-box-source-changed"].includes(error.message)) return false;
       // Una copia mal formada no modifica la memoria ni la copia local.
       setRespaldoFallo(error instanceof Error && error.message === "record-origin-conflict"
         ? "movimientos-en-conflicto"
@@ -863,7 +879,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (changed(goalsLive.current, merged.goals)) setGoals(merged.goals);
     if (changed(deletedGoalIdsRef.current, merged.deletedGoalIds ?? [])) setDeletedGoalIds(merged.deletedGoalIds ?? []);
     return true;
-  }, [userEmail, userCountry, setUserCurrency, setTransactions, setDeletedTransactionIds, setGoals, setDeletedGoalIds]);
+  }, [userEmail, userCountry, setUserCurrency, setTransactions, setDeletedTransactionIds, setGoals, setDeletedGoalIds, setPagosProgramados]);
 
   /**
    * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
@@ -1008,6 +1024,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         iconosFavoritos: [...(local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:")), ...(merged.iconosFavoritos ?? [])],
       };
     }
+    // Comprobar antes de tocar cualquier otro campo de la copia recibida.
+    if (paymentWriteReserved.current?.() && canonical(cloud.pagosProgramados ?? []) !== canonical(pagosProgramadosLive.current)) throw new Error("payment-write-reserved");
     setUserName(cloud.userName);
     setUserPhoto(cloud.userPhoto);
     setUserCurrency(cloud.userCurrency);
@@ -2563,16 +2581,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function guardarPagoProgramado(pago: PagoProgramado) {
+    if (paymentWriteReserved.current?.()) {
+      const task = captureAccountTask(auth.currentUser?.uid ?? "");
+      void withLocalAccountOperation(async () => {
+        if (!task.current()) return;
+        guardarPagoProgramado(pago);
+        await task.wait(() => flushPendingSaves());
+      }).catch(() => { if (task.current()) showToast(t("toast.localSaveFailed")); });
+      return;
+    }
     solicitarPermisoDePagos.current = true;
-    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramados, (antes) =>
+    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramadosLive.current, (antes) =>
       antes.some((p) => p.id === pago.id)
-        ? antes.map((p) => (p.id === pago.id ? pago : p))
+        ? antes.map((p) => (p.id === pago.id ? { ...pago, pagados: p.pagados, movimientos: p.movimientos } : p))
         : [...antes, pago]
     ));
   }
 
   function quitarPagoProgramado(id: string) {
-    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramados,
+    if (paymentWriteReserved.current?.()) {
+      const task = captureAccountTask(auth.currentUser?.uid ?? "");
+      void withLocalAccountOperation(async () => {
+        if (!task.current()) return;
+        quitarPagoProgramado(id);
+        await task.wait(() => flushPendingSaves());
+      }).catch(() => { if (task.current()) showToast(t("toast.localSaveFailed")); });
+      return;
+    }
+    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramadosLive.current,
       (antes) => antes.filter((p) => p.id !== id)));
   }
 
@@ -2591,76 +2627,98 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    *
    * Un recordatorio no crea nada: `movimientoDelPago` devuelve null y aquí no se fuerza.
    */
-  function marcarPagoDelMes(id: string, mes: string, pagado: boolean) {
-    const currentPayments = cloudFieldsRef.current?.pagosProgramados ?? pagosProgramados;
-    const pago = currentPayments.find((p) => p.id === id);
-    if (!pago) return;
-    const operationKey = `${id}:${mes}`;
-    if (pagosEnCurso.current.has(operationKey)) return;
+  async function marcarPagoDelMes(id: string, mes: string, pagado: boolean): Promise<boolean> {
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!ready || !hasOnboarded || !task.current() || hasUnreadableLocalData() || Platform.OS !== "android"
+      || !/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return false;
+    const operationKey = JSON.stringify([owner, version, id, mes]);
+    if (pagosEnCurso.current.has(operationKey)) return false;
+    if (!pagosProgramadosLive.current.some(pago => pago.id === id)) return false;
     pagosEnCurso.current.add(operationKey);
-    setTimeout(() => pagosEnCurso.current.delete(operationKey), 700);
-
-    const movementId = pago.movimientos?.[mes];
-    const movementStillExists =
-      movementId != null && transactions.some((tx) => tx.id === movementId);
-    const mov = pagado ? movimientoDelPago(pago, mes, new Date()) : null;
-    const nextMovementId =
-      pagado && mov && !movementStillExists ? nextId() : movementId;
-    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, currentPayments, (antes) =>
-      antes.map((p) => {
-        if (p.id !== id) return p;
-        const marked = marcarPagado(p, mes, pagado);
-        // Al desmarcar se conserva el enlace y el gasto. Si vuelve a marcarlo,
-        // se reutiliza el mismo movimiento con sus notas y categoría.
-        if (!pagado) return marked;
-        if (nextMovementId == null) return marked;
-        return {
-          ...marked,
-          movimientos: { ...(p.movimientos ?? {}), [mes]: nextMovementId },
-        };
-      })
-    ));
-    if (!pagado) {
-      return;
-    }
-    if (movementStillExists || nextMovementId == null) return;
-    if (!mov) return;
-    addOrUpdateTransaction({
-      id: nextMovementId,
-      type: mov.type,
-      amount: mov.amount,
-      /**
-       * LA CATEGORÍA SALE DEL NOMBRE, CON EL MISMO CLASIFICADOR QUE LOS YAPES.
-       *
-       * **Esto era un fallo suyo del 19/08:** *"al agregarle un icono en agregar pago no
-       * viaja a las pantallas de inicio e historial"*. Y no podía viajar — en Inicio el
-       * dibujo de un movimiento sale de su CATEGORÍA, no de un icono propio, y aquí se
-       * estaba creando todo en "Otros".
-       *
-       * No se le puso un icono suelto al movimiento a propósito: los reportes, el PDF y los
-       * límites agrupan por categoría, así que un movimiento con dibujo pero sin categoría
-       * de verdad saldría bonito en Inicio y suelto en todo lo demás.
-       *
-       * Con el clasificador, "Netflix" cae en entretenimiento y "Luz" en servicios: el
-       * dibujo sale solo y además las cuentas del mes cuadran.
-       */
-      category:
-        pago.categoria || suggestCategory(pago.nombre, mov.type, merchantLearned),
-      date: mov.date,
-      time: mov.time,
-      method: "",
-      description: mov.description,
-      notes: "",
-      /**
-       * Y SU DIBUJO. Ver `Transaction.icono`: la categoría de arriba manda en las cuentas —
-       * reportes, PDF, límites— y esto solo en lo que se pinta en la fila.
-       *
-       * **Esta línea faltaba, y por eso él vio el fallo tres veces.** Se dio por puesta en el
-       * 19ago-08 y no llegó a aplicarse; el resto del camino —el campo en el tipo, el render
-       * en Inicio y en el Historial— sí estaba, así que todo parecía hecho y no se veía nada.
-       */
-      icono: pago.icono,
-    });
+    const confirmedAt = new Date();
+    // El mismo ID se conserva si el lote tiene que recomponerse por otra edición.
+    let newMovementId: number | undefined;
+    let newCreationId: string | undefined;
+    try {
+      const saved = await withLocalAccountOperation(async () => {
+        await task.wait(() => flushPendingSaves());
+        return saveJSONBatchNow([STORAGE_KEYS.pagosProgramados, STORAGE_KEYS.transactions,
+          STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cloudSyncMeta], async () => {
+          const [diskPayments, diskRows, diskDeleted, diskMeta, diskBoxes] = await task.wait(() => Promise.all([
+            loadJSON<PagoProgramado[]>(STORAGE_KEYS.pagosProgramados, []), loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
+            loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []), loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}),
+            loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS),
+          ]));
+          const basePayments = pagosProgramadosLive.current, base = transactionsLive.current;
+          const deleted = deletedTransactionIdsRef.current, metadata = cloudSyncMetaRef.current;
+          const local = cloudFieldsRef.current ?? datosParaLaNube(true);
+          const fields = mergeCloudFields({ ...local, pagosProgramados: basePayments, syncUpdatedAt: metadata },
+            { ...local, pagosProgramados: diskPayments, syncUpdatedAt: diskMeta });
+          const mergedPayments = fields.pagosProgramados ?? [];
+          const pago = mergedPayments.find(item => item.id === id);
+          if (!pago) throw new Error("calendar-payment-missing");
+          const source = mergeTransactionCopies(base, diskRows, deleted, diskDeleted, metadata, diskMeta);
+          const movementId = pago.movimientos?.[mes];
+          const movementStillExists = movementId != null && source.transactions.some(tx => tx.id === movementId);
+          const mov = pagado ? movimientoDelPago(pago, mes, confirmedAt) : null;
+          if (pagado && pago.tipo !== "recordatorio" && (!mov || !isSafeMoneyAmount(mov.amount) || mov.amount <= 0)) throw new Error("calendar-payment-invalid");
+          let upserts: Transaction[] = [];
+          let nextMovementId = movementId;
+          if (mov && !movementStillExists) {
+            newMovementId ??= nextId();
+            newCreationId ??= issuedCreationId(newMovementId) ?? randomUUID();
+            nextMovementId = newMovementId;
+            // La categoría alimenta las cuentas; el icono propio acompaña la fila.
+            upserts = [{ id: newMovementId, creationId: newCreationId, origin: "manual", type: mov.type, amount: mov.amount,
+              category: pago.categoria || suggestCategory(pago.nombre, mov.type, merchantLearned), date: mov.date, time: mov.time,
+              method: "", description: mov.description, notes: "", icono: pago.icono }];
+          }
+          const nextPayments = mergedPayments.map(item => {
+            if (item.id !== id) return item;
+            const marked = marcarPagado(item, mes, pagado);
+            // Desmarcar conserva el movimiento y su enlace, incluyendo sus ediciones.
+            return pagado && nextMovementId != null
+              ? { ...marked, movimientos: { ...(item.movimientos ?? {}), [mes]: nextMovementId } } : marked;
+          });
+          const paymentMeta = recordCloudGroupChange(mergeMutationMetadata(source.metadata, fields.syncUpdatedAt ?? {}),
+            CLOUD_SYNC_GROUPS.payments, mergedPayments, nextPayments);
+          const next = prepareTransactionMutation(source.transactions, source.deletedIds, paymentMeta, upserts, [], randomUUID, issuedCreationId);
+          const currency = currencyForReturn.current, boxes = leerCajasEnMemoria() ?? diskBoxes;
+          let reservation: PrivateBoxMoneyLocalWrite | undefined;
+          return {
+            entries: [[STORAGE_KEYS.pagosProgramados, nextPayments], [STORAGE_KEYS.transactions, next.transactions],
+              [STORAGE_KEYS.deletedTransactionIds, next.deletedIds], [STORAGE_KEYS.cloudSyncMeta, next.metadata]],
+            stillValid: () => task.current() && pagosProgramadosLive.current === basePayments && transactionsLive.current === base
+              && deletedTransactionIdsRef.current === deleted && cloudSyncMetaRef.current === metadata && currencyForReturn.current === currency,
+            reserve: () => {
+              if (paymentWriteReserved.current?.()) throw new Error("payment-write-reserved");
+              reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: base, deletedIds: deleted, currency, boxes });
+              paymentWriteReserved.current = task.current;
+              return () => { if (paymentWriteReserved.current === task.current) paymentWriteReserved.current = null; reservation?.release(); };
+            },
+            committed: () => {
+              if (!reservation) throw new Error("private-box-source-changed");
+              reservation.publish(() => {
+                paymentWritePublishing.current = true;
+                try {
+                  const latestMeta = mergeMutationMetadata(next.metadata, cloudSyncMetaRef.current);
+                  setPagosProgramados(nextPayments); setDeletedTransactionIds(next.deletedIds); setTransactions(next.transactions);
+                  cloudSyncMetaRef.current = latestMeta;
+                  cloudFieldsRef.current = { ...replaceCloudGroup(cloudFieldsRef.current ?? local, CLOUD_SYNC_GROUPS.payments, nextPayments),
+                    transactions: next.transactions, deletedTransactionIds: next.deletedIds, syncUpdatedAt: latestMeta, syncFormat: 2 };
+                  setCloudSyncMeta(latestMeta);
+                  if (canonical(latestMeta) !== canonical(next.metadata)) saveJSON(STORAGE_KEYS.cloudSyncMeta, latestMeta);
+                } finally { paymentWritePublishing.current = false; }
+              });
+            },
+          };
+        });
+      });
+      if (!saved && task.current()) showToast(t("toast.localSaveFailed"));
+      return saved && task.current();
+    } catch { if (task.current()) showToast(t("toast.localSaveFailed")); return false; }
+    finally { pagosEnCurso.current.delete(operationKey); }
   }
 
   /**
@@ -3104,69 +3162,81 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false, requireExisting = false) {
-    if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
-      showToast(t("toast.amountPositive"));
-      return false;
-    }
-    if (!isSafeMoneyAmount(t2.amount)) {
-      showToast(t("toast.amountTooLarge"));
-      return false;
-    }
-    const existing = transactionsLive.current.find((p) => p.id === t2.id);
-    if ((requireExisting && !existing) || deletedTransactionIdsRef.current.includes(t2.id)) {
-      showToast(t("common.missingTitle"));
-      return false;
-    }
-    // Los aportes/devoluciones ya tienen identidad remota propia. No añadir
-    // un UUID solo a la mitad local de una pareja guardada por el servidor.
-    // El módulo de tarjetas permanece fuera de esta modificación.
-    const creationId = t2.creationId ?? (t2.internalTransfer || t2.method === "credit-card-payment"
-      ? undefined : issuedCreationId(t2.id)) ?? existing?.creationId;
-    t2 = { ...t2, ...(creationId ? { creationId } : {}) };
-    if (existing) {
-      try {
-        // Solo la edición seleccionada del original vigente; no bautizar
-        // copias remotas ni tocar el módulo excluido de tarjetas.
-        if (existing.method !== "credit-card-payment" && t2.method !== "credit-card-payment") {
-          t2 = identityForExplicitEdit(existing, t2);
-        }
-        assertSameCreation(existing, t2);
-        if (!allowLinkedTransferUpdate) assertSameTransactionOrigin(existing, t2);
+  function addOrUpdateTransaction(input: Transaction | Transaction[], allowLinkedTransferUpdate = false, requireExisting = false) {
+    const candidates = Array.isArray(input) ? input : [input];
+    if (!candidates.length || new Set(candidates.map(row => row.id)).size !== candidates.length) return false;
+    // Se valida de nuevo dentro de la cola: una edicion/borrado/sincronizacion
+    // que llego mientras se guardaba no debe recrear ni pisar otro movimiento.
+    const prepare = (base: Transaction[], deleted: number[]): Transaction[] => candidates.map(candidate => {
+      let t2 = candidate;
+      if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
+        throw new Error("toast.amountPositive");
       }
-      catch { showToast(t("settings.backupMovementConflict")); return false; }
-    }
-    if (existing?.internalTransfer && !allowLinkedTransferUpdate) {
-      showToast(t("toast.transferEditBlocked"));
-      return false;
-    }
-    const isEdit = Boolean(existing);
-    // Un movimiento creado por un pago de tarjeta tiene su monto y fecha
-    // enlazados al registro de la tarjeta. Editarlos solo desde Inicio dejaría
-    // dos verdades distintas; esos campos se corrigen desde Tarjeta de crédito.
-    const safeTransaction: Transaction = {
-      ...(
-      existing?.method === "credit-card-payment"
-        ? {
-            ...t2,
-            type: existing.type,
-            amount: existing.amount,
-            date: existing.date,
-            time: existing.time,
-            method: existing.method,
+      if (!isSafeMoneyAmount(t2.amount)) {
+        throw new Error("toast.amountTooLarge");
+      }
+      const existing = base.find((p) => p.id === t2.id);
+      if ((requireExisting && !existing) || deleted.includes(t2.id)) {
+        throw new Error("common.missingTitle");
+      }
+      if (requireExisting && existing && (existing.updatedAt ?? 0) > (t2.updatedAt ?? 0)) {
+        throw new Error("settings.backupMovementConflict");
+      }
+      // Los aportes/devoluciones ya tienen identidad remota propia. No añadir
+      // un UUID solo a la mitad local de una pareja guardada por el servidor.
+      // El módulo de tarjetas permanece fuera de esta modificación.
+      const creationId = t2.creationId ?? (t2.internalTransfer || t2.method === "credit-card-payment"
+        ? undefined : issuedCreationId(t2.id)) ?? existing?.creationId;
+      t2 = { ...t2, ...(creationId ? { creationId } : {}) };
+      if (existing) {
+        try {
+          // Solo la edición seleccionada del original vigente; no bautizar
+          // copias remotas ni tocar el módulo excluido de tarjetas.
+          if (existing.method !== "credit-card-payment" && t2.method !== "credit-card-payment") {
+            t2 = identityForExplicitEdit(existing, t2);
           }
-        : t2
-      ),
-      ...(existing?.hiddenFromHistory === true && existing.internalTransfer ? { hiddenFromHistory: true } : {}),
-      updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1),
-    };
-    setTransactions((prev) =>
-      isEdit
-        ? prev.map((p) => (p.id === safeTransaction.id ? safeTransaction : p))
-        : [safeTransaction, ...prev],
-    );
-    showToast(isEdit ? t("toast.transactionUpdated") : t("toast.transactionSaved"));
-    return true;
+          assertSameCreation(existing, t2);
+          if (!allowLinkedTransferUpdate) assertSameTransactionOrigin(existing, t2);
+        }
+        catch { throw new Error("settings.backupMovementConflict"); }
+      }
+      if (existing?.internalTransfer && !allowLinkedTransferUpdate) {
+        throw new Error("toast.transferEditBlocked");
+      }
+      // Un movimiento creado por un pago de tarjeta tiene su monto y fecha
+      // enlazados al registro de la tarjeta. Editarlos solo desde Inicio dejaría
+      // dos verdades distintas; esos campos se corrigen desde Tarjeta de crédito.
+      const safeTransaction: Transaction = {
+        ...(
+        existing?.method === "credit-card-payment"
+          ? {
+              ...t2,
+              type: existing.type,
+              amount: existing.amount,
+              date: existing.date,
+              time: existing.time,
+              method: existing.method,
+            }
+          : t2
+        ),
+        ...(existing?.hiddenFromHistory === true && existing.internalTransfer ? { hiddenFromHistory: true } : {}),
+        updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1),
+      };
+      return safeTransaction;
+    });
+    let prepared: Transaction[];
+    try { prepared = prepare(transactionsLive.current, deletedTransactionIdsRef.current); }
+    catch (error) { showToast(t(error instanceof Error ? error.message : "toast.localSaveFailed")); return false; }
+    const isEdit = candidates.length === 1 && transactionsLive.current.some(row => row.id === candidates[0].id);
+    const owner = auth.currentUser?.uid, version = localSessionVersion.current;
+    // El mismo lote comprobado de borrados/devoluciones guarda filas y marcas.
+    // No se publica memoria, se cierra la hoja ni se anuncia exito antes de eso.
+    return commitTransactionMutation(prepared, [], [], [], prepare).then(saved => {
+      if (owner !== auth.currentUser?.uid || version !== localSessionVersion.current) return false;
+      if (!saved) { showToast(t("toast.localSaveFailed")); return false; }
+      if (candidates.length === 1) showToast(isEdit ? t("toast.transactionUpdated") : t("toast.transactionSaved"));
+      return true;
+    });
   }
 
   // Agrega varios movimientos de golpe (importación de estados de cuenta)
@@ -3181,15 +3251,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const creationId = row.creationId ?? issuedCreationId(row.id);
       return creationId ? { ...row, creationId } : row;
     });
-    const result = applyImportedTransactions(transactionsLive.current, newRows, toReplace, deletedTransactionIdsRef.current);
-    if (result.count === 0) return 0;
-    setTransactions(result.transactions);
-    showToast(
-      t(result.count > 1 ? "importSheet.doneToastPlural" : "importSheet.doneToast", {
-        count: result.count,
-      })
-    );
-    return result.count;
+    let count = 0;
+    const prepare = (base: Transaction[], deleted: number[]): Transaction[] => {
+      const result = applyImportedTransactions(base, newRows, toReplace, deleted);
+      count = result.count;
+      const existingIds = new Set(base.map(row => row.id));
+      const replacedIds = new Set(toReplace.map(row => row.id));
+      return result.transactions.filter(row => replacedIds.has(row.id) || !existingIds.has(row.id));
+    };
+    const initial = prepare(transactionsLive.current, deletedTransactionIdsRef.current);
+    if (!count) return 0;
+    const owner = auth.currentUser?.uid, version = localSessionVersion.current;
+    return commitTransactionMutation(initial, [], [], [], prepare).then(saved => {
+      if (owner !== auth.currentUser?.uid || version !== localSessionVersion.current) throw new Error("account-task-expired");
+      if (!saved) throw new Error("local-save-failed");
+      if (count) showToast(t(count > 1 ? "importSheet.doneToastPlural" : "importSheet.doneToast", { count }));
+      return count;
+    });
   }
 
   // Guarda que un comercio va en una categoría, para futuras importaciones.
@@ -3198,7 +3276,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       (prev) => learnCategory(merchantText, category, prev)));
   }
 
-  async function commitTransactionMutation(upserts: Transaction[], ids: number[], historyIds: number[] = [], legacyReturnIds: number[] = []): Promise<boolean> {
+  async function commitTransactionMutation(upserts: Transaction[], ids: number[], historyIds: number[] = [], legacyReturnIds: number[] = [],
+    prepareUpserts?: (rows: Transaction[], deletedIds: number[]) => Transaction[]): Promise<boolean> {
     if (!upserts.length && !ids.length && !historyIds.length && !legacyReturnIds.length) return true;
     const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
     const task = captureAccountTask(owner, () => version === localSessionVersion.current);
@@ -3235,7 +3314,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             if (legacyReturnIds.some(id => !legacyEligible.has(id))) throw new Error("history-return-changed");
           }
           const historyChanges = historyIds.length ? preparePersonalHistoryRemoval(source.transactions, historyIds) : [];
-          const preserved = upserts.map(row => source.transactions.some(prior => prior.id === row.id && prior.internalTransfer && prior.hiddenFromHistory === true)
+          const preparedUpserts = prepareUpserts ? prepareUpserts(source.transactions, source.deletedIds) : upserts;
+          const preserved = preparedUpserts.map(row => source.transactions.some(prior => prior.id === row.id && prior.internalTransfer && prior.hiddenFromHistory === true)
             ? { ...row, hiddenFromHistory: true } : row);
           const next = prepareTransactionMutation(source.transactions, source.deletedIds, nextGoals?.metadata ?? source.metadata, [...preserved, ...historyChanges], [...ids, ...legacyReturnIds], randomUUID, issuedCreationId);
           const currency = currencyForReturn.current, boxes = leerCajasEnMemoria() ?? diskBoxes;

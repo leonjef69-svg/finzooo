@@ -20,6 +20,7 @@ import DuplicateReview from "@/screens/DuplicateReview";
 import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
 import { isImportTooLarge } from "@/utils/importLimits";
+import { getAccountStorageSession } from "@/utils/storage";
 
 /**
  * La extensión que le toca a un documento de Google ya convertido.
@@ -134,6 +135,8 @@ export default function ImportSheet({
     useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [bank, setBank] = useState<string | undefined>(undefined);
@@ -157,6 +160,7 @@ export default function ImportSheet({
   const [reviewing, setReviewing] = useState(false);
   const [done, setDone] = useState(false);
   const [importedTotal, setImportedTotal] = useState(0);
+  const [saving, setSaving] = useState(false);
   const importLock = useRef(false);
 
   const iconMuted = colorScheme === "dark" ? "#94a3b8" : "#475569";
@@ -437,9 +441,12 @@ export default function ImportSheet({
   }
 
   // Aplica un conjunto de decisiones y guarda todo de una vez.
-  function applyResolutions(resolutions: Map<number, Resolution>) {
-    if (importLock.current) return;
+  async function applyResolutions(resolutions: Map<number, Resolution>) {
+    if (importLock.current || !mounted.current) return false;
+    const session = getAccountStorageSession();
+    const current = () => mounted.current && getAccountStorageSession() === session;
     importLock.current = true;
+    setSaving(true);
     try {
       const toAdd: Transaction[] = [];
       const toReplace: Transaction[] = [];
@@ -456,14 +463,17 @@ export default function ImportSheet({
         }
       }
 
-      const total = commitImport(toAdd, toReplace);
+      const total = await commitImport(toAdd, toReplace);
+      if (!current()) return false;
       setImportedTotal(total);
       setReviewing(false);
       setDone(true);
+      return true;
     } catch {
-      importLock.current = false;
-      setReviewing(false);
-      showToast(t("importSheet.applyFailed"));
+      if (current()) { importLock.current = false; showToast(t("importSheet.applyFailed")); }
+      return false;
+    } finally {
+      if (current()) setSaving(false);
     }
   }
 
@@ -475,6 +485,7 @@ export default function ImportSheet({
   }
 
   function reset() {
+    if (importLock.current) return;
     importLock.current = false;
     setFileName(null);
     setCandidates([]);
@@ -485,6 +496,10 @@ export default function ImportSheet({
     setDone(false);
   }
 
+  function close() {
+    if (!importLock.current || done) onClose();
+  }
+
   // --- Pantalla de revisión de duplicados (Fase 5) ---
   if (reviewing) {
     return (
@@ -492,7 +507,8 @@ export default function ImportSheet({
         dupes={dupes}
         newCount={newOnes.length}
         onFinish={applyResolutions}
-        onCancel={() => setReviewing(false)}
+        saving={saving}
+        onCancel={() => { if (!importLock.current) setReviewing(false); }}
         onLearn={learnMerchantCategory}
       />
     );
@@ -500,7 +516,7 @@ export default function ImportSheet({
 
   return (
     <View className="absolute inset-0 z-40 justify-end">
-      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} disabled={saving} onPress={close} />
       <View
         className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{ paddingBottom: 32 + insets.bottom, maxHeight: "88%" }}
@@ -513,7 +529,8 @@ export default function ImportSheet({
             {t("importSheet.title")}
           </Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
-            onPress={onClose}
+            onPress={close}
+            disabled={saving}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color={iconMuted} />
@@ -689,6 +706,7 @@ export default function ImportSheet({
             <View className="flex-row gap-3">
               <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} hitSlop={6}
                 onPress={reset}
+                disabled={saving}
                 className="w-12 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center justify-center"
               >
                 <X size={18} color={iconMuted} />
@@ -696,13 +714,14 @@ export default function ImportSheet({
               {dupes.length > 0 && (
                 <TouchableOpacity
                   onPress={() => setReviewing(true)}
+                  disabled={saving}
                   className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center"
                 >
                   <Text className="font-bold text-slate-600 dark:text-slate-200">{t("importSheet.reviewButton")}</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={importAll} className="flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center">
-                <Text className="font-bold text-white">{dupes.length > 0 ? t("importSheet.importNew", { count: candidates.length - dupes.length }) : t("importSheet.importAll")}</Text>
+              <TouchableOpacity onPress={importAll} disabled={saving} className="flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center">
+                {saving ? <ActivityIndicator color="#ffffff" /> : <Text className="font-bold text-white">{dupes.length > 0 ? t("importSheet.importNew", { count: candidates.length - dupes.length }) : t("importSheet.importAll")}</Text>}
               </TouchableOpacity>
             </View>
           </ScrollView>

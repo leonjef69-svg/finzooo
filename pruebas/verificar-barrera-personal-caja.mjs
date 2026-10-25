@@ -166,6 +166,7 @@ function ownFunction(name) {
   const { e, api } = harness(), old = await api.loadCloudData("A");
   await api.withPrivateBoxMoneyReview("A", async () => { e.local.revisionesImporte = [clone(review)]; });
   const scope = { ...api, auth: { currentUser: { uid: "A" } }, cloudFieldsRef: { current: personalData([personal]) },
+    paymentWriteReserved: { current: null }, pagosProgramadosLive: { current: [] },
     localSessionVersion: { current: 1 }, tRef: { current: key => key }, setRespaldoFallo() {},
     loadCloudData: async () => old, isPremiumDeLaCuenta: true };
   vm.createContext(scope); vm.runInContext(ownFunction("applyNewerCloudFields") + "\nglobalThis.apply = applyNewerCloudFields;", scope);

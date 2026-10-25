@@ -23,6 +23,8 @@ function arrow(file, name, context) {
   let remote = 0, saved = false, commits = 0, announced = 0;
   const wait = action => action(); wait.reload = async () => {};
   const context = {
+    accountUid: "A", hayMovimientoCompartidoPendiente: async () => false, recuperarPendiente: async () => false,
+    nuevaOperacionMovimientoCompartido: () => ({ movementId: "form-operation", currency: "PEN" }), confirmarMovimientoCompartido: async () => true,
     pendingDebit: { current: null }, auth: { currentUser: { uid: "A" } }, familia: { id: "family", nombre: "Casa", currency: "PEN" },
     owner: true, userCurrency: "PEN", origenDinero: "personal", tipo: "ingreso", monto: "10", movimientos: [], transactions: [],
     editandoAporteId: null, movementDate: "2026-10-15", descripcion: "Aporte", category: "otros", notes: "", method: "transfer",
@@ -71,6 +73,7 @@ function arrow(file, name, context) {
 }
 {
   const auth = { currentUser: { uid: "A" } }, calls = [];
+  let journal = [];
   let generated = 0, offline = true;
   const task = handlerOriginal("utils/accountTask.ts", "captureAccountTask", { auth, getAccountStorageSession: () => 1 });
   const module = { exports: {} };
@@ -78,8 +81,12 @@ function arrow(file, name, context) {
     module, exports: module.exports, require: name => {
       if (name === "@/utils/firebase") return { auth, db: {}, functions: {} };
       if (name === "@/utils/accountTask") return { captureAccountTask: task };
-      if (name === "@/utils/storage") return { getAccountStorageSession: () => 1 };
-      if (name === "firebase/firestore") return { collection: () => ({}), doc: () => ({ id: `operation-${++generated}` }) };
+      if (name === "@/utils/storage") return { getAccountStorageSession: () => 1,
+        hasUnreadableLocalData: () => false, STORAGE_KEYS: { sharedMovementPending: "pending" },
+        loadJSON: async () => structuredClone(journal), saveJSONNow: async (_key, value) => { journal = structuredClone(value); return true; } };
+      if (name === "@/utils/amount") return { isSafeMoneyAmount: Number.isFinite };
+      if (name === "firebase/firestore") return { collection: () => ({}), doc: (...args) => ({ id: args.length === 1 ? `operation-${++generated}` : args.at(-1) }),
+        getDocFromServer: async () => ({ exists: () => true, data: () => ({ currency: "PEN" }), metadata: { fromCache: false, hasPendingWrites: false } }) };
       if (name === "firebase/functions") return { httpsCallable: () => async input => {
         calls.push(input.movementId);
         if (offline) throw Object.assign(new Error("lost-response"), { code: "functions/unavailable" });

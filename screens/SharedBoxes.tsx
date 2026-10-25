@@ -22,7 +22,8 @@ import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
 import { irUnaVez } from "@/utils/nav";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
-import { disponiblePersonalEnFecha } from "@/utils/finances";
+import { saldoLibrePersonalEnFecha } from "@/utils/finances";
+import { totalApartado } from "@/utils/ahorro";
 import { nextId } from "@/utils/id";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
@@ -34,6 +35,7 @@ import { withImmediateRemoval } from "@/utils/immediateRemoval";
 import { spaceDeletionNotice } from "@/utils/spaceDeletionNotice";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { devolverAportePersonal } from "@/utils/personalReturn";
+import { confirmarMovimientoCompartido, hayMovimientoCompartidoPendiente, nuevaOperacionMovimientoCompartido, recuperarMovimientoCompartido } from "@/utils/sharedMovements";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Check, ListChecks, LogOut, Pencil, Plus, RefreshCw, Trash2, UserPlus, UsersRound, X } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, confirmarCajaAbierta, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, renombrarCajaCompartida, salirDeCaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
@@ -47,10 +49,11 @@ export default function SharedBoxes(props: SharedBoxesProps) {
 }
 
 function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes }: SharedBoxesProps & { uid: string }) {
-  const { t, monthNames, userCurrency, isPremium, showToast, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, monthNames, userCurrency, isPremium, showToast, budgets, carryoverCleared, transactions, goals, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const apartadoPersonal = useMemo(() => totalApartado(goals), [goals]);
   const saldoPersonalEn = useCallback((fecha: string) =>
-    disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared),
-  [budgets, transactions, carryoverCleared]);
+    saldoLibrePersonalEnFecha(fecha, budgets, transactions, carryoverCleared, apartadoPersonal),
+  [budgets, transactions, carryoverCleared, apartadoPersonal]);
   const insets = useSafeAreaInsets();
   const [caja, setCaja] = useState<CajaCompartida | null>(initialBox);
   const owner = caja?.ownerUid === uid;
@@ -68,6 +71,8 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const [notes, setNotes] = useState("");
   const [origenDinero, setOrigenDinero] = useState<"externo" | "personal">("externo");
   const pendingDebit = useRef<{ confirm: () => Promise<boolean> } | null>(null);
+  const recoveryTried = useRef(new Set<string>());
+  const recoveryAction = useRef<(target: CajaCompartida) => Promise<void>>(async () => {});
   const [filter, setFilter] = useState<MovementFilter>(null);
   const [seleccionando, setSeleccionando] = useState(false);
   const [movementLimit, setMovementLimit] = useState(60);
@@ -275,6 +280,31 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       }
     }
   }
+  async function recuperarPendiente(target: CajaCompartida): Promise<boolean> {
+    return recuperarMovimientoCompartido("box", target.id, uid, target.currency, async pending => {
+      const item = pending.movement;
+      return repairLinkedTransferTransactions([{
+        id: item.personalTransactionId!, type: "expense", amount: item.monto, category: "otros", date: item.fecha,
+        time: horaDe(pending.createdAt), method: "transfer", description: t("boxes.transferTo", { name: target.nombre }),
+        notes: item.notes || "", origin: "manual", internalTransfer: "box", internalTransferLink: pending.movementId,
+        internalTransferSpaceId: target.id, internalTransferSpaceName: target.nombre,
+      }]);
+    });
+  }
+  recoveryAction.current = async target => {
+    const task = captureAccountTask(uid, () => mounted.current && selectedBoxId.current === target.id
+      && getAccountStorageSession() === accountSession && !lock.current);
+    const pending = await task.wait(() => hayMovimientoCompartidoPendiente("box", target.id, uid));
+    if (pending && task.current()) await ejecutar(async wait => { await wait(() => recuperarPendiente(target)); });
+  };
+  useEffect(() => {
+    if (!caja || busy || recoveryTried.current.has(caja.id)) return;
+    const target = caja;
+    recoveryTried.current.add(target.id);
+    void recoveryAction.current(target).catch(error => {
+      if (mounted.current && getAccountStorageSession() === accountSession) errorRef.current(error);
+    });
+  }, [accountSession, caja, busy]);
   const invitar = () => ejecutar(async wait => {
     if (!uid || !caja || !owner) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
@@ -297,6 +327,8 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       pendingDebit.current = null; limpiar(); return;
     }
     if (caja && (modo === "ingreso" || modo === "gasto")) {
+      if (await hayMovimientoCompartidoPendiente("box", caja.id, uid)
+        && await wait(() => recuperarPendiente(caja))) { showToast(t("spaces.pendingMovementRecovered")); return; }
       const issue = amountInputError(monto, moneda);
       if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
       const valor = parseAmountInput(monto, moneda); if (valor <= 0) return;
@@ -319,6 +351,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       if (desdePersonal && moneda !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
       if (desdePersonal && valor > saldoPersonalEn(movementDate)) { showToast(t("boxes.notEnoughPersonal")); return; }
       const personalTransactionId = desdePersonal ? nextId() : undefined;
+      const operation = nuevaOperacionMovimientoCompartido("box", caja.id, moneda);
       let movementId: string | undefined;
       const confirm = async () => {
         try {
@@ -326,20 +359,22 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
             tipo: modo, monto: valor, descripcion: nombre.trim().slice(0, 60), fecha: movementDate,
             ...(desdePersonal ? {} : { category }), notes: notes.trim(), method: desdePersonal ? "transfer" : method,
             ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}),
-          }));
+          }, operation));
         } catch (error) {
-          if (typeof (error as { details?: { reason?: unknown } })?.details?.reason === "string") pendingDebit.current = null;
+          if (typeof (error as { details?: { reason?: unknown } })?.details?.reason === "string"
+            || error instanceof Error && error.message === "shared-operation-pending") pendingDebit.current = null;
           throw error;
         }
         if (personalTransactionId != null) {
           const debit = { id: personalTransactionId, type: "expense", amount: valor, category: "otros", date: movementDate,
             time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: caja.nombre }), notes: notes.trim(),
             origin: "manual", internalTransfer: "box", internalTransferLink: movementId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre } as const;
-          return personalTask.wait(() => repairLinkedTransferTransactions([debit]));
+          if (!await personalTask.wait(() => repairLinkedTransferTransactions([debit]))) return false;
+          return personalTask.wait(() => confirmarMovimientoCompartido(movementId!, uid));
         }
         return true;
       };
-      if (personalTransactionId != null) pendingDebit.current = { confirm };
+      pendingDebit.current = { confirm };
       if (!await wait(confirm)) throw new Error("personal-save-failed");
       pendingDebit.current = null;
     }

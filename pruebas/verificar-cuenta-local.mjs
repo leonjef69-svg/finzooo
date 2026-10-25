@@ -47,6 +47,9 @@ await scenario(`
   await AsyncStorage.setItem("@fino/credit-v1", JSON.stringify({ cards: [{ id: "legacy-A" }] }));
   const pendingReturn = { uid: "A", payload: { kind: "family", spaceId: "f", amount: 40, personalTransactionId: 100 } };
   await saveJSONNow(STORAGE_KEYS.personalReturnPending, pendingReturn);
+  const pendingMovement = [{ version: 1, uid: "A", kind: "family", spaceId: "f", movementId: "intent-a", currency: "PEN",
+    movement: { tipo: "ingreso", monto: 10, descripcion: "Prueba", fecha: "2026-10-24", personalTransactionId: 101, personalOwnerUid: "A" } }];
+  await saveJSONNow(STORAGE_KEYS.sharedMovementPending, pendingMovement);
   const businessDeleted = { negocios: ["n-A"], productos: [], ventas: ["v-A"], movimientos: [] };
   await saveJSONNow(STORAGE_KEYS.businessDeleted, businessDeleted);
   const name = { id: "name-A", uid: "A", boxId: "box-A", local: { id: "box-A", nombre: "Viaje", creadaEn: 1, updatedAt: 10 }, remoto: { id: "box-A", nombre: "Vacaciones", creadaEn: 1, updatedAt: 10 }, elegido: { id: "box-A", nombre: "Viaje", creadaEn: 1, updatedAt: 20 }, creadoEn: 20, estado: "pendiente" };
@@ -60,6 +63,7 @@ await scenario(`
   assert.equal(await prepareLocalAccount("B", "b@example.com"), false);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [], "B nunca recibe gastos de A");
   assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null, "B nunca recibe la orden de devolución de A");
+  assert.equal(await loadJSON(STORAGE_KEYS.sharedMovementPending, null), null, "B nunca recibe la operación compartida de A");
   assert.equal(await loadJSON(STORAGE_KEYS.businessDeleted, null), null, "B no recibe marcas de Negocio de A");
   assert.equal(await loadJSON(STORAGE_KEYS.cajasDinero, null), null, "B nunca recibe los nombres de Cajas conservados de A");
   await seed("B", "b@example.com", 90);
@@ -69,6 +73,7 @@ await scenario(`
   assert.equal(await prepareLocalAccount("A", "a@example.com"), true);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 60, amount: 60 }], "A recupera también el último guardado pendiente");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.personalReturnPending, null), pendingReturn, "A recupera su devolución interrumpida al volver a entrar");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.sharedMovementPending, null), pendingMovement, "A recupera su intención compartida al volver a entrar");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.businessDeleted, null), businessDeleted, "A recupera sus marcas de Negocio sin reabrir borrados");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.cajasDinero, null), privateBoxes, "A recupera los dos nombres y la elección pendiente al iniciar sesión de nuevo");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.categoryCustom, {}), { photo: "foto-privada-A" });
@@ -79,7 +84,7 @@ await scenario(`
     assert.ok(raw.startsWith("v2:"));
     assert.ok(!raw.includes("foto-privada"));
     const copy = JSON.parse(await decryptText(raw));
-    if (copy.version === 3 && copy.entries) assert.equal(copy.entries.length, new Set(ACCOUNT_STORAGE_KEYS).size, "inventario completo");
+    if (copy.version === 4 && copy.entries) assert.equal(copy.entries.length, new Set(ACCOUNT_STORAGE_KEYS).size, "inventario completo");
   }
   await deleteLocalAccountVault("B");
   assert.ok(!(await AsyncStorage.getAllKeys()).some(k => k.includes("localAccountVault:v1:B:")));
@@ -128,6 +133,9 @@ await scenario(`
   await prepareLocalAccount("A", "a@example.com");
   failNextStorageOperation("set", STORAGE_KEYS.transactions);
   assert.equal(await saveJSONNow(STORAGE_KEYS.transactions, [{ id: 70, amount: 70 }]), false);
+  // El disco sigue fallando también al reintentar durante el cierre. Un
+  // fallo transitorio reparado ya no debe fingirse como pérdida permanente.
+  failNextStorageOperation("set", STORAGE_KEYS.transactions);
   await assert.rejects(archiveLocalAccount("A", "a@example.com"), /local-account-write/);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 50, amount: 50 }]);
   await resumeLocalAccount("A");
@@ -140,6 +148,17 @@ await scenario(`
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 70, amount: 70 }], "copia espera también guardados que ya estaban en vuelo");
 `);
 
+await scenario(`
+  await seed("retry", "retry@example.com", 50);
+  await prepareLocalAccount("retry", "retry@example.com");
+  failNextStorageOperation("set", STORAGE_KEYS.transactions);
+  assert.equal(await saveJSONNow(STORAGE_KEYS.transactions, [{ id: 71, amount: 71 }]), false);
+  await archiveLocalAccount("retry", "retry@example.com");
+  await clearAccountData();
+  await prepareLocalAccount("retry", "retry@example.com");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 71, amount: 71 }], "el cierre repara un fallo transitorio y archiva el valor confirmado, no el antiguo");
+`);
+
 const context = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
 await scenario(`
   await seed("legacy", "legacy@example.com", 123);
@@ -149,7 +168,7 @@ await scenario(`
   const manifest = JSON.parse(await decryptText(await AsyncStorage.getItem(manifestKey)));
   const snapshot = JSON.parse(await decryptText(await AsyncStorage.getItem(manifest.current)));
   snapshot.version = 1;
-  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.personalReturnPending && key !== STORAGE_KEYS.businessDeleted);
+  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.personalReturnPending && key !== STORAGE_KEYS.businessDeleted && key !== STORAGE_KEYS.sharedMovementPending);
   await AsyncStorage.setItem(manifest.current, await encryptText(JSON.stringify(snapshot)));
   await clearAccountData();
   await prepareLocalAccount("legacy", "legacy@example.com");
@@ -163,7 +182,7 @@ await scenario(`
   const manifest = JSON.parse(await decryptText(await AsyncStorage.getItem("finzo:localAccountVault:v1:v2:manifest")));
   const snapshot = JSON.parse(await decryptText(await AsyncStorage.getItem(manifest.current)));
   snapshot.version = 2;
-  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.businessDeleted);
+  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.businessDeleted && key !== STORAGE_KEYS.sharedMovementPending);
   await AsyncStorage.setItem(manifest.current, await encryptText(JSON.stringify(snapshot)));
   await clearAccountData();
   await prepareLocalAccount("v2", "v2@example.com");
@@ -177,6 +196,20 @@ await scenario(`
   await assert.rejects(prepareLocalAccount("B", "b@example.com"), /local-account-owner/);
   const original = await AsyncStorage.getItem(STORAGE_KEYS.transactions);
   assert.deepEqual(JSON.parse(await decryptText(original)), [{ id: 50, amount: 50 }]);
+`);
+await scenario(`
+  await seed("v3", "v3@example.com", 789);
+  await prepareLocalAccount("v3", "v3@example.com");
+  await archiveLocalAccount("v3", "v3@example.com");
+  const manifest = JSON.parse(await decryptText(await AsyncStorage.getItem("finzo:localAccountVault:v1:v3:manifest")));
+  const snapshot = JSON.parse(await decryptText(await AsyncStorage.getItem(manifest.current)));
+  snapshot.version = 3;
+  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.sharedMovementPending);
+  await AsyncStorage.setItem(manifest.current, await encryptText(JSON.stringify(snapshot)));
+  await clearAccountData();
+  await prepareLocalAccount("v3", "v3@example.com");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 789, amount: 789 }], "copia v3 sigue abriendo al añadir intención compartida");
+  assert.equal(await loadJSON(STORAGE_KEYS.sharedMovementPending, null), null);
 `);
 const login = fs.readFileSync("app/login.tsx", "utf8");
 assert.match(context, /await archiveLocalAccount[\s\S]*?await signOut\(auth\)/);

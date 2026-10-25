@@ -17,7 +17,7 @@ globalThis.__finoExportFixture = fixture;
 const mocks = {
   "@/utils/firebase": "export const auth = globalThis.__finoExportFixture.auth;",
   "@/utils/cajas": "export const CAJAS_VACIAS = {cajas:[],movimientos:[]};",
-  "@/utils/storage": "export const STORAGE_KEYS={cajasDinero:'cajas'}; export async function loadJSON(){return globalThis.__finoExportFixture.local;}",
+  "@/utils/storage": "export const STORAGE_KEYS={cajasDinero:'cajas'}; export const getAccountStorageSession=()=>1; export async function loadJSON(){return globalThis.__finoExportFixture.local;}",
   "@/utils/cloudFamilia": `export async function cargarFamiliaActiva(){return globalThis.__finoExportFixture.family;}
     export async function listarMovimientosFamilia(){if(globalThis.__finoExportFixture.failFamily) throw Error('offline');return globalThis.__finoExportFixture.familyMovements;}`,
   "@/utils/cloudCajasCompartidas": `export async function listarCajasCompartidas(){return globalThis.__finoExportFixture.shared;}
@@ -34,23 +34,23 @@ const module = { exports: {} };
 new Function("module", "exports", "require", result.outputFiles[0].text)(module, module.exports, require);
 const { cargarEspaciosExportables, resumenFinanciero } = module.exports;
 try {
-  const spaces = await cargarEspaciosExportables([], "PEN", "Personal", "Familia", "Caja");
-  const family = spaces.find(s => s.kind === "family");
+  const selected = async id => (await cargarEspaciosExportables([], "PEN", "Personal", "Familia", "Caja", id)).find(s => s.id === id);
+  const family = await selected("family:f1");
   assert.equal(family.currency, "USD", "No reetiquetar dólares como soles personales");
-  for (const kind of ["family", "box", "sharedBox"]) {
-    const tx = spaces.find(s => s.kind === kind).transactions[0];
+  for (const [kind, id] of [["family", "family:f1"], ["box", "box:c1"], ["sharedBox", "sharedBox:s1"]]) {
+    const tx = (await selected(id)).transactions[0];
     assert.equal(tx.category, "comida", kind);
     assert.equal(tx.notes, "Compartido", kind);
     assert.equal(tx.amount, 15);
     assert.equal(tx.method, "cash");
   }
-  assert.equal(spaces.find(s => s.kind === "sharedBox").currency, "EUR");
+  assert.equal((await selected("sharedBox:s1")).currency, "EUR");
   assert.equal(family.transactions[1].category, "otros");
   assert.equal(family.transactions[1].notes, "");
   assert.equal(family.transactions[2].internalTransfer, "family");
   assert.equal(resumenFinanciero(family, "2026-10", {}, []).income, 0);
   fixture.failFamily = true;
-  assert.ok(!(await cargarEspaciosExportables([], "PEN", "P", "F", "C")).some(s => s.kind === "family"));
+  assert.ok(!(await cargarEspaciosExportables([], "PEN", "P", "F", "C", "family:f1")).some(s => s.kind === "family"));
 } finally {
   delete globalThis.__finoExportFixture;
 }

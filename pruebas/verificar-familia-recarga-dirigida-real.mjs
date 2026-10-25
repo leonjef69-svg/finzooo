@@ -53,6 +53,9 @@ function harness() {
     amountInputError: () => null, parseAmountInput: Number, validSpaceDate: () => true, saldoPersonalEn: () => 1000,
     tipo: "gasto", monto: "5", descripcion: "Gasto", category: "otros", notes: "", method: "cash", movementDate: "2026-10-23",
     editandoAporteId: null, origenDinero: "externo", nextId: () => 55,
+    hayMovimientoCompartidoPendiente: async () => false,
+    nuevaOperacionMovimientoCompartido: () => ({ id: "synthetic-operation", currency: "PEN" }),
+    confirmarMovimientoCompartido: async () => true,
     guardarMovimientoFamilia: async (id, uid, movement) => { network.writes++; remote[id] = [...remote[id], { ...movement, id: "nuevo", creadoEn: 5, creadoPor: uid }]; return "nuevo"; },
     devolverAportePersonal: async request => {
       network.writes++; const item = { id: "devuelto", tipo: "gasto", monto: request.amount, personalTransactionId: 500, personalOwnerUid: "A",

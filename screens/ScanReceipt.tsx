@@ -26,6 +26,7 @@ import { parseReceipt, type ReceiptRead } from "@/utils/receiptParser";
 import { isValidISODate, normalizeDateInput } from "@/utils/date";
 import type { Transaction } from "@/types";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { getAccountStorageSession } from "@/utils/storage";
 
 /** Hoy en formato interno, en hora local. */
 function todayISO(): string {
@@ -44,6 +45,8 @@ type Kind = "expense" | "income";
 export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   const { t, fmt, merchantLearned, addOrUpdateTransaction, userCurrency, showToast } = useAppData();
   const insets = useSafeAreaInsets();
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const [stage, setStage] = useState<Stage>("intro");
   const [read, setRead] = useState<ReceiptRead | null>(null);
@@ -140,8 +143,10 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
     setStage("review");
   }
 
-  function save() {
-    if (saveLock.current) return;
+  async function save() {
+    if (saveLock.current || !mounted.current) return;
+    const session = getAccountStorageSession();
+    const current = () => mounted.current && getAccountStorageSession() === session;
     const amount = parseAmountInput(amountText, userCurrency);
     if (amount <= 0) return;
     const iso = normalizeDateInput(date);
@@ -164,11 +169,12 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
         merchant: merchant || undefined,
         origin: "manual",
       };
-      addOrUpdateTransaction(transaction);
-      onClose();
+      const saved = await addOrUpdateTransaction(transaction);
+      if (!current()) return;
+      if (saved) onClose();
+      else saveLock.current = false;
     } catch {
-      saveLock.current = false;
-      showToast(t("toast.localSaveFailed"));
+      if (current()) { saveLock.current = false; showToast(t("toast.localSaveFailed")); }
     }
   }
 

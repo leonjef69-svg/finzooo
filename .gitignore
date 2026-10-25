@@ -64,3 +64,15 @@ modules/*/android/.cxx/
 # para siempre. Diez entregas serian 1,6 GB que se bajan enteros en cada clon.
 # Ver ENTREGAS.md: se comparten como archivo, no por aqui.
 *.apk
+
+# Diagnosticos privados y caches locales: contienen respaldos/datos de pruebas,
+# no fuentes de la app. No deben entrar en commit/push ni en las entregas.
+/.tmp/
+/.android-user/
+/.gradle-cache/
+/.pnpm-store/
+/output/
+/pruebas/.tmp-*/
+/firestore-debug.log
+/firebase-debug.log
+/ui-debug.log

@@ -365,11 +365,14 @@ export default function Home({
     setAvisoCalendarioSeleccionado(null);
   }
 
-  function confirmarAvisoCalendario() {
+  async function confirmarAvisoCalendario() {
     const aviso = avisoCalendarioSeleccionado;
     if (!aviso) return;
     const { pago, mes } = aviso;
-    marcarPagoDelMes(pago.id, mes, true);
+    let saved = false;
+    try { saved = await marcarPagoDelMes(pago.id, mes, true); }
+    catch { showToast(t("toast.localSaveFailed")); }
+    if (!saved) return;
     showToast(
       pago.tipo === "pago"
         ? pago.monto != null

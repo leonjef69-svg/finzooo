@@ -30,7 +30,10 @@ const ui = read("screens/AutoCapture.tsx");
 assert.doesNotMatch(ui, /stats\.lastPackage|stats\.ultimasApps/);
 const context = read("contexts/AppDataContext.tsx");
 assert.match(context, /saveJSONNow\(STORAGE_KEYS\.autoCaptureLog/);
-assert.match(read("utils/storage.ts"), /const encrypted = await encryptText\(JSON.stringify\(value\)\)/);
+const storage = read("utils/storage.ts");
+const immediateWrite = storage.slice(storage.indexOf("async function saveJSONNowUntracked"), storage.indexOf("export type PreparedLocalBatch"));
+assert.match(immediateWrite, /encryptText\(JSON.stringify\(value\)\)|json = JSON.stringify\(value\);[\s\S]*?encryptText\(json\)/,
+  "el guardado inmediato debe cifrar el mismo JSON que se intenta escribir, también cuando se conserva para reintentar");
 assert.match(read("utils/autoCapture.ts"), /const MAX_LOG = 40/);
 assert.doesNotMatch(read("utils/cloudSync.ts"), /autoCaptureLog/);
 assert.equal(JSON.parse(read("app.json")).expo.android.allowBackup, false);

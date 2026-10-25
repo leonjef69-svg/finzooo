@@ -16,7 +16,7 @@ import { saldoLibre, totalApartado } from "@/utils/ahorro";
 import { fmtExact as formatAmount, horaDe } from "@/utils/format";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
-import { loadJSON, STORAGE_KEYS } from "@/utils/storage";
+import { getAccountStorageSession, loadJSON, STORAGE_KEYS } from "@/utils/storage";
 import type { Goal, Transaction } from "@/types";
 
 export type ExportSpaceKind = "personal" | "family" | "box" | "sharedBox";
@@ -27,6 +27,8 @@ export type ExportSpace = {
   name: string;
   currency: string;
   transactions: Transaction[];
+  /** false identifica un nombre del selector cuyo historial aún no se pidió. */
+  transactionsLoaded?: boolean;
 };
 
 export type ExportFinancialSummary = {
@@ -86,8 +88,10 @@ function movimientoCajaPrivada(item: MovimientoCaja): Transaction {
 }
 
 /**
- * Carga cada bolsillo por separado. Si un espacio remoto no está disponible,
- * no se mezcla ni se reemplaza por Personal: simplemente no se ofrece.
+ * El selector necesita nombres, no todos los historiales. Solo se lee el
+ * dinero del espacio elegido; una exportación sin pantalla tampoco necesita
+ * cargar el catálogo de los demás. Un fallo remoto nunca usa Personal como
+ * sustituto ni se interpreta como un historial vacío confirmado.
  */
 export async function cargarEspaciosExportables(
   personal: Transaction[],
@@ -95,51 +99,72 @@ export async function cargarEspaciosExportables(
   personalLabel: string,
   familyLabel: string,
   boxLabel: string,
+  selectedSpaceId = "personal",
+  incluirCatalogo = true,
 ): Promise<ExportSpace[]> {
+  const session = getAccountStorageSession();
+  const uid = auth.currentUser?.uid;
+  const comprobarSesion = () => {
+    if (getAccountStorageSession() !== session || auth.currentUser?.uid !== uid) throw new Error("export-session-changed");
+  };
   const espacios: ExportSpace[] = [{
     id: "personal",
     kind: "personal",
     name: personalLabel,
     currency: userCurrency,
     transactions: personal,
+    transactionsLoaded: true,
   }];
 
-  const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
+  if (!incluirCatalogo && selectedSpaceId === "personal") return espacios;
+
+  const local = incluirCatalogo || selectedSpaceId.startsWith("box:")
+    ? await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS) : CAJAS_VACIAS;
+  comprobarSesion();
   for (const caja of local.cajas) {
+    const elegida = selectedSpaceId === `box:${caja.id}`;
+    if (!incluirCatalogo && !elegida) continue;
     espacios.push({
       id: `box:${caja.id}`,
       kind: "box",
       name: caja.nombre || boxLabel,
       currency: userCurrency,
-      transactions: local.movimientos
+      transactions: elegida ? local.movimientos
         .filter((item) => item.cajaId === caja.id)
-        .map(movimientoCajaPrivada),
+        .map(movimientoCajaPrivada) : [],
+      transactionsLoaded: elegida,
     });
   }
 
-  const uid = auth.currentUser?.uid;
   if (!uid) return espacios;
 
   const [familia, cajasCompartidas] = await Promise.all([
-    cargarFamiliaActiva(uid).catch(() => null),
-    listarCajasCompartidas(uid).catch(() => []),
+    incluirCatalogo || selectedSpaceId.startsWith("family:") ? cargarFamiliaActiva(uid).catch(() => null) : null,
+    incluirCatalogo || selectedSpaceId.startsWith("sharedBox:") ? listarCajasCompartidas(uid).catch(() => []) : [],
   ]);
+  comprobarSesion();
 
   if (familia) {
-    const movimientos = await listarMovimientosFamilia(familia.id).catch(() => null);
-    if (movimientos) {
+    const elegida = selectedSpaceId === `family:${familia.id}`;
+    const movimientos = elegida ? await listarMovimientosFamilia(familia.id).catch(() => null) : [];
+    comprobarSesion();
+    if (movimientos && (incluirCatalogo || elegida)) {
       espacios.push({
         id: `family:${familia.id}`,
         kind: "family",
         name: familia.nombre || familyLabel,
         currency: familia.currency,
         transactions: movimientos.map((item) => movimientoCompartido("family", item, "family")),
+        transactionsLoaded: elegida,
       });
     }
   }
 
   const compartidas = await Promise.all(cajasCompartidas.map(async (caja) => {
-    const movimientos = await listarMovimientosCajaCompartida(caja.id).catch(() => null);
+    const elegida = selectedSpaceId === `sharedBox:${caja.id}`;
+    if (!incluirCatalogo && !elegida) return null;
+    const movimientos = elegida ? await listarMovimientosCajaCompartida(caja.id).catch(() => null) : [];
+    comprobarSesion();
     if (!movimientos) return null;
     return {
       id: `sharedBox:${caja.id}`,
@@ -147,8 +172,10 @@ export async function cargarEspaciosExportables(
       name: caja.nombre || boxLabel,
       currency: caja.currency || userCurrency,
       transactions: movimientos.map((item) => movimientoCompartido("sharedBox", item, "box")),
+      transactionsLoaded: elegida,
     };
   }));
+  comprobarSesion();
   espacios.push(...compartidas.filter((item) => item !== null));
   return espacios;
 }
@@ -160,6 +187,7 @@ export function resumenFinanciero(
   carryoverCleared: string[],
   goals: Goal[] = [],
 ): ExportFinancialSummary {
+  if (espacio.transactionsLoaded === false) throw new Error("export-space-not-loaded");
   const delMes = espacio.transactions.filter((item) => item.date.startsWith(mes));
   if (espacio.kind === "personal") {
     const expenses = sumAmounts(delMes.filter((item) => item.type === "expense" && !item.internalTransfer));

@@ -11,9 +11,9 @@ import { useAppData } from "@/contexts/AppDataContext";
 export default function SavingsExpenseSheet({ needed, free, onCancel, onConfirm, onExpenseOnly }: {
   needed: number; free: number; onCancel: () => void;
   onConfirm: (allocations: { goalId: number; amount: number }[]) => Promise<boolean>;
-  onExpenseOnly: () => void;
+  onExpenseOnly: () => Promise<boolean> | boolean | void;
 }) {
-  const { goals, fmt, t, userCurrency, isPremium } = useAppData();
+  const { goals, fmt, t, userCurrency, isPremium, showToast } = useAppData();
   const [values, setValues] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false), lock = useRef(false);
   const available = goals.filter(goal => goal.saved > 0);
@@ -38,10 +38,15 @@ export default function SavingsExpenseSheet({ needed, free, onCancel, onConfirm,
         </View>)}
         {isPremium && <TouchableOpacity disabled={!valid || busy} onPress={async () => {
           if (lock.current || !valid) return; lock.current = true; setBusy(true);
-          try { await onConfirm(allocations); } finally { lock.current = false; setBusy(false); }
+          try { await onConfirm(allocations); } catch { showToast(t("toast.localSaveFailed")); }
+          finally { lock.current = false; setBusy(false); }
         }} className={`items-center rounded-xl bg-violet-600 p-3 ${!valid || busy ? "opacity-40" : ""}`}><Text className="text-center font-bold text-white">{t("savings.expenseConfirm")}</Text></TouchableOpacity>}
         <Text className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.expenseWarning")}</Text>
-        <TouchableOpacity disabled={busy} onPress={onExpenseOnly} className="items-center p-3"><Text className="text-center text-sm font-bold text-slate-600 dark:text-slate-200">{t("savings.expenseOnly")}</Text></TouchableOpacity>
+        <TouchableOpacity disabled={busy} onPress={async () => {
+          if (lock.current) return; lock.current = true; setBusy(true);
+          try { await onExpenseOnly(); } catch { showToast(t("toast.localSaveFailed")); }
+          finally { lock.current = false; setBusy(false); }
+        }} className="items-center p-3"><Text className="text-center text-sm font-bold text-slate-600 dark:text-slate-200">{t("savings.expenseOnly")}</Text></TouchableOpacity>
         <TouchableOpacity disabled={busy} onPress={onCancel} className="items-center p-3"><Text className="font-bold text-slate-500 dark:text-slate-300">{t("common.cancel")}</Text></TouchableOpacity>
       </ScrollView>
     </View>

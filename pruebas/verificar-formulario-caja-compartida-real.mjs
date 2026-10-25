@@ -33,6 +33,9 @@ function boxForm() {
     repairLinkedTransferTransactions: async rows => { debits.push(...rows); return !s.rejectLocal; },
     limpiar: () => { s.cleaned = (s.cleaned || 0) + 1; }, showToast: message => notices.push(message), t: key => key,
     setEditandoAporteId() {},
+    hayMovimientoCompartidoPendiente: async () => false,
+    nuevaOperacionMovimientoCompartido: () => ({ id: "synthetic-operation", currency: "PEN" }),
+    confirmarMovimientoCompartido: async () => true,
   };
   s.captureAccountTask = handlerOriginal("utils/accountTask.ts", "captureAccountTask", { auth: { currentUser: { uid: "A" } }, getAccountStorageSession: () => 1 });
   run(`${original("components/SpaceMovementFields.tsx", "validSpaceDate")}\n${original("screens/SharedBoxes.tsx", "guardar")}\nglobalThis.save=guardar;`, s);

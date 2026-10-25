@@ -71,21 +71,32 @@ const deps = { ...merge, ...recordOriginOriginal(), issuedCreationId: x.issuedCr
   goalsLive: { current: [goal(originA)] }, deletedTransactionIdsRef: { current: [] }, deletedGoalIdsRef: { current: [] }, goalWriteReserved: { current: false },
   isPremium: true, isSafeMoneyAmount: () => true, metaConEstadoActual: value => value,
   showToast: key => messages.push(key), t: key => key, setTransactions: update => writes.push(update), setGoals: update => writes.push(update),
+  auth: { currentUser: { uid: "ficticio" } }, localSessionVersion: { current: 1 },
+};
+deps.commitTransactionMutation = async (upserts, _ids, _history, _legacy, prepare) => {
+  const rows = prepare ? prepare(deps.transactionsLive.current, deps.deletedTransactionIdsRef.current) : upserts;
+  deps.setTransactions(() => rows);
+  return true;
 };
 const saveMovement = handlerOriginal("contexts/AppDataContext.tsx", "addOrUpdateTransaction", deps, read("contexts/AppDataContext.tsx"));
 const saveGoal = handlerOriginal("contexts/AppDataContext.tsx", "addOrUpdateGoal", deps, read("contexts/AppDataContext.tsx"));
 assert.equal(saveMovement(other), false);
 assert.equal(saveGoal(goal(originB)), false);
 assert.deepEqual(writes, [], "colisión en alta/edición no cambia la lista ni se presenta como éxito");
-assert.equal(saveMovement({ ...first, amount: 15 }), true);
+assert.equal(await saveMovement({ ...first, amount: 15 }), true);
 assert.equal(saveGoal({ ...goal(originA), name: "Editada" }), true);
 assert.equal(writes.length, 2);
-assert.equal(saveMovement({ ...first, creationId: undefined, amount: 15 }), true,
+assert.equal(await saveMovement({ ...first, creationId: undefined, amount: 15 }), true,
   "un formulario de edición conserva la identidad guardada, no crea otra");
 deps.transactionsLive.current = []; deps.goalsLive.current = [];
 const brandNew = a.nextId(), input = { ...movement(undefined), id: brandNew };
 const addDeps = { ...deps, issuedCreationId: a.issuedCreationId, setTransactions: update => {
   const rows = update([]); assert.equal(rows[0].creationId, a.issuedCreationId(brandNew));
 } };
-assert.equal(handlerOriginal("contexts/AppDataContext.tsx", "addOrUpdateTransaction", addDeps, read("contexts/AppDataContext.tsx"))(input), true);
+addDeps.commitTransactionMutation = async (upserts, _ids, _history, _legacy, prepare) => {
+  const rows = prepare ? prepare(addDeps.transactionsLive.current, addDeps.deletedTransactionIdsRef.current) : upserts;
+  addDeps.setTransactions(() => rows);
+  return true;
+};
+assert.equal(await handlerOriginal("contexts/AppDataContext.tsx", "addOrUpdateTransaction", addDeps, read("contexts/AppDataContext.tsx"))(input), true);
 console.log("Originales/IO adaptado: máximo común y reloj fijo no fuerzan mismo ID; colisión numérica forzada conserva copias manuales/metas, edición misma identidad válida, agotamiento falla cerrado. Android pendiente.");

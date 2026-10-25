@@ -4,7 +4,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
-import { guardarMovimientoCompartido, borrarMovimientoCompartido } from "@/utils/sharedMovements";
+import { guardarMovimientoCompartido, borrarMovimientoCompartido, type SharedMovementOperation } from "@/utils/sharedMovements";
 import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
@@ -189,10 +189,10 @@ export async function listarMovimientosCajaCompartida(boxId: string): Promise<Mo
   return snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), category: typeof item.data().category === "string" ? item.data().category : undefined, notes: typeof item.data().notes === "string" ? item.data().notes : undefined, method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined }));
 }
 
-export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<string> {
+export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">, operation?: SharedMovementOperation): Promise<string> {
   await assertSharedContentAccepted(uid);
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
-  return guardarMovimientoCompartido("box", boxId, uid, movimiento);
+  return guardarMovimientoCompartido("box", boxId, uid, movimiento, operation);
 }
 
 export async function borrarMovimientoCajaCompartida(boxId: string, movementId: string): Promise<void> {

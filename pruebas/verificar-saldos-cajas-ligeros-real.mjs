@@ -124,11 +124,12 @@ scenario("disponible de Personal en caja compartida", () => {
   let calculations = 0;
   const rows = Array.from({ length: 1_000 }, (_, id) => ({ id, date: id % 2 ? "2026-09-20" : "2026-10-20", type: id % 3 ? "income" : "expense", amount: 0.1,
     ...(id % 11 === 0 ? { internalTransfer: "box" } : {}) }));
-  const scope = { budgets: { "2026-09": 200, "2026-10": 300 }, transactions: rows, carryoverCleared: [], movementDate: "2026-10-20", owner: true,
+  const scope = { budgets: { "2026-09": 200, "2026-10": 300 }, transactions: rows, goals: [], totalApartado: originalModule("utils/ahorro.ts").totalApartado, carryoverCleared: [], movementDate: "2026-10-20", owner: true,
     userCurrency: "PEN", t: (_key, values) => values.amount, formatAmount: String, currencySymbolFor: () => "S/",
-    disponiblePersonalEnFecha: (...args) => { calculations++; return finances.disponiblePersonalEnFecha(...args); } };
+    disponiblePersonalEnFecha: (...args) => { calculations++; return finances.disponiblePersonalEnFecha(...args); },
+    saldoLibrePersonalEnFecha: (...args) => { calculations++; return finances.saldoLibrePersonalEnFecha(...args); } };
   const reset = memoHooks(scope);
-  const prepare = ["saldoPersonalEn", "disponibleMovimiento"].filter(name => declarations.has(name))
+  const prepare = ["apartadoPersonal", "saldoPersonalEn", "disponibleMovimiento"].filter(name => declarations.has(name))
     .map(name => `globalThis.${name} = ${declarations.get(name).initializer.getText(tree)};`).join("\n");
   const render = () => {
     reset(); vm.runInNewContext(transpile(prepare), scope);

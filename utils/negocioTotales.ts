@@ -22,6 +22,7 @@
 // vendiste un Broster"*.
 
 import { type MetodoDeVenta, type MovimientoNegocio, type Venta } from "@/utils/negocio";
+import { moneyFromUnits, moneyUnits, sumMoney } from "@/utils/moneyPrecision";
 
 /**
  * QUÉ TROZO DE TIEMPO SE ESTÁ MIRANDO (V2, 08/08/2026).
@@ -86,17 +87,6 @@ export type TotalesDelNegocio = {
 };
 
 /**
- * A céntimos, y en un solo sitio.
- *
- * Sumar decimales en coma flotante da colas: 0.1 + 0.2 son 0.30000000000000004, y ese número
- * acaba impreso en un total. Se redondea al terminar cada suma, no en la pantalla: con dos
- * sitios redondeando, uno de los dos se olvida.
- */
-function aCentimos(n: number): number {
-  return Math.round(n * 100) / 100;
-}
-
-/**
  * Las cuentas de UN negocio.
  *
  * FILTRA POR NEGOCIO AQUÍ DENTRO, aunque la pantalla ya podría pasarle solo los suyos. Es a
@@ -111,12 +101,12 @@ export function totalesDelNegocio(
   const mias = ventas.filter((v) => v.negocioId === negocioId);
   const mios = movimientos.filter((m) => m.negocioId === negocioId);
 
-  const totalVentas = aCentimos(mias.reduce((t, v) => t + v.total, 0));
+  const totalVentas = sumMoney(mias.map(v => v.total));
   const suma = (tipo: "ingreso" | "gasto", origen?: "manual" | "automatico") =>
-    aCentimos(
+    sumMoney(
       mios
         .filter((m) => m.tipo === tipo && (origen ? m.origen === origen : true))
-        .reduce((t, m) => t + m.monto, 0)
+        .map(m => m.monto)
     );
 
   const ingresosAutomaticos = suma("ingreso", "automatico");
@@ -132,7 +122,7 @@ export function totalesDelNegocio(
     // EL SALDO SUMA LAS VENTAS **Y** LOS INGRESOS AUTOMÁTICOS, y ahí está el doble conteo de
     // la V1 explicado arriba. No se resta ni se descuenta nada por si acaso: descontar a ojo
     // sería adivinar qué Yape era de qué venta, que es lo que él prohibió hasta la V2.
-    saldo: aCentimos(totalVentas + ingresosAutomaticos + ingresosManuales - gastos),
+    saldo: moneyFromUnits(moneyUnits(totalVentas) + moneyUnits(ingresosAutomaticos) + moneyUnits(ingresosManuales) - moneyUnits(gastos)),
   };
 }
 
@@ -255,31 +245,31 @@ export function resumenPorMes(
   movimientos: MovimientoNegocio[],
   tope = 6
 ): MesDelNegocio[] {
-  const meses = new Map<string, MesDelNegocio>();
+  const meses = new Map<string, { mes: string; entro: bigint; salio: bigint }>();
   const dame = (fecha: string) => {
     const mes = fecha.slice(0, 7);
-    const antes = meses.get(mes) ?? { mes, entro: 0, salio: 0, queda: 0 };
+    const antes = meses.get(mes) ?? { mes, entro: 0n, salio: 0n };
     meses.set(mes, antes);
     return antes;
   };
 
   for (const v of ventas) {
     if (v.negocioId !== negocioId) continue;
-    dame(v.fecha).entro += v.total;
+    dame(v.fecha).entro += moneyUnits(v.total);
   }
   for (const m of movimientos) {
     if (m.negocioId !== negocioId) continue;
     const fila = dame(m.fecha);
-    if (m.tipo === "ingreso") fila.entro += m.monto;
-    else fila.salio += m.monto;
+    if (m.tipo === "ingreso") fila.entro += moneyUnits(m.monto);
+    else fila.salio += moneyUnits(m.monto);
   }
 
   return [...meses.values()]
     .map((f) => ({
       mes: f.mes,
-      entro: aCentimos(f.entro),
-      salio: aCentimos(f.salio),
-      queda: aCentimos(f.entro - f.salio),
+      entro: moneyFromUnits(f.entro),
+      salio: moneyFromUnits(f.salio),
+      queda: moneyFromUnits(f.entro - f.salio),
     }))
     // El más nuevo primero, que es como se lee: se mira este mes y se compara con el de antes.
     .sort((a, b) => b.mes.localeCompare(a.mes))
@@ -300,7 +290,7 @@ export function diferenciaConElMesPasado(meses: MesDelNegocio[], mesActual: stri
   const ahora = meses.find((m) => m.mes === mesActual);
   const antes = meses.find((m) => m.mes === mesAnteriorDe(mesActual));
   if (!ahora || !antes) return null;
-  return aCentimos(ahora.queda - antes.queda);
+  return moneyFromUnits(moneyUnits(ahora.queda) - moneyUnits(antes.queda));
 }
 
 /**
@@ -350,7 +340,7 @@ export function productosVendidos(negocioId: string, ventas: Venta[]): ProductoV
         productoId: linea.productoId,
         nombre: linea.nombre,
         cantidad: (antes?.cantidad ?? 0) + linea.cantidad,
-        total: aCentimos((antes?.total ?? 0) + linea.precio * linea.cantidad),
+        total: moneyFromUnits(moneyUnits(antes?.total ?? 0) + moneyUnits(linea.precio * linea.cantidad)),
       });
     }
   }

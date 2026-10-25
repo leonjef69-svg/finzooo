@@ -41,6 +41,7 @@ const data = {
   },
   userCurrency: "PEN",
   userLanguage: "es",
+  month: { y: 1999, m: 1 },
   monthNames: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
   showToast() {},
   categoryBudgets: { transporte: 100, comida: 50, compras: 50 },
@@ -145,6 +146,10 @@ function labelText(nodes) {
 }
 
 render();
+assert(labelText(tree).includes("Febrero 1999"), "la fecha del editor corresponde al mes elegido, no al reloj del teléfono");
+data.month = { y: 2031, m: 4 };
+render();
+assert(labelText(tree).includes("Mayo 2031"), "el encabezado sigue el mes de los gastos usados para los avisos");
 const all = flatten(tree);
 assert.equal(all.filter((item) => item.props?.testID?.startsWith("category-budget-row-")).length, 4, "cada categoría mantiene una tarjeta táctil para fijar el límite");
 

@@ -18,7 +18,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
-import { guardarMovimientoCompartido, borrarMovimientoCompartido } from "@/utils/sharedMovements";
+import { guardarMovimientoCompartido, borrarMovimientoCompartido, type SharedMovementOperation } from "@/utils/sharedMovements";
 import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
@@ -239,10 +239,10 @@ export async function listarMovimientosFamilia(familyId: string, confirmarServid
   });
 }
 
-export async function guardarMovimientoFamilia(familyId: string, uid: string, movimiento: Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">): Promise<string> {
+export async function guardarMovimientoFamilia(familyId: string, uid: string, movimiento: Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">, operation?: SharedMovementOperation): Promise<string> {
   await assertSharedContentAccepted(uid);
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
-  return guardarMovimientoCompartido("family", familyId, uid, movimiento);
+  return guardarMovimientoCompartido("family", familyId, uid, movimiento, operation);
 }
 
 /** Vincula de una sola vez un aporte familiar antiguo con su débito de Personal. */

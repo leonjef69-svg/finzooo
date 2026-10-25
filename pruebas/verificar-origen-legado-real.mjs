@@ -91,10 +91,16 @@ const live = { current: [record] }, writes = [], notices = [];
 const save = handlerOriginal("contexts/AppDataContext.tsx", "addOrUpdateTransaction", {
   ...merge, ...identities, transactionsLive: live, deletedTransactionIdsRef: { current: [] },
   issuedCreationId: () => undefined, isSafeMoneyAmount: () => true,
+  auth: { currentUser: { uid: "ficticio" } }, localSessionVersion: { current: 1 },
+  async commitTransactionMutation(upserts, _ids, _history, _legacy, prepare) {
+    live.current = prepare ? prepare(live.current, []) : upserts;
+    writes.push(live.current);
+    return true;
+  },
   showToast: value => notices.push(value), t: key => key,
   setTransactions: update => { live.current = update(live.current); writes.push(live.current); },
 }, read("contexts/AppDataContext.tsx"));
-assert.equal(save({ ...record, amount: 20 }, false, true), true);
+assert.equal(await save({ ...record, amount: 20 }, false, true), true);
 assert.equal(live.current[0].creationId, proof);
 assert.equal(live.current[0].amount, 20);
 assert.equal(writes.length, 1);

@@ -184,6 +184,7 @@ const scenario = esbuild.buildSync({ stdin: { contents: `
     failNextStorageOperation("set", STORAGE_KEYS.cajasDinero);
     assert.equal(await saveJSONNow(STORAGE_KEYS.cajasDinero, { ...journal, revisionesImporte: [] }), false);
     assert.equal(await AsyncStorage.getItem(STORAGE_KEYS.cajasDinero), raw, "fallo de disco conserva originales");
+    failNextStorageOperation("set", STORAGE_KEYS.cajasDinero);
     await assert.rejects(archiveLocalAccount("A", "a@example.com"), /local-account-write/, "no cierra sesión con un guardado fallido pendiente");
     assert.equal(await saveJSONNow(STORAGE_KEYS.cajasDinero, journal), true, "reintento real confirma originales antes de archivar");
     await archiveLocalAccount("A", "a@example.com"); await clearAccountData();

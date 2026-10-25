@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const esbuild = require("../../node_modules/esbuild");
+const { resolveRepoSource } = require("../test-support/repo-source-resolver");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc, updateDoc, serverTimestamp } = require("firebase/firestore");
 const { initializeApp, deleteApp } = require("firebase-admin/app");
@@ -68,8 +69,7 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts", uid = 
           export const deleteCreditCloudAccount = async () => {};`, loader: "js",
       }));
       build.onResolve({ filter: /^@\// }, args => {
-        const base = path.join(root, args.path.slice(2));
-        return { path: fs.existsSync(`${base}.ts`) ? `${base}.ts` : `${base}.tsx` };
+        return { path: resolveRepoSource(root, args.path) };
       });
     } }],
   });

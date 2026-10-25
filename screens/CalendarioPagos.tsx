@@ -207,9 +207,12 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
    * siguiente al momento —que es lo que uno espera— y la confirmación sale abajo, donde ya
    * salen las de toda la app. Se ve que funcionó sin que nada se quede a medias.
    */
-  function pagar(id: string, mesDelPago: string) {
+  async function pagar(id: string, mesDelPago: string) {
     const p = pagosProgramados.find((x) => x.id === id);
-    marcarPagoDelMes(id, mesDelPago, true);
+    let saved = false;
+    try { saved = await marcarPagoDelMes(id, mesDelPago, true); }
+    catch { showToast(t("toast.localSaveFailed")); }
+    if (!saved) return;
     if (p) {
       showToast(
         p.monto != null

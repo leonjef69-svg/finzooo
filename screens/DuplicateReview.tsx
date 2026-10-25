@@ -29,12 +29,14 @@ export default function DuplicateReview({
   onFinish,
   onCancel,
   onLearn,
+  saving = false,
 }: {
   dupes: Candidate[];
   newCount: number;
-  onFinish: (resolutions: Map<number, Resolution>) => void;
+  onFinish: (resolutions: Map<number, Resolution>) => void | boolean | Promise<boolean>;
   onCancel: () => void;
   onLearn: (merchantText: string, category: string) => void;
+  saving?: boolean;
 }) {
   const { t, fmt, monthNames } = useAppData();
   const insets = useSafeAreaInsets();
@@ -48,8 +50,8 @@ export default function DuplicateReview({
   const current = dupes[index];
   const isLast = index >= dupes.length - 1;
 
-  function decide(decision: Resolution) {
-    if (!current || decidedIds.current.has(current.tx.id)) return;
+  async function decide(decision: Resolution) {
+    if (saving || !current || decidedIds.current.has(current.tx.id)) return;
     decidedIds.current.add(current.tx.id);
     try {
       resolutions.set(current.tx.id, decision);
@@ -58,7 +60,7 @@ export default function DuplicateReview({
         onLearn(current.raw.merchant || current.raw.description, current.match.existing.category);
       }
       if (isLast) {
-        onFinish(resolutions);
+        if (await onFinish(resolutions) === false) decidedIds.current.delete(current.tx.id);
       } else {
         setIndex((i) => i + 1);
       }
@@ -85,6 +87,7 @@ export default function DuplicateReview({
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
         <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} hitSlop={6}
           onPress={onCancel}
+          disabled={saving}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >
           <ChevronLeft size={20} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
@@ -143,6 +146,7 @@ export default function DuplicateReview({
         <View className="gap-2.5">
           <TouchableOpacity
             onPress={() => decide("merge")}
+            disabled={saving}
             className="flex-row items-center gap-3 bg-emerald-600 rounded-2xl p-4"
           >
             <GitMerge size={18} color="#ffffff" />
@@ -150,12 +154,13 @@ export default function DuplicateReview({
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => decide("keepBoth")}
+            disabled={saving}
             className="flex-row items-center gap-3 bg-slate-100 dark:bg-noche-2 rounded-2xl p-4"
           >
             <Layers size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             <Text className="font-bold text-slate-700 dark:text-slate-200 flex-1">{t("dupes.keepBoth")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => decide("skip")} className="items-center py-3">
+          <TouchableOpacity onPress={() => decide("skip")} disabled={saving} className="items-center py-3">
             <Text className="font-semibold text-slate-400 dark:text-slate-400 text-sm">{t("dupes.skip")}</Text>
           </TouchableOpacity>
         </View>

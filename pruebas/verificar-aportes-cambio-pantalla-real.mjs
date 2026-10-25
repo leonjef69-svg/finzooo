@@ -39,6 +39,8 @@ function harness(kind, mode) {
     mounted: { current: true }, actionLock: { current: false }, lock: { current: false }, moneyLock: { current: false },
     reloadId: { current: 0 }, movementEpoch: { current: 0 }, confirmedSource: { current: null }, cierresPendientes: { current: new Set() },
     pendingDebit: { current: null }, familiaElegida: { current: null }, owner: true, isPremium: true,
+    hayMovimientoCompartidoPendiente: async () => false, recuperarPendiente: async () => false,
+    nuevaOperacionMovimientoCompartido: () => ({ movementId: "form-operation", currency: "PEN" }), confirmarMovimientoCompartido: async () => true,
     userCurrency: "PEN", moneda: "PEN", userName: "Prueba", familia: { id: "space", nombre: "Casa", currency: "PEN" }, caja: { id: "space", nombre: "Caja", currency: "PEN" },
     tipo: "ingreso", modo: "ingreso", origenDinero: "personal", origenInicial: "personal", nombre: "Casa", monto: mode === "edit" ? "150" : "100", montoInicial: "100",
     descripcion: "Aporte", category: "otros", notes: "", method: "transfer", movementDate: "2026-10-18", editandoAporteId: mode === "edit" ? contribution.id : null,
@@ -138,14 +140,20 @@ for (const kind of ["family", "box"]) {
 }
 for (const kind of ["family", "box"]) {
   const h = harness(kind, "new"), backend = new Map(), calls = [];
+  let journal = [];
   let generated = 0, personalId = 100, responseLost = true;
   const module = { exports: {} };
   vm.runInNewContext(ts.transpile(read("utils/sharedMovements.ts"), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), {
     module, exports: module.exports, require: name => {
       if (name === "@/utils/firebase") return { auth: h.scope.auth, db: {}, functions: {} };
       if (name === "@/utils/accountTask") return { captureAccountTask: h.scope.captureAccountTask };
-      if (name === "@/utils/storage") return { getAccountStorageSession: h.scope.getAccountStorageSession };
-      if (name === "firebase/firestore") return { collection: () => ({}), doc: () => ({ id: `operation-${++generated}` }) };
+      if (name === "@/utils/storage") return { getAccountStorageSession: h.scope.getAccountStorageSession,
+        hasUnreadableLocalData: () => false, STORAGE_KEYS: { sharedMovementPending: "pending", transactions: "transactions" },
+        loadJSON: async key => structuredClone(key === "pending" ? journal : h.state.rows),
+        saveJSONNow: async (_key, value) => { journal = structuredClone(value); return true; } };
+      if (name === "@/utils/amount") return { isSafeMoneyAmount: Number.isFinite };
+      if (name === "firebase/firestore") return { collection: () => ({}), doc: (...args) => ({ id: args.length === 1 ? `operation-${++generated}` : args.at(-1) }),
+        getDocFromServer: async () => ({ exists: () => true, data: () => ({ currency: "PEN" }), metadata: { fromCache: false, hasPendingWrites: false } }) };
       if (name === "firebase/functions") return { httpsCallable: () => async input => {
         calls.push(input.movementId); backend.set(input.movementId, input.movement);
         if (responseLost) throw Error("lost-response");
@@ -154,7 +162,8 @@ for (const kind of ["family", "box"]) {
       throw Error(name);
     },
   });
-  const save = (_space, uid, movement) => module.exports.guardarMovimientoCompartido(kind, "space", uid, movement);
+  const save = (_space, uid, movement, operation) => module.exports.guardarMovimientoCompartido(kind, "space", uid, movement, operation);
+  h.scope.confirmarMovimientoCompartido = module.exports.confirmarMovimientoCompartido ?? h.scope.confirmarMovimientoCompartido;
   h.scope.guardarMovimientoFamilia = save; h.scope.guardarMovimientoCajaCompartida = save;
   h.scope.nextId = () => ++personalId;
   await h.action(); assert.equal(h.state.writes.length, 0, "sin confirmación no se supone guardado local");

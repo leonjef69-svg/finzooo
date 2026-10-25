@@ -28,6 +28,7 @@ async function scenario(destination, options = {}) {
   const upload = async () => { events.push("upload"); if (options.fail) throw Error("upload-failed"); if (options.wait) await deferred; return { name: "Prueba.pdf" }; };
   class Missing extends Error {}
   const deps = {
+    espaciosCargando: false, espacio: { id: "personal", transactionsLoaded: true },
     monthTx: [{}], format: options.format ?? "pdf", destination, selectedMonthLabel: "Octubre",
     contactosDelDestino: [], contactos: options.contacts ?? [fixture],
     contactoElegido: Object.hasOwn(options, "chosen") ? options.chosen : destination === "whatsapp" ? fixture : null,

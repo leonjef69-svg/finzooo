@@ -12,7 +12,7 @@ const common = {
   useAppData: () => data, useLocalSearchParams: () => ({ id: "999", mode: "add" }),
   useRedirectIfOrphaned: () => false, safeBack() { navigations++; },
   router: { dismissTo() { navigations++; } }, irUnaVez() { navigations++; },
-  useState: value => [value, () => {}], useRef: value => ({ current: value }), useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
+  useState: value => [value, () => {}], useRef: value => ({ current: value }), useEffect() {}, useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
   useColorScheme: () => ({ colorScheme: "light" }),
   candadoPremium: () => "abierto", puedeTocar: () => true,
 };

@@ -365,6 +365,8 @@ function ScheduledExportEffect() {
           format: s.format,
           type: s.type,
           destination: s.destination,
+          charts: s.charts,
+          spaceId: s.spaceId || "personal",
           fileName: buildFileName({
               mode: s.fileNameMode,
               custom: s.fileName,

@@ -12,6 +12,10 @@ export function spaceErrorKey(error: unknown, invalidCode = false): string {
   if (detail.includes("legal-account-")) return "family.loginRequired";
   if (detail.includes("legal-")) return "legal.saveFailed";
   const reason = value?.details?.reason;
+  if (detail.includes("shared-local-save-failed")) return "toast.localSaveFailed";
+  if (detail.includes("shared-currency-mismatch")) return "spaces.currencyMismatch";
+  if (detail.includes("shared-operation-pending")) return "spaces.pendingSharedMovement";
+  if (detail.includes("shared-pending-invalid")) return "settings.backupMovementConflict";
   if (reason === "shared-insufficient-balance") return "spaces.balanceChanged";
   if (reason === "shared-space-closed") return "spaces.returnClosed";
   if (reason === "shared-premium-required") return "spaces.proRequired";

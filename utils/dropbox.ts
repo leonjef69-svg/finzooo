@@ -29,6 +29,8 @@ import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
 import { uploadAsync, FileSystemUploadType } from "expo-file-system/legacy";
 import { aBase64Url, codigoDeLaVuelta, comoFormulario, verificadorPkce } from "@/utils/pkce";
+import { auth } from "@/utils/firebase";
+import { getAccountStorageSession } from "@/utils/storage";
 
 /**
  * La clave pública de la app en Dropbox.
@@ -56,6 +58,24 @@ const SUBIR = "https://content.dropboxapi.com/2/files/upload";
 // ajustes normales: con él se puede escribir en la carpeta de la persona.
 const CLAVE_REFRESH = "finzo.dropbox.refresh";
 
+let connectionRevision = 0;
+let credentialMutations: Promise<unknown> = Promise.resolve();
+
+function connectionIsCurrent(revision = connectionRevision): () => boolean {
+  const user = auth.currentUser;
+  const session = getAccountStorageSession();
+  return () => user !== null && session !== null
+    && auth.currentUser === user && getAccountStorageSession() === session
+    && connectionRevision === revision;
+}
+
+/** Solo las escrituras se ordenan: Desconectar no espera al navegador ni a la red. */
+function changeCredential<T>(work: () => Promise<T>): Promise<T> {
+  const result = credentialMutations.then(work, work);
+  credentialMutations = result.then(() => undefined, () => undefined);
+  return result;
+}
+
 /** No hay cuenta de Dropbox conectada todavía. */
 export class DropboxSinConectar extends Error {
   constructor() {
@@ -74,13 +94,17 @@ export class DropboxRechazado extends Error {
 
 /** ¿Ya está conectada una cuenta? */
 export async function dropboxConectado(): Promise<boolean> {
-  return (await SecureStore.getItemAsync(CLAVE_REFRESH)) !== null;
+  const current = connectionIsCurrent();
+  if (!current()) return false;
+  const refresh = await SecureStore.getItemAsync(CLAVE_REFRESH);
+  return current() && refresh !== null;
 }
 
 // Se olvida la cuenta. También se usa al cerrar sesión para que la cuenta
 // siguiente del mismo teléfono nunca exporte al Dropbox de la anterior.
 export async function desconectarDropbox(): Promise<void> {
-  await SecureStore.deleteItemAsync(CLAVE_REFRESH);
+  connectionRevision += 1;
+  await changeCredential(() => SecureStore.deleteItemAsync(CLAVE_REFRESH));
 }
 
 /**
@@ -91,13 +115,18 @@ export async function desconectarDropbox(): Promise<void> {
  * cual no es automático de ninguna manera.
  */
 export async function conectarDropbox(): Promise<void> {
+  const current = connectionIsCurrent(++connectionRevision);
+  const check = () => { if (!current()) throw new DropboxRechazado(); };
+  check();
   const azar = await Crypto.getRandomBytesAsync(64);
+  check();
   const verificador = verificadorPkce(azar);
   const huella = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
     verificador,
     { encoding: Crypto.CryptoEncoding.BASE64 }
   );
+  check();
   const desafio = aBase64Url(huella);
 
   const url =
@@ -109,6 +138,7 @@ export async function conectarDropbox(): Promise<void> {
     `&token_access_type=offline`;
 
   const r = await WebBrowser.openAuthSessionAsync(url, REDIRECT);
+  check();
   if (r.type !== "success") throw new DropboxRechazado();
 
   const codigo = codigoDeLaVuelta(r.url);
@@ -125,11 +155,23 @@ export async function conectarDropbox(): Promise<void> {
       redirect_uri: REDIRECT,
     }),
   });
+  check();
   if (!respuesta.ok) throw new DropboxRechazado();
 
   const datos = (await respuesta.json()) as { refresh_token?: string };
+  check();
   if (!datos.refresh_token) throw new DropboxRechazado();
-  await SecureStore.setItemAsync(CLAVE_REFRESH, datos.refresh_token);
+  const refresh = datos.refresh_token;
+  await changeCredential(async () => {
+    check();
+    await SecureStore.setItemAsync(CLAVE_REFRESH, refresh);
+    // La escritura nativa puede terminar después de Desconectar/cambiar de cuenta.
+    // Se retira antes de dejar pasar otra escritura en esta misma cola.
+    if (!current()) {
+      await SecureStore.deleteItemAsync(CLAVE_REFRESH);
+      throw new DropboxRechazado();
+    }
+  });
 }
 
 /**
@@ -140,7 +182,11 @@ export async function conectarDropbox(): Promise<void> {
  * del reporte, que es cuando nadie está mirando.
  */
 async function permisoDeAhora(): Promise<string> {
+  const current = connectionIsCurrent();
+  const check = () => { if (!current()) throw new DropboxSinConectar(); };
+  check();
   const refresh = await SecureStore.getItemAsync(CLAVE_REFRESH);
+  check();
   if (!refresh) throw new DropboxSinConectar();
 
   const respuesta = await fetch(TOKEN, {
@@ -152,6 +198,7 @@ async function permisoDeAhora(): Promise<string> {
       client_id: CLIENT_ID,
     }),
   });
+  check();
 
   // Si Dropbox dice que el permiso ya no vale —la persona lo revocó desde su
   // cuenta— se olvida. Dejarlo guardado haría que cada reporte fallara igual y
@@ -163,6 +210,7 @@ async function permisoDeAhora(): Promise<string> {
   if (!respuesta.ok) throw new Error("dropbox-token");
 
   const datos = (await respuesta.json()) as { access_token?: string };
+  check();
   if (!datos.access_token) throw new Error("dropbox-token");
   return datos.access_token;
 }
@@ -175,7 +223,9 @@ async function permisoDeAhora(): Promise<string> {
  * del mismo día no se pisan.
  */
 export async function subirADropbox(fileUri: string, nombre: string): Promise<string> {
+  const current = connectionIsCurrent();
   const token = await permisoDeAhora();
+  if (!current()) throw new DropboxSinConectar();
 
   // Los datos de la subida van en una CABECERA, no en el cuerpo: el cuerpo es
   // el archivo entero. Por eso el nombre tiene que ir en JSON aquí.
@@ -197,6 +247,8 @@ export async function subirADropbox(fileUri: string, nombre: string): Promise<st
       "Dropbox-API-Arg": argumentos,
     },
   });
+
+  if (!current()) throw new DropboxSinConectar();
 
   if (r.status < 200 || r.status >= 300) throw new Error("dropbox-subida");
   const datos = JSON.parse(r.body) as { name?: string };

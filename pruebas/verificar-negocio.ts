@@ -880,7 +880,7 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
     && /pruebaVigente\(inicioPrueba, Date\.now\(\)\)/.test(fondo),
     "la app cerrada comprueba el plan y la hora real antes de elegir destino");
   ok(/loadJSON<MovimientoNegocio\[\]>\(STORAGE_KEYS\.movimientosNegocio/.test(fondo), "leyendo la caja del disco, que es lo unico que hay con la app cerrada");
-  ok(/saveJSON\(STORAGE_KEYS\.movimientosNegocio, \[\.\.\.caja, \.\.\.delNegocio\]\)/.test(fondo), "y lo del negocio se escribe en su caja");
+  ok(/saveJSONNow\(STORAGE_KEYS\.movimientosNegocio, \[\.\.\.caja, \.\.\.delNegocio\]\)/.test(fondo), "y lo del negocio se confirma en su caja");
   ok(/mergeTransactions\(personales, guardadas\)/.test(fondo), "y en los movimientos personales solo va lo personal");
 
   // 12. Y LA OTRA MITAD: que la app no PISE lo que se escribio con ella cerrada.

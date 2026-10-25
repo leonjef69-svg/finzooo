@@ -19,6 +19,7 @@
 import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { saldoAnteriorDe, type MovimientoDelSaldo } from "@/utils/saldoAnterior";
 import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
+import { saldoLibre } from "@/utils/ahorro";
 
 export type MonthFigures = {
   /** Presupuesto puesto para ese mes. 0 si no se puso ninguno. */
@@ -158,4 +159,19 @@ export function disponiblePersonalEnFecha(
     prevBalance: saldoAnteriorDe(mes, budgets, transactions, carryoverCleared),
     spent, income, transfersOut, transfersIn,
   });
+}
+
+/**
+ * Importe que se puede enviar a otro espacio sin usar el dinero de las metas.
+ * La reserva actual se aplica también al consultar otro mes, igual que Personal.
+ * Se recibe ya sumada para no recorrer las metas por cada dibujo del formulario.
+ */
+export function saldoLibrePersonalEnFecha(
+  fecha: string,
+  budgets: Record<string, number>,
+  transactions: (MovimientoDelSaldo & { internalTransfer?: unknown })[],
+  carryoverCleared: string[],
+  apartado: number,
+): number {
+  return saldoLibre(disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared), apartado);
 }
