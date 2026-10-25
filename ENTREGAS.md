@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 25/10/2026 — comprobación de invitación de Caja, sin entrega de código
+
+Validado `80ff9241` en Medium_Phone, misma cuenta: Caja temporal con S/0,
+código visible, cierre/reapertura del panel y cierre final de la Caja correctos.
+Datos originales y saldos preservados; cero movimientos financieros nuevos.
+Solo quedan comprobantes de conversión/retiro de la propia prueba. Primera
+preparación completa ~26,9 s y reapertura del código ~4,5 s: la preparación
+inicial queda como siguiente mejora. Detalle y límites en ESTADO.md.
+Sin código nuevo, APK, OTA ni despliegue; no se repite la batería de pruebas
+del mismo código por este cambio de documentación. Telegram y tarjetas fuera.
+
 ## 25/10/2026 — entrada a espacios, invitaciones y PIN (desarrollo)
 
 Marca `25oct-entrada-invitacion-pin`, base `6aa8de59`. Catálogos visuales de

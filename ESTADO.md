@@ -1,5 +1,41 @@
 # Estado actual de Fino
 
+## Invitación de Caja comprobada — 25/10/2026 — sin cambiar la app
+
+Prueba manual autorizada sobre `80ff9241`, mismo Medium_Phone y misma cuenta.
+Se creó `PRUEBA CODIGO 25OCT` con S/0 y sin movimientos; se abrió la invitación,
+se verificó código visible de ocho caracteres con botones habilitados, se cerró
+el panel y se volvió a abrir correctamente. No se copió ni envió a terceros.
+Después se cerró únicamente esa Caja y desapareció de la lista activa.
+
+Mediciones de una muestra de desarrollo, no FPS ni garantía de red:
+
+- Primera apertura desde Caja privada hasta invitación confirmada: ~26,9 s.
+  Incluye aceptación comprobada (~4,6 s), preparación/conversión compartida
+  (~18,3 s), guardados y generación del código (~3,3 s).
+- Reabrir la invitación de la Caja ya compartida: ~4,5 s; no repite conversión.
+- Las tres llamadas de confirmación de conversión tardaron ~5,4 / 4,3 / 4,2 s.
+  La preparación inicial sigue siendo lenta: esta prueba NO la da por arreglada.
+
+Comparación privada antes/después: 18 campos locales ajenos al libro de Cajas
+idénticos; todas las Cajas/movimientos originales, recibos anteriores e
+historiales remotos originales idénticos. Personal conserva sus 59 registros y
+S/50; WWW sigue con S/1; WW sigue con S/11. Cero movimientos financieros nuevos.
+Solo se añaden la marca de retiro y el recibo de conversión de la propia Caja
+de prueba (`cajasBorradas` / `conversiones`); no borrarlos para forzar una
+igualdad artificial, porque evitan que la copia antigua reaparezca.
+
+Android tuvo fallos de arranque de System UI antes de abrir Fino. Se recuperó
+la instalación existente sin limpiar sus datos. No hubo cambios de código,
+credenciales, permisos, APK/OTA ni servicios publicados; Telegram y tarjetas
+siguen excluidos. Instrumentación y copias de comprobación privadas solo en
+`.tmp`, fuera de Git. Se conserva la validación del código de `80ff9241`.
+
+Qué sigue: optimizar la preparación inicial de compartir una Caja sin retirar
+las comprobaciones de dinero; después primera carga de espacios y FPS de
+producción. Falta comprobar unión/consumo del código desde otra cuenta y red
+fría/lenta: esta prueba verificó creación/reapertura/cierre con el propietario.
+
 ## Entrada a espacios, invitaciones y PIN — 25/10/2026 — desarrollo
 
 Marca `25oct-entrada-invitacion-pin`, base `6aa8de59`. Continuación autorizada:
