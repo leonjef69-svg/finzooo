@@ -25,7 +25,7 @@ export default function SavingsMovementRow({ transaction: tx, fmt, t, onPress, t
       </Text>
       <Text className="mt-1 text-[11px] font-semibold text-violet-700 dark:text-violet-300">{t(used ? "savings.usedLabel" : "savings.label")}{timeLabel || tx.time ? ` · ${timeLabel || tx.time}` : ""}</Text>
     </View>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="max-w-[42%] text-sm font-extrabold text-violet-700 dark:text-violet-300">
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="max-w-[42%] text-sm font-extrabold text-violet-700 dark:text-violet-300" style={{ textAlign: "right" }}>
       {tx.type === "expense" ? "− " : "+ "}{fmt(tx.amount)}
     </Text>
   </TouchableOpacity>;

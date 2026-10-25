@@ -52,11 +52,11 @@ export default function SavingsFlowSummaryCard({
       returnedLabel={goal.saved === 0 && summary.received > 0 && summary.returned === summary.received ? t("savings.fullyReturned") : undefined} />
     <View className="mt-2 flex-row items-center gap-3">
       <AmountCell label={t(view === "personal" ? "savings.sentToSavings" : "savings.receivedFromPersonal")}
-        amount={summary.received} color="#7c3aed" inline={view === "personal"} fmt={fmt} />
+        amount={summary.received} color="#7c3aed" inline fmt={fmt} />
       {view === "savings" && <AmountCell label={t("goalForm.targetLabel")} amount={goal.target} color="#475569" align="right" fmt={fmt} />}
     </View>
     <View className="mt-1.5 flex-row items-center gap-3">
-      <AmountCell label={t("savings.returnedToPersonal")} amount={summary.returned} color="#059669" inline={view === "personal"} fmt={fmt} />
+      <AmountCell label={t("savings.returnedToPersonal")} amount={summary.returned} color="#059669" inline fmt={fmt} />
       {view === "savings" && <AmountCell label={t("savings.currentInGoal")} amount={goal.saved} color="#0f766e" align="right" fmt={fmt} />}
     </View>
   </View>;

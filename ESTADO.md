@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## Transferencias y montos de ahorro en Personal, Historial y Ahorro — 25/10/2026 — desarrollo
+
+Marca `25oct-personal-texto-espacios-moderado`, base `c51e0fa1`. En los
+movimientos de Familia y Cajas que se muestran dentro de Personal, el nombre
+del espacio baja de 15 px muy pesado a 14 px en negrita. Solo en Personal;
+las mismas filas en Familia y Cajas mantienen su tamaño. Montos, etiquetas,
+colores, mayúsculas, fechas y datos financieros no cambian.
+
+Continuación solicitada: «Enviado a Ahorro» y «Devuelto a Personal» muestran
+el monto a la derecha de su etiqueta en el resumen de Personal y en Movimientos
+de Ahorro. En esta última la columna contigua de objetivo/ahorrado conserva su
+posición; cada monto se alinea a la derecha dentro de su propia columna.
+En Historial, el importe de cada movimiento de ahorro queda alineado a la
+derecha de su tarjeta y conserva su color.
+
+Sin dato o permiso nuevo; PLAYSTORE.md no cambia. TypeScript y ESLint pasan.
+La captura del emulador habitual salió negra, así que falta la comprobación
+visual en ese emulador. No APK/OTA ni publicación.
+
 ## Ahorro: montos a la derecha en Personal — 25/10/2026 — desarrollo
 
 Marca `25oct-ahorro-montos-derecha`, base `3eb19d42`. El propietario decidió

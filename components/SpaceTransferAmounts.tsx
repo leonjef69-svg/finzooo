@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-export default function SpaceTransferAmounts({ title, sentLabel, returnedLabel, sent, returned, consumed = 0, consumedLabel, format }: {
+export default function SpaceTransferAmounts({ title, sentLabel, returnedLabel, sent, returned, consumed = 0, consumedLabel, format, compactTitle = false }: {
   title: string;
   sentLabel: string;
   returnedLabel: string;
@@ -9,9 +9,10 @@ export default function SpaceTransferAmounts({ title, sentLabel, returnedLabel, 
   consumed?: number;
   consumedLabel?: string;
   format: (value: number) => string;
+  compactTitle?: boolean;
 }) {
   return <View className="min-w-0 flex-1">
-    <Text numberOfLines={1} className="mb-1 text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{title}</Text>
+    <Text numberOfLines={1} className={`mb-1 ${compactTitle ? "text-sm font-bold" : "text-[15px] font-extrabold"} text-slate-900 dark:text-slate-100`}>{title}</Text>
     {sent > 0 && <View className="flex-row items-center justify-between gap-3">
       <Text numberOfLines={1} className="min-w-0 flex-1 text-xs font-semibold text-blue-600 dark:text-blue-300">{sentLabel}</Text>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-sm font-extrabold text-blue-700 dark:text-blue-200">{format(sent)}</Text>

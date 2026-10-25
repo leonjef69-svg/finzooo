@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 25/10/2026 — texto más pequeño en transferencias de Personal (desarrollo)
+
+Marca `25oct-personal-texto-espacios-moderado`, base `c51e0fa1`. El nombre de
+Familia/Caja en los movimientos de Personal baja de 15 a 14 px y de extra
+negrita a negrita. Solo cambia esa pantalla; se conservan los demás textos,
+montos, colores y registros. TypeScript y ESLint pasan. La captura del emulador
+salió negra, así que no pude confirmar visualmente esta versión allí.
+En Personal y en Movimientos de Ahorro, los importes de «Enviado a Ahorro» y
+«Devuelto a Personal» quedan a la derecha de sus etiquetas dentro de cada
+columna. Historial conserva el monto al extremo derecho de cada movimiento.
+
 ## 25/10/2026 — importes de ahorro a la derecha en Personal (desarrollo)
 
 Marca `25oct-ahorro-montos-derecha`, base `3eb19d42`. Solo presentación:

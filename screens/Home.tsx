@@ -176,6 +176,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
           />
           {isTransfer ? <View className="flex-1"><SpaceTransferAmounts
             title={title}
+            compactTitle
             sentLabel={t(tx.internalTransfer === "family" ? "transfer.sentToFamily" : "transfer.sentToBox")}
             returnedLabel={t("transfer.returned")}
             sent={transferGroup?.sent ?? (tx.type === "expense" ? tx.amount : 0)}
