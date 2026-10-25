@@ -65,6 +65,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { shareSpaceRead } from "@/utils/spaceRead";
 import { familyMutationVersion } from "@/utils/familyMutation";
+import { peekBoxCatalog } from "@/utils/spaceCatalog";
 
 // Cambiar de Personal a Familia y volver a Cajas desmonta estas pantallas.
 // Conservamos la última copia ya pintada para no reconstruir una pantalla
@@ -86,16 +87,17 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, goals, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, cloudBackupEnabled, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const copiaCompartidaInicial = useRef(leerCajasCompartidasEnMemoria()).current;
+  const catalogoInicial = useRef(peekBoxCatalog(accountUid)).current;
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
   const [lista, setLista] = useState(true);
-  const [compartidas, setRenderedCompartidas] = useState<CajaCompartida[]>(copiaCompartidaInicial?.cajas ?? []);
+  const [compartidas, setRenderedCompartidas] = useState<CajaCompartida[]>(copiaCompartidaInicial?.cajas ?? catalogoInicial ?? []);
   const [saldosCompartidas, setRenderedSaldosCompartidas] = useState<Record<string, number>>(copiaCompartidaInicial?.saldos ?? {});
   const compartidasActuales = useRef(compartidas);
   const saldosCompartidasActuales = useRef(saldosCompartidas);
   const listaCompartidaCompleta = useRef(copiaCompartidaInicial !== null);
-  const [compartidasConocidas, setCompartidasConocidas] = useState(copiaCompartidaInicial !== null);
-  const [cargandoCompartidas, setCargandoCompartidas] = useState(copiaCompartidaInicial === null);
+  const [compartidasConocidas, setCompartidasConocidas] = useState(copiaCompartidaInicial !== null || catalogoInicial !== undefined);
+  const [cargandoCompartidas, setCargandoCompartidas] = useState(copiaCompartidaInicial === null && catalogoInicial === undefined);
   const [actualizandoListaCompartida, setActualizandoListaCompartida] = useState(false);
   const [errorCompartidas, setErrorCompartidas] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState<CajaCompartida | null>(null);

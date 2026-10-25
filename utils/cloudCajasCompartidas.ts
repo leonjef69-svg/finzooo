@@ -5,7 +5,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { guardarMovimientoCompartido, borrarMovimientoCompartido, type SharedMovementOperation } from "@/utils/sharedMovements";
-import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
+import { assertSharedContentAccepted, writeWithAcceptedSharedContent } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { subirCajas } from "@/utils/cloudCajas";
@@ -151,9 +151,8 @@ export async function compartirCajaExistente(
 }
 
 export async function crearInvitacionCaja(uid: string, boxId: string): Promise<string> {
-  await assertSharedContentAccepted(uid);
   const codigo = crearCodigoFamilia();
-  await setDoc(doc(db, "boxInvites", codigo), { boxId, createdBy: uid, expiresAt: Date.now() + 7 * 86400000, creadoEn: serverTimestamp() });
+  await writeWithAcceptedSharedContent(uid, () => setDoc(doc(db, "boxInvites", codigo), { boxId, createdBy: uid, expiresAt: Date.now() + 7 * 86400000, creadoEn: serverTimestamp() }));
   return codigo;
 }
 

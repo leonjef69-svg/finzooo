@@ -98,6 +98,25 @@ export async function assertSharedContentAccepted(uid = auth.currentUser?.uid ??
   await confirmLegalAcceptance(uid, documents); check();
 }
 
+/** Solo escrituras cuyas reglas publicadas EXIGEN el recibo legal vigente.
+ * El ACK de Firestore ya prueba esa aceptación: evita renovar el mismo recibo
+ * mediante otra llamada. Si falta en el servidor, confirmar la elección local
+ * y reintentar UNA vez, únicamente tras un rechazo que no guardó nada. */
+export async function writeWithAcceptedSharedContent<T>(uid: string, write: () => Promise<T>): Promise<T> {
+  const check = accountCheck(uid);
+  if (!await hasAcceptedLegalDocuments(uid)) throw new Error("legal-acceptance-required");
+  check();
+  try { const result = await write(); check(); return result; }
+  catch (error) {
+    check();
+    if ((error as { code?: string })?.code !== "permission-denied") throw error;
+    const documents = await hashes(); check();
+    forgetLegalAcceptanceConfirmation(uid);
+    await confirmLegalAcceptance(uid, documents); check();
+    const result = await write(); check(); return result;
+  }
+}
+
 export async function deleteLegalAcceptance(uid: string): Promise<void> {
   const key = receiptKey(uid);
   closing.add(uid); // Impide que una elección atrasada vuelva a crear el recibo.

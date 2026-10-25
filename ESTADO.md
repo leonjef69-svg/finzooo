@@ -1,5 +1,74 @@
 # Estado actual de Fino
 
+## Entrada a espacios, invitaciones y PIN — 25/10/2026 — desarrollo
+
+Marca `25oct-entrada-invitacion-pin`, base `6aa8de59`. Continuación autorizada:
+reducir esperas de Familia/Cajas e invitaciones, sin tocar dinero; corregir
+el PIN que interrumpía el uso interno. Telegram y tarjetas siguen fuera.
+
+- Personal prepara únicamente los dos catálogos de nombres cuando queda libre
+  y el candado está abierto. No monta pantallas ni descarga historiales. Las
+  entradas comparten consultas pendientes y muestran nombres ya conocidos;
+  esa copia es visual, separada por usuario real, sesión y revisión. No confirma
+  membresía, dinero ni ausencias; las pantallas siguen consultando el servidor.
+  Solo se conservan dos catálogos en memoria; no se agrega almacenamiento local,
+  permiso, colección, proveedor ni dato declarado nuevo en PLAYSTORE.md.
+- Al elegir una Familia conocida, catálogo, movimientos y miembros arrancan
+  juntos. No se publican saldos confirmados ni se concilia Personal hasta
+  completar las verificaciones vigentes de esa cuenta/selección/revisión.
+  Revocación, fallos y respuestas tardías siguen protegidos. La comprobación
+  de cierre permanece DESPUÉS del historial para no interpretar una purga
+  de cierre como un aporte borrado.
+- Invitaciones de Familia y Cajas comprueban primero la elección legal local.
+  El ACK de la escritura, protegida por las reglas que exigen ese recibo,
+  evita renovar previamente la aceptación remota en cada apertura. Solo un
+  rechazo `permission-denied` permite confirmar el recibo y repetir UNA vez
+  el mismo código. Red/resultado incierto no se reintentan automáticamente;
+  dueño, Pro, espacio abierto, caducidad y consumo único conservan sus reglas.
+  No se aceptan documentos al arrancar ni se cambia la elección del usuario.
+- El candado inicia el margen únicamente con una salida real a `background`.
+  Una pausa `inactive` de un panel/aviso no lo inicia. Conserva arranque cerrado,
+  huella/PIN alternativos, margen de 120 s y protección ante errores; atrasar
+  el reloj durante una salida también bloquea. No se cambia ninguna credencial.
+
+Medición en el emulador habitual, misma cuenta, APK de DESARROLLO, una muestra
+antes/después (tiempo de consultas originales, no FPS ni promesa de red):
+
+| Operación | Antes | Después |
+| --- | ---: | ---: |
+| Elegir Familia: catálogo + historial/miembros | 3,618 s | 2,698 s |
+| Generar invitación de Familia confirmada | 8,975 s | 3,153 s |
+| Consultar catálogo de Cajas compartidas | 1,826 s | 1,878 s |
+
+La consulta inicial de nombres de Familia siguió dependiendo de la red
+(2,280→2,953 s). La mejora visual consiste en mostrar lo conocido mientras se
+confirma: no afirmar que esas lecturas de red se hicieron instantáneas. Cajas
+privadas mostró WWW con S/1 durante la revisión; Familia WW conserva S/11,
+Personal S/50. Invitación abierta y botones disponibles, sin compartir a nadie.
+Comparación privada antes/después: los 19 conjuntos locales y los movimientos
+remotos idénticos; mismos 59 registros, 1 meta, 1 Caja privada, 1 Familia y ninguna
+Caja compartida. Las invitaciones de prueba son metadatos, no movimientos.
+
+Regresiones de invitación, selección paralela y pausa interna fallan contra
+`6aa8de59` por el comportamiento anterior; adaptadores no se presentan como
+Android. Pasada FINAL: TypeScript y ESLint sin errores, 278 pruebas + 8
+auditores verdes, tarjetas excluidas. En Android real del emulador, tras
+navegar varios minutos sin nuevo PIN, salir con Inicio durante más de 162 s
+y volver mostró el candado; la entrada autorizada lo desbloqueó correctamente
+sin volver a pedirlo dentro. No se cambia ni registra ninguna credencial.
+
+Durante la actualización local hubo JS antiguo y una descarga cuyo archivo
+tenía bytes faltantes/restos de transferencia; también un ANR de desarrollo.
+Se recuperó la app sin reinstalar ni borrar datos y se confirmó la marca en
+Información. Se probó un transporte local temporal con tamaño explícito,
+fuera de Git: no es una corrección demostrada de producción ni una entrega
+nativa. Si reaparece, revisar el transporte de desarrollo con evidencia nueva.
+
+Qué falta: FPS de producción y teléfono físico, red fría/lenta y otra cuenta
+con Caja compartida. La invitación de Caja
+usa el mismo ayudante y sus pruebas originales, pero no se convirtió la WWW
+del propietario para probarla. Sin APK nuevo, OTA/Play ni despliegue de Firebase.
+
 ## Guardados, saldos y consultas — 25/10/2026 — integración en desarrollo
 
 Marca `25oct-guardados-saldos-consultas`, base `1955c268`. Correcciones de la

@@ -106,11 +106,27 @@ for (const preferred of [undefined, "f0"]) {
   assert.equal(h.scope.familiaConfirmada.current, null); assert.ok(h.memory.get("A").actualizadaEn > 0);
 }
 
-// Si ya no pertenece a la Familia elegida, no consulta un historial revocado.
+// La consulta anticipada no publica dinero si el catálogo revoca la selección.
 {
   const h = harness(); h.network.holdList = deferred(); h.scope.open(h.rows[1]); await tick();
   h.network.holdList.resolve(h.rows.filter(item => item.id !== "f1")); await tick();
-  assert.ok(!h.network.movements.includes("f1")); assert.equal(h.scope.familia, null);
+  assert.equal(h.scope.familia, null); assert.deepEqual(plain(h.scope.movimientos), []);
+  assert.equal(h.scope.familiaConfirmada.current, null); h.scope.reconcile();
+  assert.deepEqual(h.repairs, [], "la respuesta anticipada no concilia la Familia revocada");
+}
+
+// La comprobación de pertenencia y el historial elegido arrancan juntos.
+// Aun con el historial listo, Personal espera la lista confirmada.
+{
+  const h = harness(), list = deferred(), history = deferred();
+  h.network.holdList = list; h.network.holdHistory.set("f1", history);
+  h.scope.open(h.rows[1]); await tick();
+  assert.deepEqual(h.network.movements, ["f1"], "la lectura elegida no espera otro viaje del catálogo");
+  assert.deepEqual(h.network.members, ["f1"]);
+  history.resolve(h.remote.f1); await tick();
+  assert.equal(h.scope.familiasSincronizadas, false); h.scope.reconcile(); assert.deepEqual(h.repairs, []);
+  list.resolve(h.rows); await tick();
+  assert.equal(h.scope.familiaConfirmada.current, "f1"); assert.equal(h.scope.familiasSincronizadas, true);
 }
 
 // Error o cambio de cuenta/sesión: no confirma la foto ni concilia Personal.

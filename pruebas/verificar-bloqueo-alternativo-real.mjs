@@ -168,6 +168,23 @@ try {
     env = mount(overrides); await env.flush(); assert.ok(env.pad()); assert.equal(env.requests.length, 0);
     env.pad().props.onChange("1234"); await env.flush(); assert.equal(env.tree, null); env.close();
   }
+  // Una interrupción interna no es salir de Fino, aunque dure más del margen.
+  // FINO_LOCK_ALTERNATIVE_BASELINE=6aa8de59 vuelve a poner el PIN aquí.
+  env = mount({ usaHuella: async () => false }); await env.flush();
+  env.pad().props.onChange("1234"); await env.flush(); assert.equal(env.tree, null);
+  for (let i = 0; i < 3; i++) {
+    env.emit("inactive"); env.now += 121000; env.emit("active"); await env.flush();
+    assert.equal(env.tree, null, "avisos/paneles internos no interrumpen una sesión desbloqueada");
+  }
+  assert.equal(env.remembered, 0, "inactive no guarda una salida ni crea una excepción de arranque");
+  env.emit("inactive"); env.now += 121000; env.emit("background"); env.now += 1000; env.emit("active"); await env.flush();
+  assert.equal(env.tree, null, "el margen empieza al salir de verdad, no al abrir un aviso interno");
+  env.emit("background"); env.now += 121000; env.emit("active"); await env.flush();
+  assert.ok(env.pad(), "una salida real prolongada conserva el PIN al volver"); env.close();
+
+  env = mount({ usaHuella: async () => false }); await env.flush();
+  env.pad().props.onChange("1234"); await env.flush(); env.emit("background"); env.now -= 1000; env.emit("active"); await env.flush();
+  assert.ok(env.pad(), "atrasar el reloj durante una salida no conserva el acceso"); env.close();
   env = mount({ lockEnabledState: async () => "unavailable" }); await env.flush();
   assert.equal(env.pad(), undefined); assert.equal(env.requests.length, 0); assert.ok(env.button("lock.retryCheck")); env.close();
   env = mount({ applyLockScreenPrivacy: async () => { throw Error("privacy-failed"); } }); await env.flush();

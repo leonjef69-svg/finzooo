@@ -19,7 +19,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { guardarMovimientoCompartido, borrarMovimientoCompartido, type SharedMovementOperation } from "@/utils/sharedMovements";
-import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
+import { assertSharedContentAccepted, writeWithAcceptedSharedContent } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
@@ -139,14 +139,13 @@ export async function crearFamilia(
 }
 
 export async function crearInvitacionFamilia(uid: string, familiaId: string): Promise<string> {
-  await assertSharedContentAccepted(uid);
   const codigo = crearCodigoFamilia();
-  await setDoc(doc(db, "familyInvites", codigo), {
+  await writeWithAcceptedSharedContent(uid, () => setDoc(doc(db, "familyInvites", codigo), {
     familyId: familiaId,
     createdBy: uid,
     expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     creadoEn: serverTimestamp(),
-  });
+  }));
   return codigo;
 }
 

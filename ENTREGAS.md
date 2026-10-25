@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 25/10/2026 — entrada a espacios, invitaciones y PIN (desarrollo)
+
+Marca `25oct-entrada-invitacion-pin`, base `6aa8de59`. Catálogos visuales de
+Familia/Cajas preparados tras desbloquear; selección de Familia con consultas
+independientes paralelas, manteniendo confirmación financiera y cierre posterior
+al historial. Invitaciones sin renovación legal redundante antes de cada ACK,
+con elección local y reglas intactas. PIN: pausa interna no inicia el margen;
+salida real conserva la protección. No se cambia ninguna credencial.
+
+Emulador habitual/misma cuenta: consultas de selección 3,618→2,698 s; invitación
+8,975→3,153 s. Una muestra de desarrollo, sin medir FPS. El catálogo de Cajas
+no bajó su latencia de red; se conserva la vista mientras consulta. Marca
+confirmada en Información; Personal S/50, WW S/11 y WWW S/1. Los 19 conjuntos
+financieros locales y los historiales remotos resultaron idénticos. Sin envío
+de códigos a terceros ni conversión de la Caja del propietario.
+
+Controles finales: TypeScript/ESLint sin errores, 278 pruebas + 8 auditores
+verdes. Navegación interna sin nuevo PIN; salida real de más de 162 s vuelve
+a pedirlo, entrada autorizada correcta. Detalle y limitaciones en ESTADO.md.
+Se recuperaron fallos de carga/ANR de desarrollo sin borrar datos.
+Sin APK nuevo, OTA/Play ni despliegue de Firebase. Telegram y tarjetas excluidos.
+
 ## 25/10/2026 — guardados y consultas (integración de desarrollo)
 
 Marca `25oct-guardados-saldos-consultas`, base `1955c268`. Guardados manuales,

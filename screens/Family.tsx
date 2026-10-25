@@ -44,6 +44,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
+import { peekFamilyCatalog } from "@/utils/spaceCatalog";
 
 const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
@@ -86,8 +87,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const copiaConocida = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
   const copiaInicial = copiaConocida && familyMutationPending(accountUid, getAccountStorageSession())
     ? { ...copiaConocida, saldosFamilias: {}, movimientosFamilias: {}, movimientos: [] } : copiaConocida;
+  const catalogoInicial = useRef(peekFamilyCatalog(accountUid)).current;
   const [familia, setFamilia] = useState<EspacioFamilia | null>(copiaInicial?.familia ?? null);
-  const [familias, setFamilias] = useState<EspacioFamilia[]>(copiaInicial?.familias ?? (copiaInicial?.familia ? [copiaInicial.familia] : []));
+  const [familias, setFamilias] = useState<EspacioFamilia[]>(copiaInicial?.familias ?? catalogoInicial ?? (copiaInicial?.familia ? [copiaInicial.familia] : []));
   const [saldosFamilias, setSaldosFamilias] = useState<Record<string, number>>(copiaInicial?.saldosFamilias ?? {});
   // Entrar desde Personal debe llevar al selector de familias, no abrir
   // automáticamente la última familia activa. La persona elige el espacio
@@ -109,7 +111,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   // familia se interpretara como huérfana y se borrara de Personal.
   const [movimientosFamilias, setMovimientosFamilias] = useState<Record<string, MovimientoFamilia[]>>(copiaInicial?.movimientosFamilias ?? {});
   const [familiasSincronizadas, setFamiliasSincronizadas] = useState(false);
-  const [cargando, setCargando] = useState(!copiaInicial);
+  const [cargando, setCargando] = useState(!copiaInicial && catalogoInicial === undefined);
   const [ocupado, setOcupado] = useState(false);
   const [familiasOcultas, setFamiliasOcultas] = useState(new Set<string>());
   const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
@@ -209,6 +211,18 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       shareSpaceRead({ uid, session: accountSession, revision: moneyVersion, key }, work, forzar);
     let completing = false;
     try {
+      // La pertenencia se vuelve a comprobar con el catálogo. El historial
+      // de la selección conocida puede consultarse en paralelo; no se publica
+      // ni se concilia nada hasta que AMBAS lecturas hayan sido confirmadas.
+      const seleccionConocida = seleccionExplicita && preferida && !alcance
+        ? familiaEnMemoria.get(uid)?.familias.find(item => item.id === preferida) : undefined;
+      const lecturaSeleccion = seleccionConocida ? Promise.all([
+        leer(`family:movements:${seleccionConocida.id}`, () => listarMovimientosFamilia(seleccionConocida.id, true)),
+        leer(`family:members:${seleccionConocida.id}`, () => listarMiembrosFamilia(seleccionConocida.id)),
+      ]) : undefined;
+      // La lista puede fallar antes que el historial: observar ese rechazo
+      // desde el inicio evita una promesa rechazada sin atender.
+      if (lecturaSeleccion) void lecturaSeleccion.catch(() => undefined);
       // listarFamilias ya incorpora el índice antiguo: no consultarlo otra vez.
       const lista = alcance ? alcance.visual.familias : await task.wait(() => leer("family:list", () => listarFamilias(uid)));
       // La lista y sus botones no necesitan esperar todos los historiales.
@@ -224,7 +238,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       // foco, actualización manual y cambios de integrantes siguen globales.
       const soloActiva = Boolean(alcance || (seleccionExplicita && preferida && activa));
       const previa = alcance?.visual ?? familiaEnMemoria.get(uid);
-      const [movements, people] = activa ? await task.wait(() => Promise.all([
+      const [movements, people] = activa ? await task.wait(() => lecturaSeleccion && activa.id === seleccionConocida?.id ? lecturaSeleccion : Promise.all([
         leer(`family:movements:${activa.id}`, () => listarMovimientosFamilia(activa.id, true)),
         consultarMiembros ? leer(`family:members:${activa.id}`, () => listarMiembrosFamilia(activa.id))
           : Promise.resolve(previa?.familia?.id === activa.id ? previa.miembros : []),

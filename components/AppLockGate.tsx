@@ -275,7 +275,10 @@ export default function AppLockGate() {
         setForeground(true);
       }
       if (!enabled) return;
-      if (next === "background" || next === "inactive") {
+      // «inactive» también ocurre con avisos y paneles del sistema mientras
+      // se sigue usando Fino. Solo una salida real al fondo inicia el margen;
+      // una pausa interna larga no debe pedir otra vez el PIN al cerrarse.
+      if (next === "background") {
         if (!lockedRef.current && !prompting.current && leftAt.current === null) {
           leftAt.current = Date.now();
           // Y también en disco, por si Android mata la app antes de volver.
@@ -286,7 +289,7 @@ export default function AppLockGate() {
       if (next === "active") {
         const since = leftAt.current;
         leftAt.current = null;
-        if (!prompting.current && since !== null && Date.now() - since > GRACE_MS) {
+        if (!prompting.current && since !== null && (Date.now() < since || Date.now() - since > GRACE_MS)) {
           setLocked(true);
           autoPrompted.current = false;
           setMethod("biometric");

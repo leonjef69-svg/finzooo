@@ -1,8 +1,13 @@
 import { Boxes, UserRound, UsersRound } from "lucide-react-native";
+import { useEffect } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import { cambiarEspacioUnaVez } from "@/utils/nav";
+import { auth } from "@/utils/firebase";
+import { getAccountStorageSession } from "@/utils/storage";
+import { warmSpaceCatalogs } from "@/utils/spaceCatalog";
+import { useAppLocked } from "@/utils/lockState";
 
 export type FinoSpace = "personal" | "family" | "boxes";
 
@@ -21,8 +26,18 @@ const OPTIONS = [
  * Cambiar de pestaña no altera movimientos ni crea un espacio nuevo.
  */
 export default function SpaceSwitcher({ active }: { active: FinoSpace }) {
-  const { t } = useAppData();
+  const { t, ready, hasOnboarded } = useAppData();
   const navigation = useNavigation("/");
+  const locked = useAppLocked();
+  const uid = auth.currentUser?.uid ?? "", session = getAccountStorageSession();
+  useEffect(() => {
+    if (active !== "personal" || locked || !ready || !hasOnboarded || !uid || session === null) return;
+    // Personal se pinta primero. Preparar nombres no monta las otras pantallas.
+    const idle = requestIdleCallback(() => {
+      if (getAccountStorageSession() === session) warmSpaceCatalogs(uid);
+    });
+    return () => cancelIdleCallback(idle);
+  }, [active, locked, ready, hasOnboarded, uid, session]);
 
   function open(id: FinoSpace) {
     if (id === active) return;

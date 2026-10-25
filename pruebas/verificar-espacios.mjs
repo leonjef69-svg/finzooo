@@ -42,7 +42,7 @@ assert.match(family, /<SpaceSwitcher active="family"/);
 assert.match(family, /crearFamilia/, "Familia permite crear un espacio real");
 assert.match(family, /unirseAFamilia/, "Familia permite entrar mediante invitación");
 assert.match(family, /familiaEnMemoria/, "Familia conserva lo ya mostrado mientras actualiza la nube");
-assert.match(family, /useState\(!copiaInicial\)/, "Familia enseña la copia completa ya conocida mientras refresca");
+assert.match(family, /useState\(!copiaInicial && catalogoInicial === undefined\)/, "Familia enseña la copia o los nombres preparados mientras confirma saldos");
 assert.match(family, /movimientosFamilias: nextMovements/, "la copia inmediata conserva todas las familias, no solo la última abierta");
 assert.match(family, /VENTANA_CAMBIO_RAPIDO_MS = 2_000/, "un cambio rápido reutiliza por poco tiempo la consulta completa ya obtenida");
 assert.doesNotMatch(family, /!cargando && actualizando/, "Familia no tapa datos visibles con un aviso de carga de fondo");
