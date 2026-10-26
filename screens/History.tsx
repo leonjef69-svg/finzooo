@@ -124,7 +124,7 @@ const Fila = memo(function Fila({
           {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
           {fmt(tx.amount)}
         </Text>
-        {!isTransfer && tx.description !== t(c.label) ? (
+        {!isTransfer && title !== t(c.label) ? (
           <Text className="mt-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300" numberOfLines={1}>
             {t(c.label)}
           </Text>

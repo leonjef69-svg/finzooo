@@ -1,5 +1,18 @@
 # Estado actual de Fino
 
+## Historial: quitar categoría repetida en una fila — 25/10/2026 — desarrollo
+
+Marca `25oct-historial-categoria-sin-duplicar`. La fila compara el título que
+realmente muestra a la izquierda con el nombre de categoría antes de mostrar
+la categoría debajo del monto. Si son iguales, la segunda etiqueta desaparece;
+si el título es una descripción distinta, la categoría sigue visible. No cambia
+movimientos, saldos, filtros ni datos. Sin permisos ni código nativo; no requiere
+cambio en PLAYSTORE.md.
+
+TypeScript y ESLint pasan. Qué sigue/falta: comprobar la fila en el emulador
+habitual; después entregar el cambio al celular. Sin APK/OTA ni publicación de
+la app.
+
 ## Importar: tipo por movimiento dudoso — 25/10/2026 — desarrollo
 
 Marca `25oct-importacion-tipo-por-movimiento`, base `dfbc4a97`. Sustituye la
