@@ -1,5 +1,53 @@
 # Estado actual de Fino
 
+## Importación: montos, fechas y duplicados — 25/10/2026 — desarrollo
+
+Marca `25oct-importacion-montos-fechas-duplicados`, base `3382cf1b`.
+CSV/TXT conocidos prevalecen sobre MIME de Excel/PDF. Lector exclusivo de
+importación valida miles, céntimos, precisión de moneda y columnas; no cambia
+voz, recibos ni captura automática. Respeta campos CSV multilínea y separadores
+entre comillas. Fechas inválidas no pasan al selector de mes, años mal escritos
+no se recortan y resúmenes sin fecha no heredan el último día. Las fechas
+numéricas ambiguas y positivos sin tipo piden aclaración antes de guardar;
+una convención inequívoca del archivo evita preguntas innecesarias.
+
+La vista previa muestra tipo/categoría. Repetidos dentro del archivo se revisan
+y omiten por defecto, con opción de conservar ambos; no se fusionan con altas
+aún inexistentes. Códigos de operación distintos no se fusionan; el mismo código
+con importe cambiado exige revisión y no se añade automáticamente. Al guardar se revalida contra el libro vigente y se
+rechaza el lote entero si cambió; conservar ambos requiere decisión expresa.
+La limpieza del archivo solo alcanza la copia en caché. No añade datos
+persistentes, permisos ni servicios; PLAYSTORE.md no requiere cambios.
+
+28 casos nuevos ejecutan lector/detector originales y manejador de confirmación
+con IO en memoria; los casos monetarios/fecha reproducen fallos en la base.
+TypeScript y ESLint pasan; batería general de 282 pruebas/ocho auditores verde,
+con Excel, PDF e importación repetidos después del refuerzo de símbolos.
+
+Emulador habitual/misma cuenta: selección real de CSV, XLSX y PDF ficticios,
+todos con ingreso S/6,50, gasto S/2,35 y una repetición: tres filas encontradas,
+dos nuevas y una repetida. Revisión interna sin opción de fusionar contra un
+registro aún inexistente. Otro CSV bloquea guardar hasta elegir día/mes o
+mes/día y gasto/ingreso; ambas fechas y el ingreso se verificaron en pantalla.
+31/02 se rechaza con aviso claro. Se conservaron los cinco archivos originales
+antes de retirar exclusivamente las copias ficticias creadas para las pruebas.
+
+El manejador original se ejecutó también en Hermes con guardado sustituido
+solo por una lista en memoria: dos registros, saldo ficticio S/4,15, doble toque
+con un solo envío, archivo repetido con cero altas y bloqueo de datos ambiguos.
+No acredita un guardado SQLite en Android ni registra dinero ficticio en la
+cuenta. Comparación de solo lectura: 20 conjuntos financieros locales idénticos,
+68 movimientos antes/después y datos remotos de Familia/Cajas idénticos.
+Fino queda abierta en Personal; no se cambió ni desactivó el PIN.
+
+La carga de desarrollo fallaba y el emulador se congeló. Se recuperaron el
+mismo AVD (arranque completo sin borrar datos) y el servidor con sus permisos
+normales. La pantalla de servidores no era un cierre de sesión. Instrumentación
+solo privada en `.tmp`, sin cambios de depuración en la app.
+Qué sigue/falta: probar un estado de cuenta bancario real anonimizado y, antes
+de distribuir, verificar el guardado completo en una cuenta de prueba Android.
+Sin APK, OTA ni servicios publicados; Telegram y tarjetas quedan fuera.
+
 ## Presupuestos: etiqueta corta para más de 999% — 25/10/2026 — desarrollo
 
 Marca `25oct-presupuesto-etiqueta-999-corta`, base `c4a906e0`. La etiqueta

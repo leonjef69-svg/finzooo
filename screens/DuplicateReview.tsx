@@ -16,6 +16,7 @@ type Candidate = {
   tx: Transaction;
   raw: RawRow;
   match: DuplicateMatch | null;
+  inFile?: boolean;
 };
 
 // PANTALLA DE REVISIÓN DE MOVIMIENTOS PARECIDOS (Fase 5)
@@ -119,7 +120,7 @@ export default function DuplicateReview({
         {/* Movimiento existente (el tuyo) */}
         <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4 mb-3">
           <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase mb-2">
-            {t("dupes.existing")}
+            {t(current.inFile ? "importSheet.previewInFile" : "dupes.existing")}
           </Text>
           <Row label={existing.description || existingCat?.id || ""} value={fmt(existing.amount)} primary={primaryText} />
           <Text className="text-xs text-slate-500 dark:text-slate-300 mt-1">
@@ -144,14 +145,14 @@ export default function DuplicateReview({
 
         {/* Opciones */}
         <View className="gap-2.5">
-          <TouchableOpacity
+          {!current.inFile && <TouchableOpacity
             onPress={() => decide("merge")}
             disabled={saving}
             className="flex-row items-center gap-3 bg-emerald-600 rounded-2xl p-4"
           >
             <GitMerge size={18} color="#ffffff" />
             <Text className="font-bold text-white flex-1">{t("dupes.merge")}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
           <TouchableOpacity
             onPress={() => decide("keepBoth")}
             disabled={saving}

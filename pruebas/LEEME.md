@@ -1,5 +1,17 @@
 # Pruebas y auditores
 
+25/10 Importación: `verificar-importacion-segura-real.mjs` ejecuta lectores y
+detector originales (CSV, montos, moneda, fechas, signos, columnas, referencias),
+la preparación de candidatos y el manejador de confirmación con IO en memoria.
+28 casos incluyen repetir archivo, repetidos internos, conflicto concurrente,
+doble toque, rechazo pendiente de aclaración y reintento tras fallo.
+`FINO_TEST_BASELINE=3382cf1b` reproduce errores anteriores de comportamiento;
+las nuevas funciones auxiliares se comprueban sobre la carpeta corregida.
+No acredita un guardado SQLite/Android ni usa una cuenta real. Los adaptadores
+de dos pruebas anteriores de formularios incorporan el preparador original;
+el auditor estático sigue su conexión desde la pantalla al módulo extraído.
+
+
 25/10 Resumen de ahorro: `verificar-ahorro-unificado-real.mjs` también ejecuta
 el JSX de la tarjeta con medidas adaptadas de nombre/tarjeta. Aviso arriba a
 la derecha cuando cabe, debajo si el nombre ocupa más espacio o varias líneas,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
-import { File } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
 import { diagnosePdf, extractPdfText, seEntiende, PdfResourceLimitError } from "@/utils/pdfExtract";
 import { extractExcelText, looksLikeExcel } from "@/utils/excelExtract";
@@ -13,9 +13,10 @@ import { nextId } from "@/utils/id";
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
 import { catInfo } from "@/constants/categories";
 import { fmtDate } from "@/utils/format";
-import { matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
+import { matchMethod, parseStatement, type RawRow, type ImportOptions, type ParseResult } from "@/utils/importEngine";
 import { categoryForImportedRow } from "@/utils/importCategory";
-import { buildDuplicateDateIndex, findBestMatchInIndex, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
+import { buildDuplicateDateIndex } from "@/utils/duplicates";
+import { buildImportCandidates, resolveImportCandidates, type ImportCandidate, type ImportResolution } from "@/utils/importCandidates";
 import DuplicateReview from "@/screens/DuplicateReview";
 import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
@@ -106,11 +107,7 @@ function ElegirMes({
 
 // Un movimiento del banco ya convertido a formato Fino, junto con la
 // información de si se parece a algo que ya tienes.
-type Candidate = {
-  tx: Transaction; // el movimiento nuevo, listo para guardarse
-  raw: RawRow; // los datos crudos del banco (para aprender/fusionar)
-  match: DuplicateMatch | null; // el parecido encontrado (o null si es nuevo)
-};
+type Candidate = ImportCandidate;
 
 // Cuántos movimientos se dibujan en la vista previa. Un extracto largo con
 // cientos de filas dentro de un ScrollView se siente pesado al desplazar;
@@ -118,7 +115,7 @@ type Candidate = {
 const PREVIEW_LIMIT = 100;
 
 // Decisión que toma la persona (o el sistema) sobre cada candidato.
-export type Resolution = "new" | "merge" | "keepBoth" | "skip";
+export type Resolution = ImportResolution;
 
 export default function ImportSheet({
   onClose,
@@ -131,7 +128,7 @@ export default function ImportSheet({
    */
   incoming?: { uri: string; name: string } | null;
 }) {
-  const { t, fmt, monthNames, showToast, transactions, commitImport, learnMerchantCategory, merchantLearned } =
+  const { t, fmt, monthNames, showToast, transactions, commitImport, learnMerchantCategory, merchantLearned, userCurrency } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -162,6 +159,12 @@ export default function ImportSheet({
   const [importedTotal, setImportedTotal] = useState(0);
   const [saving, setSaving] = useState(false);
   const importLock = useRef(false);
+  const source = useRef<{ text: string; bank?: string } | null>(null);
+  const seenFileRows = useRef(new Map<string, ImportCandidate>());
+  const [importOptions, setImportOptions] = useState<ImportOptions>({});
+  const [requirements, setRequirements] = useState({ type: false, date: false });
+  const needsChoices = (requirements.type && !importOptions.positiveType)
+    || (requirements.date && !importOptions.dateOrder);
 
   const iconMuted = colorScheme === "dark" ? "#94a3b8" : "#475569";
   const primaryText = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
@@ -263,7 +266,7 @@ export default function ImportSheet({
    * mes a mano. Copiarla habría bastado hoy y se habría desviado de la otra en el primer arreglo.
    */
   function construirCandidatos(raws: RawRow[]): Candidate[] {
-    return raws.map((raw) => {
+    return buildImportCandidates(raws, duplicateDateIndex, yaEmparejados.current, seenFileRows.current, (raw) => {
       // LA CATEGORÍA DEL ARCHIVO MANDA, Y ANTES SE TIRABA (12/08/2026).
       //
       // El comentario que había aquí decía "si el archivo ya trae una categoría reconocible la
@@ -293,10 +296,26 @@ export default function ImportSheet({
         account: raw.account,
         origin: "imported",
       };
-      const match = findBestMatchInIndex(duplicateDateIndex, raw, yaEmparejados.current);
-      if (match) yaEmparejados.current.add(match.existing.id);
-      return { tx, raw, match };
+      return tx;
     });
+  }
+
+  function updatePreview(parsed: Extract<ParseResult, { ok: true }>) {
+    yaEmparejados.current = new Set();
+    seenFileRows.current = new Map();
+    setCandidates(construirCandidatos(parsed.rows));
+    setErrorCount(parsed.errorCount - parsed.sinFecha);
+    setSinFecha(parsed.sinFecha);
+    setRowsSinFecha(parsed.rowsSinFecha);
+  }
+
+  function chooseImportOptions(choice: ImportOptions) {
+    if (!source.current || saving) return;
+    const options = { currency: userCurrency, ...importOptions, ...choice };
+    const parsed = parseStatement(source.current.text, source.current.bank, options);
+    if (!parsed.ok) return;
+    setImportOptions(options);
+    updatePreview(parsed);
   }
 
   /**
@@ -328,7 +347,7 @@ export default function ImportSheet({
     setDone(false);
     const asset = { uri, name, mimeType };
     const isPdf = asset.name.toLowerCase().endsWith(".pdf") ||
-      asset.mimeType === "application/pdf";
+      (!/\.(csv|txt|tsv|xls|xlsx|xlsm)$/i.test(asset.name) && asset.mimeType === "application/pdf");
     const isExcel = !isPdf && looksLikeExcel(asset.name, asset.mimeType);
     let file: File | null = null;
     let readAsPdf = false;
@@ -394,7 +413,7 @@ export default function ImportSheet({
       }
 
       const detectedBank = guessAccount(asset.name, text.slice(0, 400));
-      const parsed = parseStatement(text, detectedBank);
+      const parsed = parseStatement(text, detectedBank, { currency: userCurrency });
 
       if (!parsed.ok) {
         showToastAndClose(isPdf ? t("importSheet.pdfError") : t(parsed.reason === "empty" ? "importSheet.emptyFile" : "importSheet.missingColumns"));
@@ -405,27 +424,22 @@ export default function ImportSheet({
       // su hoja de control, donde los montos y las categorías SÍ estaban escritos. Con filas sin
       // fecha la pantalla se queda abierta para poder preguntarle de qué mes son.
       if (parsed.rows.length === 0 && parsed.rowsSinFecha.length === 0) {
-        showToastAndClose(isPdf ? t("importSheet.pdfError") : t("importSheet.emptyFile"));
+        showToastAndClose(isPdf ? t("importSheet.pdfError") : t(parsed.errorCount > 0 ? "importSheet.noValidRows" : "importSheet.emptyFile"));
         return;
       }
 
-      // Se empieza de cero con los emparejamientos: son de este archivo y de ninguno anterior.
-      yaEmparejados.current = new Set();
-      const built: Candidate[] = construirCandidatos(parsed.rows);
-
+      source.current = { text, bank: detectedBank };
+      setImportOptions({});
+      setRequirements({ type: parsed.needsTypeChoice, date: parsed.needsDateOrder });
       setFileName(asset.name);
       setBank(detectedBank);
-      setCandidates(built);
-      setErrorCount(parsed.errorCount);
-      setSinFecha(parsed.sinFecha);
-      setRowsSinFecha(parsed.rowsSinFecha);
+      updatePreview(parsed);
     } catch (error) {
       showToastAndClose(error instanceof PdfResourceLimitError ? t("importSheet.pdfTooComplex") : readAsPdf ? t("importSheet.pdfError") : isExcel ? t("importSheet.excelError") : t("importSheet.readError"));
     } finally {
-      // Seguridad/privacidad: el archivo del banco se borra del celular
-      // apenas terminamos de leerlo. No lo guardamos más de lo necesario.
+      // Solo la copia temporal del selector; nunca el archivo original.
       try {
-        if (file?.exists) file.delete();
+        if (file?.exists && file.uri.startsWith(Paths.cache.uri)) file.delete();
       } catch {
         // Si no se puede borrar, no es grave: está en la carpeta temporal
         // que el sistema limpia solo.
@@ -442,28 +456,15 @@ export default function ImportSheet({
 
   // Aplica un conjunto de decisiones y guarda todo de una vez.
   async function applyResolutions(resolutions: Map<number, Resolution>) {
-    if (importLock.current || !mounted.current) return false;
+    if (importLock.current || !mounted.current || needsChoices) return false;
     const session = getAccountStorageSession();
     const current = () => mounted.current && getAccountStorageSession() === session;
     importLock.current = true;
     setSaving(true);
     try {
-      const toAdd: Transaction[] = [];
-      const toReplace: Transaction[] = [];
-
-      for (const cand of candidates) {
-        const decision = resolutions.get(cand.tx.id) ?? (cand.match ? "skip" : "new");
-        if (decision === "skip") continue;
-        if (decision === "merge" && cand.match) {
-          toReplace.push(mergeTransaction(cand.match.existing, cand.raw));
-        } else {
-          // "new" o "keepBoth": entra tal cual. Si el usuario ya lo tenía
-          // manual y elige mantener ambos, este queda marcado "importado".
-          toAdd.push(cand.tx);
-        }
-      }
-
-      const total = await commitImport(toAdd, toReplace);
+      const { toAdd, toReplace } = resolveImportCandidates(candidates, resolutions);
+      const keepBothIds = candidates.filter(c => resolutions.get(c.tx.id) === "keepBoth").map(c => c.tx.id);
+      const total = await commitImport(toAdd, toReplace, keepBothIds);
       if (!current()) return false;
       setImportedTotal(total);
       setReviewing(false);
@@ -492,6 +493,10 @@ export default function ImportSheet({
     setErrorCount(0);
     setSinFecha(0);
     setRowsSinFecha([]);
+    source.current = null;
+    seenFileRows.current.clear();
+    setImportOptions({});
+    setRequirements({ type: false, date: false });
     setBank(undefined);
     setDone(false);
   }
@@ -606,13 +611,45 @@ export default function ImportSheet({
             </View>
 
             <View className="gap-2.5 mb-4">
-              <View className="flex-row items-center gap-3 bg-emerald-50 dark:bg-emerald-950 rounded-2xl p-3.5">
+              {(requirements.date || requirements.type) && (
+                <View className="rounded-2xl p-3.5 bg-amber-50 dark:bg-noche-2 gap-3">
+                  {requirements.date && (
+                    <View>
+                      <Text className="text-xs font-bold text-slate-700 dark:text-slate-100 mb-2">{t("importSheet.dateOrderQuestion")}</Text>
+                      <View className="flex-row gap-2">
+                        {(["DMY", "MDY"] as const).map(order => (
+                          <TouchableOpacity key={order} accessibilityRole="radio" accessibilityState={{ checked: importOptions.dateOrder === order }}
+                            onPress={() => chooseImportOptions({ dateOrder: order })}
+                            className={`flex-1 rounded-xl p-3 ${importOptions.dateOrder === order ? "bg-emerald-600" : "bg-slate-100 dark:bg-noche-3"}`}>
+                            <Text className={`text-xs font-bold text-center ${importOptions.dateOrder === order ? "text-white" : "text-slate-700 dark:text-slate-100"}`}>{t(`importSheet.date${order}`)}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  {requirements.type && (
+                    <View>
+                      <Text className="text-xs font-bold text-slate-700 dark:text-slate-100 mb-2">{t("importSheet.typeQuestion")}</Text>
+                      <View className="flex-row gap-2">
+                        {(["expense", "income"] as const).map(type => (
+                          <TouchableOpacity key={type} accessibilityRole="radio" accessibilityState={{ checked: importOptions.positiveType === type }}
+                            onPress={() => chooseImportOptions({ positiveType: type })}
+                            className={`flex-1 rounded-xl p-3 ${importOptions.positiveType === type ? "bg-emerald-600" : "bg-slate-100 dark:bg-noche-3"}`}>
+                            <Text className={`text-xs font-bold text-center ${importOptions.positiveType === type ? "text-white" : "text-slate-700 dark:text-slate-100"}`}>{t(type === "expense" ? "history.filterExpense" : "history.filterIncome")}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+              {!needsChoices && <View className="flex-row items-center gap-3 bg-emerald-50 dark:bg-emerald-950 rounded-2xl p-3.5">
                 <CheckCircle2 size={18} color="#059669" />
                 <Text className="text-sm font-bold text-emerald-700 dark:text-slate-100 flex-1">
                   {t("importSheet.summaryNew", { count: newOnes.length })}
                 </Text>
-              </View>
-              {dupes.length > 0 && (
+              </View>}
+              {!needsChoices && dupes.length > 0 && (
                 <View className="flex-row items-center gap-3 bg-amber-50 dark:bg-noche-2 rounded-2xl p-3.5">
                   <Copy size={18} color="#f59e0b" />
                   <Text className="text-sm font-bold text-amber-700 dark:text-slate-100 flex-1">
@@ -634,6 +671,7 @@ export default function ImportSheet({
                   se arreglan escribiendo la fecha en la hoja. */}
               {sinFecha > 0 && (
                 <TouchableOpacity
+                  disabled={needsChoices}
                   onPress={() => setEligiendoMes(true)}
                   className="flex-row items-center gap-3 bg-amber-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-amber-300"
                 >
@@ -660,7 +698,7 @@ export default function ImportSheet({
                 forma de notarlo hasta después de guardarlo todo.
                 Ahora se ven, con su fecha, su monto y marcados los que ya
                 tienes. */}
-            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+            {!needsChoices && <><Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("importSheet.previewTitle")}
             </Text>
             <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde overflow-hidden mb-4">
@@ -680,9 +718,12 @@ export default function ImportSheet({
                     >
                       {c.tx.description || t(catInfo(c.tx.category).label)}
                     </Text>
+                    <Text className="text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={1}>
+                      {t(c.tx.type === "expense" ? "addSheet.expense" : "addSheet.income")} · {t(catInfo(c.tx.category).label)}
+                    </Text>
                     {c.match && (
                       <Text className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
-                        {t("importSheet.previewDupe")}
+                        {t(c.inFile ? "importSheet.previewInFile" : "importSheet.previewDupe")}
                       </Text>
                     )}
                   </View>
@@ -701,7 +742,7 @@ export default function ImportSheet({
                   {t("importSheet.previewMore", { count: candidates.length - PREVIEW_LIMIT })}
                 </Text>
               )}
-            </View>
+            </View></>}
 
             <View className="flex-row gap-3">
               <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} hitSlop={6}
@@ -714,13 +755,13 @@ export default function ImportSheet({
               {dupes.length > 0 && (
                 <TouchableOpacity
                   onPress={() => setReviewing(true)}
-                  disabled={saving}
+                  disabled={saving || needsChoices}
                   className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center"
                 >
                   <Text className="font-bold text-slate-600 dark:text-slate-200">{t("importSheet.reviewButton")}</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={importAll} disabled={saving} className="flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center">
+              <TouchableOpacity onPress={importAll} disabled={saving || needsChoices || newOnes.length === 0} className={`flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center ${needsChoices || newOnes.length === 0 ? "opacity-40" : ""}`}>
                 {saving ? <ActivityIndicator color="#ffffff" /> : <Text className="font-bold text-white">{dupes.length > 0 ? t("importSheet.importNew", { count: candidates.length - dupes.length }) : t("importSheet.importAll")}</Text>}
               </TouchableOpacity>
             </View>

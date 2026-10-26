@@ -293,7 +293,7 @@ type AppDataContextValue = {
   stagePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   readPrivateBoxMoneyLocal: () => { transactions: Transaction[]; deletedIds: number[]; currency: string };
   deleteTransactions: (ids: number[]) => Promise<boolean>;
-  commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => number | Promise<number>;
+  commitImport: (toAdd: Transaction[], toReplace: Transaction[], keepBothIds?: number[]) => number | Promise<number>;
 
   merchantLearned: Record<string, string>;
   learnMerchantCategory: (merchantText: string, category: string) => void;
@@ -3261,7 +3261,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // en UN solo cambio de estado, para no disparar 30 guardados seguidos.
   //   toAdd    → movimientos nuevos (ya con su id puesto)
   //   toReplace→ movimientos fusionados (mismo id que uno existente)
-  function commitImport(toAdd: Transaction[], toReplace: Transaction[]) {
+  function commitImport(toAdd: Transaction[], toReplace: Transaction[], keepBothIds: number[] = []) {
     if (toAdd.length === 0 && toReplace.length === 0) return 0;
     assertPrivateBoxMoneyLocalIdle();
     const newRows = toAdd.map(row => {
@@ -3270,7 +3270,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
     let count = 0;
     const prepare = (base: Transaction[], deleted: number[]): Transaction[] => {
-      const result = applyImportedTransactions(base, newRows, toReplace, deleted);
+      const result = applyImportedTransactions(base, newRows, toReplace, deleted, Date.now(), keepBothIds);
       count = result.count;
       const existingIds = new Set(base.map(row => row.id));
       const replacedIds = new Set(toReplace.map(row => row.id));

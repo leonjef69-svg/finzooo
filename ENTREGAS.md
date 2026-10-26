@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 25/10/2026 — importación segura de montos, fechas y duplicados (desarrollo)
+
+Marca `25oct-importacion-montos-fechas-duplicados`, base `3382cf1b`. Correcciones
+de lectura CSV/Excel/PDF compartida, aclaraciones de tipo/fecha cuando faltan
+datos, duplicados dentro del archivo y comprobación final contra movimientos
+actuales. 28 casos sintéticos originales y batería de 282 pruebas/ocho auditores
+aprobados; TypeScript/ESLint correctos. Emulador habitual: cinco archivos
+ficticios, lectura de CSV/XLSX/PDF, aclaraciones y rechazo de fecha inválida.
+Guardado original adicional en memoria de Hermes, sin altas en la cuenta:
+68 movimientos y 20 conjuntos locales intactos, igual que Familia/Cajas.
+Fino queda conectada y abierta en Personal. Pendientes físicos/archivo real
+en ESTADO.md. No se publica APK/OTA ni se cambian servicios.
+
+
 ## 25/10/2026 — acortar etiqueta de presupuesto superior a 999% (desarrollo)
 
 Marca `25oct-presupuesto-etiqueta-999-corta`, base `c4a906e0`. «Más de 999%

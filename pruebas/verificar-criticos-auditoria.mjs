@@ -47,7 +47,7 @@ for (const clave of [
 
 exigir(inicio.includes("needsEmailVerification") && inicio.includes("/verify-email"), "Una cuenta sin verificar todavía puede reabrir Inicio");
 exigir(!home.includes('t.method !== "credit"'), "Inicio todavía oculta gastos pagados con tarjeta de crédito");
-exigir(importar.includes('cand.match ? "skip" : "new"'), "Importar todavía duplica por defecto movimientos existentes");
+exigir(importar.includes("resolveImportCandidates(candidates, resolutions)") && leer("utils/importCandidates.ts").includes('candidate.match ? "skip" : "new"'), "Importar todavía duplica por defecto movimientos existentes");
 exigir(nube.includes('throw new Error("cloud-read-failed"'), "Un fallo al leer la nube todavía se presenta como cuenta sin copia");
 
 console.log("Bloqueantes y descuadres prioritarios de la auditoría protegidos.");

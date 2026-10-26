@@ -11,7 +11,10 @@
 
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
 import { PAYMENT_METHODS } from "@/constants/i18n";
-import { isSafeMoneyAmount } from "@/utils/amount";
+import { amountInputError, isSafeMoneyAmount } from "@/utils/amount";
+import { CURRENCIES, currencyDecimals } from "@/constants/currencies";
+import { normalizeHeader } from "@/utils/importText";
+export { normalizeHeader } from "@/utils/importText";
 
 // ---------------------------------------------------------------------
 // 1. LECTURA DEL ARCHIVO
@@ -27,7 +30,14 @@ export function detectDelimiter(lines: string[]): string {
   let best = ",";
   let bestCount = 0;
   for (const candidate of candidates) {
-    const count = sample.split(candidate).length - 1;
+    let count = 0;
+    let quoted = false;
+    for (let i = 0; i < sample.length; i++) {
+      if (sample[i] === '"') {
+        if (quoted && sample[i + 1] === '"') i++;
+        else quoted = !quoted;
+      } else if (!quoted && sample[i] === candidate) count++;
+    }
     if (count > bestCount) {
       bestCount = count;
       best = candidate;
@@ -95,7 +105,7 @@ const COLUMN_ALIASES = {
   method: ["metodo", "method", "medio", "medio de pago", "canal", "forma de pago"],
   type: ["tipo", "type", "tipo movimiento", "tipo de movimiento"],
   reference: [
-    "referencia", "reference", "operacion", "nro operacion", "num operacion",
+    "referencia", "reference", "operacion", "nro operacion", "num operacion", "numero operacion", "numero de operacion",
     "codigo", "cod. operacion", "n operacion", "id",
   ],
   merchant: ["comercio", "merchant", "establecimiento", "beneficiario", "empresa"],
@@ -117,15 +127,6 @@ export type ColumnMap = {
 
 // Quita tildes, espacios de sobra y mayúsculas para poder comparar
 // "Descripción" con "descripcion" sin problemas.
-export function normalizeHeader(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // quita tildes
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 /**
  * Cuántas letras tiene que tener un nombre para buscarlo POR PARTES.
@@ -164,7 +165,7 @@ function findColumnIndex(headers: string[], aliases: readonly string[]): number 
 
 export function buildColumnMap(rawHeaders: string[]): ColumnMap {
   const headers = rawHeaders.map(normalizeHeader);
-  return {
+  const map: ColumnMap = {
     date: findColumnIndex(headers, COLUMN_ALIASES.date),
     description: findColumnIndex(headers, COLUMN_ALIASES.description),
     amount: findColumnIndex(headers, COLUMN_ALIASES.amount),
@@ -176,6 +177,15 @@ export function buildColumnMap(rawHeaders: string[]): ColumnMap {
     reference: findColumnIndex(headers, COLUMN_ALIASES.reference),
     merchant: findColumnIndex(headers, COLUMN_ALIASES.merchant),
   };
+  // «Fecha de operación» es fecha, no un código repetido ni un abono.
+  for (const key of Object.keys(map) as (keyof ColumnMap)[]) {
+    if (key !== "date" && map[key] === map.date) map[key] = -1;
+  }
+  if (map.reference >= 0 && map.reference === map.description) {
+    if (/^(?:nro|num|numero|codigo|cod)\b/.test(headers[map.reference])) map.description = -1;
+    else map.reference = -1;
+  }
+  return map;
 }
 
 // Un mapa sirve si sabemos CUÁNDO pasó algo y CUÁNTO fue. El monto puede
@@ -255,6 +265,61 @@ export function parseAmount(raw: string): number | null {
   return isNegative ? -n : n;
 }
 
+/** Lector de archivos: rechaza agrupaciones rotas en vez de cambiar la cifra.
+ * No modifica el lector compartido por voz, recibos y notificaciones. */
+const importMoneyTokens = [...new Set([...CURRENCIES.flatMap(c => [c.id, c.symbol]), "S/.", "Bs.", "$"])]
+  .sort((a, b) => b.length - a.length).map(token => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+const importMoneyPrefix = new RegExp(`^(?:S\\s*/\\s*\\.?|${importMoneyTokens})(?=\\s*[+-]?\\d)\\s*`, "i");
+const importMoneySuffix = new RegExp(`\\s*(?:${importMoneyTokens})$`, "i");
+
+export function parseImportAmount(raw: string, currency = "PEN"): number | null {
+  let value = (raw || "").trim();
+  const parentheses = /^\(.*\)$/.test(value);
+  if (parentheses) value = value.slice(1, -1).trim();
+  const leadingSign = value.match(/^[+-]\s*/)?.[0];
+  let negative = value.startsWith("-") || parentheses;
+  if (leadingSign) value = value.slice(leadingSign.length);
+  value = value.replace(importMoneyPrefix, "").replace(importMoneySuffix, "").trim();
+  if (leadingSign && /^[+-]/.test(value)) return null;
+  negative = negative || value.startsWith("-");
+  value = value.replace(/^[+-]\s*/, "");
+  // Puntuación final de una cifra, por ejemplo «S/ 6.50.».
+  if (/\d\.$/.test(value)) value = value.slice(0, -1);
+  // Espacios solo como agrupación de miles, no para unir cifras rotas.
+  if (/\s/.test(value)) {
+    if (!/^\d{1,3}(?:[\s\u00a0]\d{3})+(?:[.,]\d{1,3})?$/.test(value)) return null;
+    value = value.replace(/[\s\u00a0]/g, "");
+  }
+  if (!/^\d+(?:[.,]\d+)*$/.test(value)) return null;
+  let normalized = value;
+  if (value.includes(".") && value.includes(",")) {
+    const decimal = value.lastIndexOf(".") > value.lastIndexOf(",") ? "." : ",";
+    const thousands = decimal === "." ? "," : ".";
+    const parts = value.split(decimal);
+    if (parts.length !== 2 || !/^\d{1,3}$/.test(parts[1])) return null;
+    const groups = parts[0].split(thousands);
+    if (!/^\d{1,3}$/.test(groups[0]) || !groups.slice(1).every(g => /^\d{3}$/.test(g))) return null;
+    normalized = `${groups.join("")}.${parts[1]}`;
+  } else if (/[.,]/.test(value)) {
+    const groups = value.split(/[.,]/);
+    const thousands = (groups.length > 2 || currencyDecimals(currency) !== 3)
+      && /^\d{1,3}$/.test(groups[0]) && groups[0] !== "0"
+      && groups.slice(1).every(g => /^\d{3}$/.test(g));
+    if (thousands) normalized = groups.join("");
+    else if (groups.length === 2 && /^\d{1,3}$/.test(groups[1])) normalized = groups.join(".");
+    else return null;
+  }
+  const amount = Number(normalized);
+  if ((normalized.split(".")[1]?.length ?? 0) > currencyDecimals(currency) || amountInputError(normalized, currency)) return null;
+  return isSafeMoneyAmount(amount) ? (negative ? -amount : amount) : null;
+}
+
+export type ImportOptions = {
+  currency?: string;
+  dateOrder?: "DMY" | "MDY";
+  positiveType?: "expense" | "income";
+};
+
 // Comprueba que la fecha exista de verdad en el calendario, para que
 // basura como "2026-13-45" no entre como válida.
 function isRealDate(y: number, m: number, d: number): boolean {
@@ -333,11 +398,11 @@ export function fechaDeDiaSuelto(
 }
 
 // Devuelve la fecha en formato "YYYY-MM-DD", o null si no se entiende.
-export function parseDate(raw: string): string | null {
+export function parseDate(raw: string, order: "DMY" | "MDY" = "DMY"): string | null {
   const trimmed = (raw || "").trim();
   if (!trimmed) return null;
 
-  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?=$|[T\s])/);
   if (iso) {
     const [, y, m, d] = iso;
     if (!isRealDate(Number(y), Number(m), Number(d))) return null;
@@ -345,9 +410,10 @@ export function parseDate(raw: string): string | null {
   }
 
   // 24/07/2026 · 24-07-2026 · 24.07.2026 (y también con año de 2 cifras)
-  const dmy = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/);
+  const dmy = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4}|\d{2})(?=$|\s)/);
   if (dmy) {
-    const [, dRaw, mRaw, yRaw] = dmy;
+    const [, first, second, yRaw] = dmy;
+    const [dRaw, mRaw] = order === "MDY" ? [second, first] : [first, second];
     let year = Number(yRaw);
     if (yRaw.length === 2) year += year < 70 ? 2000 : 1900;
     if (!isRealDate(year, Number(mRaw), Number(dRaw))) return null;
@@ -355,7 +421,7 @@ export function parseDate(raw: string): string | null {
   }
 
   // "24 JUL 2026" o "24-jul-26"
-  const withWord = trimmed.match(/^(\d{1,2})[\s\-/]+([a-zA-Zá-úÁ-Ú]{3,})[\s\-/]+(\d{2,4})/);
+  const withWord = trimmed.match(/^(\d{1,2})[\s\-/]+([a-zA-Zá-úÁ-Ú]{3,})[\s\-/]+(\d{4}|\d{2})(?=$|\s)/);
   if (withWord) {
     const [, dRaw, monthWord, yRaw] = withWord;
     const key = normalizeHeader(monthWord).slice(0, 3);
@@ -485,11 +551,25 @@ export type ParseResult =
        */
       rowsSinFecha: RawRow[];
       headerIndex: number;
+      needsTypeChoice: boolean;
+      needsDateOrder: boolean;
     }
   | { ok: false; reason: "empty" | "noTable" };
 
-export function parseStatement(text: string, account?: string): ParseResult {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+export function parseStatement(text: string, account?: string, options: ImportOptions = {}): ParseResult {
+  // Un campo CSV entre comillas puede ocupar varias líneas físicas.
+  const lines: string[] = [];
+  let record = "", quoted = false;
+  for (const line of text.split(/\r?\n/)) {
+    record += (record ? "\n" : "") + line;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] !== '"') continue;
+      if (quoted && line[i + 1] === '"') i++;
+      else quoted = !quoted;
+    }
+    if (!quoted) { if (record.trim()) lines.push(record); record = ""; }
+  }
+  if (record.trim()) return { ok: false, reason: "noTable" };
   if (lines.length < 2) return { ok: false, reason: "empty" };
 
   const delimiter = detectDelimiter(lines);
@@ -497,6 +577,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
   if (!header) return { ok: false, reason: "noTable" };
 
   const { headerIndex, map } = header;
+  const columnCount = parseDelimitedLine(lines[headerIndex], delimiter).length;
   const rows: RawRow[] = [];
   let errorCount = 0;
   let sinFecha = 0;
@@ -505,10 +586,17 @@ export function parseStatement(text: string, account?: string): ParseResult {
   // abonos positivos. No se puede inferir el signo de un solo renglón: otros
   // bancos ponen TODOS los cargos en positivo. La decisión se toma al final
   // del archivo y solo para filas reales sin columna de tipo ni cargo/abono.
-  const columnaUnicaSinTipo = map.amount !== -1 && map.charge === -1
-    && map.credit === -1 && map.type === -1;
   const positivosSinTipo: RawRow[] = [];
   let hayCargoNegativo = false;
+  let needsDateOrder = false;
+  // Una fecha como 05/10 tiene dos lecturas. Una fecha inequívoca del mismo
+  // archivo permite determinar el orden; si ambas convenciones se mezclan,
+  // se pide una elección y las filas incompatibles quedan como errores.
+  const numericDates = lines.slice(headerIndex + 1).map(line =>
+    parseDelimitedLine(line, delimiter)[map.date] ?? "");
+  const onlyDmy = numericDates.some(date => parseDate(date, "DMY") && !parseDate(date, "MDY"));
+  const onlyMdy = numericDates.some(date => parseDate(date, "MDY") && !parseDate(date, "DMY"));
+  const order = options.dateOrder ?? (onlyMdy && !onlyDmy ? "MDY" : "DMY");
 
   // Lo que el archivo dice de sí mismo antes de empezar la tabla. Ver mesDeclaradoEn.
   const mesDelArchivo = mesDeclaradoEn(lines.slice(0, headerIndex));
@@ -517,6 +605,9 @@ export function parseStatement(text: string, account?: string): ParseResult {
 
   for (let i = headerIndex + 1; i < lines.length; i++) {
     const cells = parseDelimitedLine(lines[i], delimiter);
+    // Una coma decimal sin comillas en un CSV separado por comas no puede
+    // recortar 6,50 a 6. Las columnas extra con datos indican una fila rota.
+    if (cells.slice(columnCount).some(cell => cell.trim())) { errorCount++; continue; }
     const cellAt = (idx: number) => (idx === -1 ? "" : cells[idx] || "");
 
     /**
@@ -537,9 +628,15 @@ export function parseStatement(text: string, account?: string): ParseResult {
      * totales sin que se vea.
      */
     const fechaCruda = cellAt(map.date);
-    let date = parseDate(fechaCruda);
+    // Un resumen no hereda la fecha de la compra anterior.
+    if (!fechaCruda.trim() && /^(total(?:es)?(?: del (?:mes|periodo)| (?:general|gastos|ingresos|egresos|cargos|abonos))?|sub ?total|saldo (?:inicial|final|anterior|actual|disponible|contable))$/.test(normalizeHeader(cellAt(map.description)))) continue;
+    let date = parseDate(fechaCruda, order);
+    const otherDate = parseDate(fechaCruda, order === "DMY" ? "MDY" : "DMY");
+    if (!options.dateOrder && ((date && otherDate && date !== otherDate && onlyDmy === onlyMdy)
+      || (onlyDmy && onlyMdy))) needsDateOrder = true;
     if (!date) date = fechaDeDiaSuelto(fechaCruda, mesDelArchivo);
     if (!date && !fechaCruda.trim()) date = ultimaFecha;
+    if (!date && fechaCruda.trim()) ultimaFecha = null;
     if (date) ultimaFecha = date;
 
     // El monto puede venir de tres formas: una columna única, o dos
@@ -549,8 +646,10 @@ export function parseStatement(text: string, account?: string): ParseResult {
     let montoUnico: number | null = null;
 
     if (map.charge !== -1 || map.credit !== -1) {
-      const charge = parseAmount(cellAt(map.charge));
-      const credit = parseAmount(cellAt(map.credit));
+      const charge = parseImportAmount(cellAt(map.charge), options.currency);
+      const credit = parseImportAmount(cellAt(map.credit), options.currency);
+      if ((charge && credit) || (cellAt(map.charge).trim() && charge === null)
+        || (cellAt(map.credit).trim() && credit === null)) { errorCount++; continue; }
       if (charge !== null && charge !== 0) {
         value = Math.abs(charge);
         typeFromColumns = "expense";
@@ -560,18 +659,20 @@ export function parseStatement(text: string, account?: string): ParseResult {
       }
     }
     if (value === null && map.amount !== -1) {
-      const single = parseAmount(cellAt(map.amount));
+      const single = parseImportAmount(cellAt(map.amount), options.currency);
       if (single !== null && single !== 0) {
         montoUnico = single;
         value = Math.abs(single);
         // Sin columna de tipo, el signo manda: negativo = salió dinero.
-        typeFromColumns = single < 0 ? "expense" : null;
+        typeFromColumns = single < 0 ? "expense" : /^\s*\+/.test(cellAt(map.amount)) ? "income" : null;
       }
     }
 
     // Una fila TOTAL con fecha inválida no decide la convención de todo el
     // archivo. Sí cuentan las filas sin fecha que se conservan para revisión.
-    const signoDeFilaReal = columnaUnicaSinTipo && montoUnico !== null
+    const explicitType = map.type !== -1 ? matchType(cellAt(map.type)) : null;
+    if (montoUnico === null && explicitType && typeFromColumns && explicitType !== typeFromColumns) { errorCount++; continue; }
+    const signoDeFilaReal = !explicitType && montoUnico !== null
       && (date !== null || !fechaCruda.trim());
     if (signoDeFilaReal && montoUnico !== null && montoUnico < 0) hayCargoNegativo = true;
 
@@ -582,7 +683,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
       // la fecha en la hoja—. Una fila sin monto suele ser un hueco o el pie de la tabla, y no
       // hay nada que hacer. Contarlas juntas como "3 con errores" mezcla las dos y no deja
       // actuar sobre ninguna.
-      if (!date && value !== null && value !== 0) {
+      if (!date && !fechaCruda.trim() && value !== null && value !== 0) {
         sinFecha++;
         // Se guarda entera menos la fecha. Ver rowsSinFecha.
         const sinDia = cellAt(map.description);
@@ -598,12 +699,11 @@ export function parseStatement(text: string, account?: string): ParseResult {
           account,
         };
         rowsSinFecha.push(filaSinFecha);
-        if (signoDeFilaReal && montoUnico !== null && montoUnico > 0) positivosSinTipo.push(filaSinFecha);
+        if (signoDeFilaReal && montoUnico !== null && montoUnico > 0 && !typeFromColumns) positivosSinTipo.push(filaSinFecha);
       }
       continue;
     }
 
-    const explicitType = map.type !== -1 ? matchType(cellAt(map.type)) : null;
     // Si nada nos dice qué es, asumimos GASTO: en un estado de cuenta la
     // enorme mayoría de líneas son gastos, y equivocarse hacia "ingreso"
     // inflaría el saldo de la persona (error más confuso).
@@ -622,7 +722,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
       account,
     };
     rows.push(fila);
-    if (signoDeFilaReal && montoUnico !== null && montoUnico > 0) positivosSinTipo.push(fila);
+    if (signoDeFilaReal && montoUnico !== null && montoUnico > 0 && !typeFromColumns) positivosSinTipo.push(fila);
   }
 
   // Aplicar una sola convención a todo el archivo. Sin cargos negativos se
@@ -630,9 +730,13 @@ export function parseStatement(text: string, account?: string): ParseResult {
   // de otro banco en ingresos inventados.
   if (hayCargoNegativo) {
     for (const fila of positivosSinTipo) fila.type = "income";
+  } else if (options.positiveType) {
+    for (const fila of positivosSinTipo) fila.type = options.positiveType;
   }
 
-  return { ok: true, rows, errorCount, sinFecha, rowsSinFecha, headerIndex };
+  return { ok: true, rows, errorCount, sinFecha, rowsSinFecha, headerIndex,
+    needsTypeChoice: positivosSinTipo.length > 0 && !hayCargoNegativo && !options.positiveType,
+    needsDateOrder };
 }
 
 // Convierte el método de pago que dice el banco a uno de los de Fino.

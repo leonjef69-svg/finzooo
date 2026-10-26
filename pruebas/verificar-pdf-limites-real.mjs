@@ -49,12 +49,12 @@ assert.equal((await api.extractPdfText(pdf([deflateSync(rows), true]))).split("\
 assert.equal(await api.extractPdfText(pdf([Buffer.from([255, 255, 255, 255]), true], [deflateSync(valid), true])), "Saldo", "Errores antiguos de stream no cambian a limite inventado");
 let notice = "", deleted = 0, reset = 0, parsed = 0;
 class File {
-  constructor() { this.exists = true; this.size = 100; }
+  constructor(uri) { this.uri = uri; this.exists = true; this.size = 100; }
   async arrayBuffer() { return new ArrayBuffer(0); }
   async bytes() { return new Uint8Array(); }
   delete() { deleted++; }
 }
-const deps = { File, isImportTooLarge: () => false, setLoading() {}, setDone() {}, setLoadingPdf: () => reset++,
+const deps = { File, Paths: { cache: { uri: "file:///cache/" } }, isImportTooLarge: () => false, setLoading() {}, setDone() {}, setLoadingPdf: () => reset++,
   t: key => key, showToastAndClose: msg => { notice = msg; },
   extractPdfText: async () => { throw new api.PdfResourceLimitError(); }, PdfResourceLimitError: api.PdfResourceLimitError,
   parseStatement: () => { parsed++; },

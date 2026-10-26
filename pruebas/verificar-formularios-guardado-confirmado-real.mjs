@@ -61,6 +61,7 @@ for (const [file, name] of [["app/transaction/new.tsx", "NewTransactionRoute"], 
 {
   const importLock = { current: false }, gate = deferred(); let done = false, total = 0, busy = false;
   const apply = handler("screens/ImportSheet.tsx", "applyResolutions", { importLock, mounted: { current: true }, getAccountStorageSession: () => 1,
+    needsChoices: false, resolveImportCandidates: handlerOriginal("utils/importCandidates.ts", "resolveImportCandidates", { mergeTransaction() {} }),
     candidates: [{ tx: { id: 1 }, match: null }], commitImport: () => gate.promise,
     setSaving(value) { busy = value; }, setImportedTotal(value) { total = value; }, setDone(value) { done = value; },
     setReviewing() {}, mergeTransaction() {}, showToast() {}, t });
@@ -93,6 +94,7 @@ for (const file of ["screens/ScanReceipt.tsx", "screens/VoiceEntry.tsx"]) {
 for (const leave of ["unmount", "session"]) for (const outcome of [1, "reject"]) {
   const gate = deferred(), mounted = { current: true }; let session = 1, updates = 0, notices = 0;
   const apply = handler("screens/ImportSheet.tsx", "applyResolutions", {
+    needsChoices: false, resolveImportCandidates: handlerOriginal("utils/importCandidates.ts", "resolveImportCandidates", { mergeTransaction() {} }),
     mounted, getAccountStorageSession: () => session, importLock: { current: false }, candidates: [{ tx: { id: 1 }, match: null }],
     commitImport: () => gate.promise, setSaving() { updates++; }, setImportedTotal() { updates++; },
     setDone() { updates++; }, setReviewing() { updates++; }, mergeTransaction() {}, showToast() { notices++; }, t,

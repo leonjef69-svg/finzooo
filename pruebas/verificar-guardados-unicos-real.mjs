@@ -10,6 +10,8 @@ const handler = (file, name, deps) => handlerOriginal(file, name, deps,
 let imports = 0, importedTotal = 0, failed = 0;
 const importLock = { current: false };
 const importDependencies = {
+  needsChoices: false,
+  resolveImportCandidates: handlerOriginal("utils/importCandidates.ts", "resolveImportCandidates", { mergeTransaction() { throw Error("No se fusiona en este caso"); } }),
   mounted: { current: true }, getAccountStorageSession: () => 1,
   candidates: [{ tx: { id: 1 }, match: null }], importLock,
   commitImport() { imports++; return 1; },

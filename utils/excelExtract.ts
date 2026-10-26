@@ -35,6 +35,8 @@ export type ExcelRead = {
  */
 export function looksLikeExcel(name: string, mimeType?: string): boolean {
   const n = name.toLowerCase();
+  // Algunos proveedores etiquetan CSV como Excel. El nombre conocido manda.
+  if (/\.(csv|txt|tsv|pdf)$/.test(n)) return false;
   if (n.endsWith(".xlsx") || n.endsWith(".xls") || n.endsWith(".xlsm")) return true;
   if (!mimeType) return false;
   return (

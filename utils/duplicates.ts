@@ -10,7 +10,7 @@
 
 import type { Transaction } from "@/types";
 import type { RawRow } from "@/utils/importEngine";
-import { normalizeHeader } from "@/utils/importEngine";
+import { normalizeHeader } from "@/utils/importText";
 
 // Cuánto vale cada coincidencia. Suman 100 entre todas.
 const WEIGHT_AMOUNT = 40;
@@ -30,11 +30,10 @@ export type DuplicateMatch = {
 export type DuplicateDateIndex = Map<string, Transaction[]>;
 
 // --- Monto ---
-// Se compara con una tolerancia de un centavo, porque los redondeos
-// (0.1 + 0.2 no da exactamente 0.3 en una computadora) pueden hacer que
-// dos montos iguales parezcan distintos.
+// Solo se tolera el ruido numérico de la computadora (0.1 + 0.2).
+// Un céntimo de diferencia es un importe distinto y exige revisión.
 function amountScore(a: number, b: number): number {
-  return Math.abs(a - b) < 0.01 ? WEIGHT_AMOUNT : 0;
+  return Math.abs(a - b) < 0.0000001 ? WEIGHT_AMOUNT : 0;
 }
 
 // --- Fecha ---
@@ -108,6 +107,14 @@ export function scoreMatch(existing: Transaction, incoming: RawRow): DuplicateMa
   if (existing.type !== incoming.type || existing.internalTransfer) {
     return { existing, score: 0, level: "new", reasons: [] };
   }
+  // Dos operaciones identificadas distintas no se fusionan por compartir
+  // fecha, comercio y monto. Un código no se convierte a número: conserva ceros.
+  const reference = (value?: string) => (value ?? "").trim().toUpperCase();
+  const sameReference = Boolean(reference(existing.reference) && reference(incoming.reference)
+    && reference(existing.reference) === reference(incoming.reference));
+  if (reference(existing.reference) && reference(incoming.reference) && !sameReference) {
+    return { existing, score: 0, level: "new", reasons: [] };
+  }
 
   let earned = 0;
   let possible = 0;
@@ -152,6 +159,11 @@ export function scoreMatch(existing: Transaction, incoming: RawRow): DuplicateMa
   // distintos aunque todo lo demás coincida.
   if (bothHaveAccount && existing.account !== incoming.account) {
     score = Math.min(score, 50);
+  } else if (sameReference) {
+    // Mismo código con importe cambiado: revisar la corrección, no añadir
+    // otra operación automáticamente ni darla por idéntica.
+    score = gotAmount > 0 ? 100 : 70;
+    reasons.push("reference");
   }
 
   return { existing, score, level: levelFor(score), reasons };
