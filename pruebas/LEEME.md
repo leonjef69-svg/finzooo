@@ -1,5 +1,14 @@
 # Pruebas y auditores
 
+25/10 Importación por fila: `verificar-importacion-tipo-por-fila-real.mjs`
+ejecuta lector, categorías, candidatos y JSX/manejadores originales con
+React/selector/archivo/guardado adaptados. Verifica tres elecciones independientes,
+signos/tipos conocidos, categoría tras elegir, bloqueo mientras falte una,
+cambio de fecha sin perder elecciones, filas sin fecha, duplicados recalculados,
+metadatos fuera del guardado y página 101 accesible. `FINO_TEST_BASELINE=dfbc4a97`
+falla por ausencia de decisiones individuales antes de cargar auxiliares nuevos.
+La prueba automatizada no equivale a guardar en Android ni usa cuentas reales.
+
 25/10 Importación: `verificar-importacion-segura-real.mjs` ejecuta lectores y
 detector originales (CSV, montos, moneda, fechas, signos, columnas, referencias),
 la preparación de candidatos y el manejador de confirmación con IO en memoria.

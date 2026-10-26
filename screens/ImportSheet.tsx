@@ -16,7 +16,8 @@ import { fmtDate } from "@/utils/format";
 import { matchMethod, parseStatement, type RawRow, type ImportOptions, type ParseResult } from "@/utils/importEngine";
 import { categoryForImportedRow } from "@/utils/importCategory";
 import { buildDuplicateDateIndex } from "@/utils/duplicates";
-import { buildImportCandidates, resolveImportCandidates, type ImportCandidate, type ImportResolution } from "@/utils/importCandidates";
+import { buildImportCandidates, classifyImportRow, pendingImportTypeCount, resolveImportCandidates, type ImportCandidate, type ImportResolution } from "@/utils/importCandidates";
+import ImportPreviewRow from "@/components/ImportPreviewRow";
 import DuplicateReview from "@/screens/DuplicateReview";
 import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
@@ -161,10 +162,18 @@ export default function ImportSheet({
   const importLock = useRef(false);
   const source = useRef<{ text: string; bank?: string } | null>(null);
   const seenFileRows = useRef(new Map<string, ImportCandidate>());
+  const assignedMonth = useRef<string | null>(null);
+  const [previewPage, setPreviewPage] = useState(0);
   const [importOptions, setImportOptions] = useState<ImportOptions>({});
-  const [requirements, setRequirements] = useState({ type: false, date: false });
-  const needsChoices = (requirements.type && !importOptions.positiveType)
-    || (requirements.date && !importOptions.dateOrder);
+  const [requirements, setRequirements] = useState({ date: false });
+  const needsDateChoice = requirements.date && !importOptions.dateOrder;
+  const pendingTypes = pendingImportTypeCount(candidates, rowsSinFecha);
+  const needsChoices = needsDateChoice || pendingTypes > 0;
+  const previewRows = useMemo(() => [
+    ...candidates.map(candidate => ({ raw: candidate.raw, candidate })),
+    ...rowsSinFecha.map(raw => ({ raw, candidate: undefined })),
+  ].sort((a, b) => (a.raw.sourceRow ?? 0) - (b.raw.sourceRow ?? 0)), [candidates, rowsSinFecha]);
+  const previewStart = previewPage * PREVIEW_LIMIT;
 
   const iconMuted = colorScheme === "dark" ? "#94a3b8" : "#475569";
   const primaryText = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
@@ -303,10 +312,24 @@ export default function ImportSheet({
   function updatePreview(parsed: Extract<ParseResult, { ok: true }>) {
     yaEmparejados.current = new Set();
     seenFileRows.current = new Map();
-    setCandidates(construirCandidatos(parsed.rows));
+    const assigned = assignedMonth.current;
+    setCandidates(construirCandidatos(assigned
+      ? [...parsed.rows, ...parsed.rowsSinFecha.map(raw => ({ ...raw, date: assigned }))]
+      : parsed.rows));
     setErrorCount(parsed.errorCount - parsed.sinFecha);
-    setSinFecha(parsed.sinFecha);
+    setSinFecha(assigned ? 0 : parsed.sinFecha);
     setRowsSinFecha(parsed.rowsSinFecha);
+    if (assigned) setRowsSinFecha([]);
+    setPreviewPage(0);
+  }
+
+  function chooseRowType(sourceRow: number, type: "expense" | "income") {
+    if (saving || importLock.current || needsDateChoice) return;
+    const result = classifyImportRow(candidates, rowsSinFecha, sourceRow, type, duplicateDateIndex,
+      raw => categoryForImportedRow(raw, t, merchantLearned));
+    setCandidates(result.candidates);
+    setRowsSinFecha(result.undated);
+    setImportOptions(previous => ({ ...previous, rowTypes: { ...previous.rowTypes, [sourceRow]: type } }));
   }
 
   function chooseImportOptions(choice: ImportOptions) {
@@ -326,8 +349,11 @@ export default function ImportSheet({
    */
   function ponerlesElMes(anio: number, mes: number) {
     const fecha = `${anio}-${String(mes).padStart(2, "0")}-01`;
+    assignedMonth.current = fecha;
     const conFecha = rowsSinFecha.map((r) => ({ ...r, date: fecha }));
-    setCandidates((previos) => [...previos, ...construirCandidatos(conFecha)]);
+    yaEmparejados.current = new Set();
+    seenFileRows.current = new Map();
+    setCandidates(construirCandidatos([...candidates.map(candidate => candidate.raw), ...conFecha]));
     setRowsSinFecha([]);
     setSinFecha(0);
     setEligiendoMes(false);
@@ -429,8 +455,9 @@ export default function ImportSheet({
       }
 
       source.current = { text, bank: detectedBank };
+      assignedMonth.current = null;
       setImportOptions({});
-      setRequirements({ type: parsed.needsTypeChoice, date: parsed.needsDateOrder });
+      setRequirements({ date: parsed.needsDateOrder });
       setFileName(asset.name);
       setBank(detectedBank);
       updatePreview(parsed);
@@ -494,9 +521,11 @@ export default function ImportSheet({
     setSinFecha(0);
     setRowsSinFecha([]);
     source.current = null;
+    assignedMonth.current = null;
     seenFileRows.current.clear();
     setImportOptions({});
-    setRequirements({ type: false, date: false });
+    setRequirements({ date: false });
+    setPreviewPage(0);
     setBank(undefined);
     setDone(false);
   }
@@ -605,13 +634,13 @@ export default function ImportSheet({
 
             <View className="items-center py-2 mb-1">
               <Text className="font-extrabold text-lg" style={{ color: primaryText }}>
-                {t("importSheet.foundCount", { count: candidates.length })}
+                {t("importSheet.foundCount", { count: previewRows.length })}
               </Text>
               <Text className="text-[11px] text-slate-400 dark:text-slate-300">{t("importSheet.analyzedOk")}</Text>
             </View>
 
             <View className="gap-2.5 mb-4">
-              {(requirements.date || requirements.type) && (
+              {requirements.date && (
                 <View className="rounded-2xl p-3.5 bg-amber-50 dark:bg-noche-2 gap-3">
                   {requirements.date && (
                     <View>
@@ -627,21 +656,12 @@ export default function ImportSheet({
                       </View>
                     </View>
                   )}
-                  {requirements.type && (
-                    <View>
-                      <Text className="text-xs font-bold text-slate-700 dark:text-slate-100 mb-2">{t("importSheet.typeQuestion")}</Text>
-                      <View className="flex-row gap-2">
-                        {(["expense", "income"] as const).map(type => (
-                          <TouchableOpacity key={type} accessibilityRole="radio" accessibilityState={{ checked: importOptions.positiveType === type }}
-                            onPress={() => chooseImportOptions({ positiveType: type })}
-                            className={`flex-1 rounded-xl p-3 ${importOptions.positiveType === type ? "bg-emerald-600" : "bg-slate-100 dark:bg-noche-3"}`}>
-                            <Text className={`text-xs font-bold text-center ${importOptions.positiveType === type ? "text-white" : "text-slate-700 dark:text-slate-100"}`}>{t(type === "expense" ? "history.filterExpense" : "history.filterIncome")}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  )}
                 </View>
+              )}
+              {!needsDateChoice && pendingTypes > 0 && (
+                <Text accessibilityLiveRegion="polite" className="text-xs font-bold text-amber-700 dark:text-amber-400 px-1">
+                  {t("importSheet.pendingTypes", { count: pendingTypes })}
+                </Text>
               )}
               {!needsChoices && <View className="flex-row items-center gap-3 bg-emerald-50 dark:bg-emerald-950 rounded-2xl p-3.5">
                 <CheckCircle2 size={18} color="#059669" />
@@ -671,7 +691,7 @@ export default function ImportSheet({
                   se arreglan escribiendo la fecha en la hoja. */}
               {sinFecha > 0 && (
                 <TouchableOpacity
-                  disabled={needsChoices}
+                  disabled={needsDateChoice || saving}
                   onPress={() => setEligiendoMes(true)}
                   className="flex-row items-center gap-3 bg-amber-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-amber-300"
                 >
@@ -698,49 +718,31 @@ export default function ImportSheet({
                 forma de notarlo hasta después de guardarlo todo.
                 Ahora se ven, con su fecha, su monto y marcados los que ya
                 tienes. */}
-            {!needsChoices && <><Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+            {!needsDateChoice && <><Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("importSheet.previewTitle")}
             </Text>
             <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde overflow-hidden mb-4">
-              {candidates.slice(0, PREVIEW_LIMIT).map((c, i) => (
-                <View
-                  key={c.tx.id}
-                  className={`flex-row items-center gap-2.5 px-3 py-2.5 ${
-                    i > 0 ? "border-t border-slate-100 dark:border-noche-borde" : ""
-                  }`}
-                >
-                  <Text className="text-[11px] text-slate-400 w-14">{fmtDate(c.tx.date, monthNames)}</Text>
-                  <View className="flex-1 min-w-0">
-                    <Text
-                      className="text-xs font-bold"
-                      style={{ color: primaryText }}
-                      numberOfLines={1}
-                    >
-                      {c.tx.description || t(catInfo(c.tx.category).label)}
-                    </Text>
-                    <Text className="text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={1}>
-                      {t(c.tx.type === "expense" ? "addSheet.expense" : "addSheet.income")} · {t(catInfo(c.tx.category).label)}
-                    </Text>
-                    {c.match && (
-                      <Text className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
-                        {t(c.inFile ? "importSheet.previewInFile" : "importSheet.previewDupe")}
-                      </Text>
-                    )}
-                  </View>
-                  <Text
-                    className={`text-xs font-extrabold ${
-                      c.tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
-                    }`}
-                  >
-                    {c.tx.type === "expense" ? "-" : "+"}
-                    {fmt(c.tx.amount)}
-                  </Text>
-                </View>
+              {previewRows.slice(previewStart, previewStart + PREVIEW_LIMIT).map(({ raw, candidate }, i) => (
+                <ImportPreviewRow key={raw.sourceRow ?? candidate?.tx.id ?? i} raw={raw}
+                  title={raw.description || raw.merchant || t("importSheet.unnamedRow", { row: raw.sourceRow ?? previewStart + i + 1 })}
+                  date={raw.date ? fmtDate(raw.date, monthNames) : t("importSheet.noDate")}
+                  category={raw.typePending ? "" : t(catInfo(candidate?.tx.category ?? categoryForImportedRow(raw, t, merchantLearned)).label)}
+                  amount={fmt(raw.amount)}
+                  duplicate={!needsChoices && candidate?.match ? t(candidate.inFile ? "importSheet.previewInFile" : "importSheet.previewDupe") : undefined}
+                  saving={saving} primaryText={primaryText} t={t} onChoose={chooseRowType} />
               ))}
-              {candidates.length > PREVIEW_LIMIT && (
-                <Text className="text-[11px] text-slate-400 text-center py-2.5 border-t border-slate-100 dark:border-noche-borde">
-                  {t("importSheet.previewMore", { count: candidates.length - PREVIEW_LIMIT })}
-                </Text>
+              {previewRows.length > PREVIEW_LIMIT && (
+                <View className="flex-row items-center justify-between gap-2 p-2">
+                  <TouchableOpacity accessibilityRole="button" disabled={saving || previewPage === 0}
+                    onPress={() => setPreviewPage(page => Math.max(0, page - 1))} className={`p-2.5 ${previewPage === 0 ? "opacity-40" : ""}`}>
+                    <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">{t("importSheet.previousRows")}</Text>
+                  </TouchableOpacity>
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("importSheet.rowsPage", { start: previewStart + 1, end: Math.min(previewStart + PREVIEW_LIMIT, previewRows.length), total: previewRows.length })}</Text>
+                  <TouchableOpacity accessibilityRole="button" disabled={saving || previewStart + PREVIEW_LIMIT >= previewRows.length}
+                    onPress={() => setPreviewPage(page => page + 1)} className={`p-2.5 ${previewStart + PREVIEW_LIMIT >= previewRows.length ? "opacity-40" : ""}`}>
+                    <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">{t("importSheet.nextRows")}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View></>}
 

@@ -317,7 +317,7 @@ export function parseImportAmount(raw: string, currency = "PEN"): number | null 
 export type ImportOptions = {
   currency?: string;
   dateOrder?: "DMY" | "MDY";
-  positiveType?: "expense" | "income";
+  rowTypes?: Record<number, "expense" | "income">;
 };
 
 // Comprueba que la fecha exista de verdad en el calendario, para que
@@ -528,6 +528,11 @@ export type RawRow = {
   // reconocer: en ese caso el detector de repetidos simplemente no usa
   // esta señal, en vez de inventarse un banco equivocado.
   account?: string;
+  /** Posición estable dentro del archivo, aunque cambie el formato de fecha. */
+  sourceRow?: number;
+  /** Mantener el selector visible después de resolver una fila dudosa. */
+  typeUncertain?: boolean;
+  typePending?: boolean;
 };
 
 export type ParseResult =
@@ -688,6 +693,7 @@ export function parseStatement(text: string, account?: string, options: ImportOp
         // Se guarda entera menos la fecha. Ver rowsSinFecha.
         const sinDia = cellAt(map.description);
         const filaSinFecha: RawRow = {
+          sourceRow: i + 1,
           date: "",
           amount: value,
           type: (map.type !== -1 ? matchType(cellAt(map.type)) : null) ?? typeFromColumns ?? "expense",
@@ -704,13 +710,13 @@ export function parseStatement(text: string, account?: string, options: ImportOp
       continue;
     }
 
-    // Si nada nos dice qué es, asumimos GASTO: en un estado de cuenta la
-    // enorme mayoría de líneas son gastos, y equivocarse hacia "ingreso"
-    // inflaría el saldo de la persona (error más confuso).
+    // El valor de respaldo conserva el contrato del lector. Al terminar se
+    // marca cada dirección desconocida: no se muestra ni se guarda como gasto.
     const type = explicitType ?? typeFromColumns ?? "expense";
 
     const description = cellAt(map.description);
     const fila: RawRow = {
+      sourceRow: i + 1,
       date,
       amount: value,
       type,
@@ -725,17 +731,21 @@ export function parseStatement(text: string, account?: string, options: ImportOp
     if (signoDeFilaReal && montoUnico !== null && montoUnico > 0 && !typeFromColumns) positivosSinTipo.push(fila);
   }
 
-  // Aplicar una sola convención a todo el archivo. Sin cargos negativos se
-  // conserva el comportamiento anterior, para no convertir compras positivas
-  // de otro banco en ingresos inventados.
-  if (hayCargoNegativo) {
-    for (const fila of positivosSinTipo) fila.type = "income";
-  } else if (options.positiveType) {
-    for (const fila of positivosSinTipo) fila.type = options.positiveType;
+  for (const fila of positivosSinTipo) {
+    if (hayCargoNegativo) {
+      fila.type = "income";
+      continue;
+    }
+    // Cada importe sin dirección se resuelve por separado. El tipo de
+    // respaldo no se muestra ni se guarda mientras siga pendiente.
+    fila.typeUncertain = true;
+    const choice = fila.sourceRow === undefined ? undefined : options.rowTypes?.[fila.sourceRow];
+    fila.typePending = choice !== "income" && choice !== "expense";
+    if (!fila.typePending) fila.type = choice!;
   }
 
   return { ok: true, rows, errorCount, sinFecha, rowsSinFecha, headerIndex,
-    needsTypeChoice: positivosSinTipo.length > 0 && !hayCargoNegativo && !options.positiveType,
+    needsTypeChoice: positivosSinTipo.some(row => row.typePending),
     needsDateOrder };
 }
 

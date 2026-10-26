@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## 25/10/2026 — elegir tipo por fila al importar (desarrollo)
+
+Marca `25oct-importacion-tipo-por-movimiento`, base `dfbc4a97`. Ingreso/Gasto
+en cada movimiento dudoso, con color y sin guardar hasta resolver todos.
+Se conservan elecciones al cambiar fecha/mes y se recalculan duplicados.
+283 pruebas/ocho auditores, TypeScript y ESLint correctos. Emulador habitual:
+elecciones independientes y bloqueo comprobados; guardado ficticio en memoria
+de Hermes. 68 movimientos, 20 conjuntos locales y datos remotos sin cambios.
+No se publica APK/OTA; pendientes de entrega/archivo real en ESTADO.md.
+
 ## 25/10/2026 — importación segura de montos, fechas y duplicados (desarrollo)
 
 Marca `25oct-importacion-montos-fechas-duplicados`, base `3382cf1b`. Correcciones

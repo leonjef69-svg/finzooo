@@ -1,5 +1,49 @@
 # Estado actual de Fino
 
+## Importar: tipo por movimiento dudoso — 25/10/2026 — desarrollo
+
+Marca `25oct-importacion-tipo-por-movimiento`, base `dfbc4a97`. Sustituye la
+pregunta general de ingreso/gasto por dos botones dentro de cada fila dudosa.
+Importe neutro sin signo ni categoría supuesta hasta elegir; después muestra
+signo, color y categoría del tipo seleccionado. Las filas inequívocas no piden
+otra elección. Se puede cambiar una decisión sin modificar las otras.
+
+Se cuentan pendientes en todas las páginas y en filas sin fecha. Importar y
+Revisar quedan bloqueados hasta clasificar todas; el preparador del lote también
+rechaza candidatos pendientes. Los duplicados se calculan al terminar y se
+recalculan al cambiar un tipo. Elecciones ligadas a la fila original, conservadas
+al alternar formato de fecha o asignar mes. La vista muestra hasta 100 filas por
+página con Anterior/Siguiente para que ninguna pendiente quede inaccesible.
+Los campos de revisión son solo memoria: las transacciones guardadas conservan
+el formato existente. No requiere modificar PLAYSTORE.md ni código nativo.
+
+TypeScript/ESLint correctos; 283 pruebas y ocho auditores aprobados, tarjetas
+excluidas. La regresión nueva ejecuta lector/categorías/candidatos y JSX/acciones
+originales con React/IO adaptados; falla sobre dfbc4a97 por el comportamiento
+general anterior. Cubre elecciones mixtas, tipos claros, bloqueo, cambios de
+fecha/mes, categoría, duplicados y una pendiente en la fila 101.
+
+Emulador habitual/misma cuenta: archivo ficticio con S/50 y S/20 sin tipo y
+S/6,50 ya identificado. Dos selectores individuales visibles, Importar bloqueado
+con dos y con una pendientes; al elegir ingreso y gasto queda habilitado con
++S/50, −S/20 y +S/6,50. Cambiar la primera elección conserva la segunda; conocido
+sin selector adicional. Se comprobaron posiciones táctiles en la misma fila.
+La captura Android quedó negra y el capturador Windows agotó su espera: esta
+comprobación usa controles/toques reales, sin afirmar revisión de imagen.
+
+Manejador y módulos originales ejecutados también en Hermes con guardado solo
+en una lista en memoria: bloqueo inicial/parcial, tres registros/importe neto
+ficticio S/36,50, IDs conservados, doble toque con un envío y reimportación con
+cero altas. No se guardaron movimientos ficticios en la cuenta. Comparación
+antes/después: 68 movimientos, 20 conjuntos locales y datos de Familia/Cajas
+idénticos. Archivo ficticio preservado antes de retirarlo; Fino queda abierta
+en Personal. Una recarga de desarrollo para cargar esta versión, sin reiniciar
+el emulador, cerrar sesión ni cambiar la protección del PIN.
+
+Qué sigue/falta: incluir el cambio en la entrega al celular y validar archivo
+bancario real anonimizado/guardado completo en cuenta Android de prueba antes
+de distribuir. Sin APK, OTA ni servicios publicados. Telegram y tarjetas fuera.
+
 ## Importación: montos, fechas y duplicados — 25/10/2026 — desarrollo
 
 Marca `25oct-importacion-montos-fechas-duplicados`, base `3382cf1b`.

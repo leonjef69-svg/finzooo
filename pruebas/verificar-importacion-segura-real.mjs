@@ -51,7 +51,7 @@ check("Resumen sin fecha no duplica el gasto", () => assert.equal(parsed(["Fecha
 check("Positivos sin tipo requieren una elección", () => {
   const data = ["Fecha;Monto;Tipo", "2026-10-25;6,50;"];
   assert.equal(parsed(data).needsTypeChoice, true);
-  const p = parsed(data, { positiveType: "income" }); assert.equal(p.rows[0].type, "income"); assert.equal(p.needsTypeChoice, false);
+  const p = parsed(data, { rowTypes: { 2: "income" } }); assert.equal(p.rows[0].type, "income"); assert.equal(p.needsTypeChoice, false);
 });
 check("Día y mes ambiguos piden confirmación y respetan ambas opciones", () => {
   const data = ["Fecha;Monto;Tipo", "05/10/2026;6,50;Ingreso"];
