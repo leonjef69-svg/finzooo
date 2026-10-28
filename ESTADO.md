@@ -1,3 +1,56 @@
+## Correcciones de auditoría — 28/10/2026 — desarrollo
+
+Marca 28oct-guardados-importacion-permisos-fluidez; base 8a342dea.
+Negocio guarda sus cinco claves en lote confirmado antes de publicar el cambio;
+formularios, categorías, deshacer y borrado esperan el resultado y permiten reintento.
+Excel respeta date1904. Un tercer decimal con punto queda inválido, nunca se
+convierte en miles; se conservan los formatos pegados con miles/coma decimal.
+Exportación enumera todas las Familias y resuelve por ID, aunque cambie la activa.
+Reportes actualiza personalización de categorías y compacta porcentajes >999%.
+Volver libera la protección de apertura para reabrir el mismo detalle enseguida.
+
+Huella confirma SecureStore; voz invalida el permiso pendiente al cerrar.
+Renovar avisos conserva los anteriores hasta preparar todos los nuevos y retira
+altas parciales si falla; devuelve recuento real. Familia observa la versión y los cambios del historial abierto, incluidos
+aportes/devoluciones que no actualizan sharedMoneyVersion; solicita solo la elegida, agrupando ráfagas y esperando
+operaciones locales. Invitaciones válidas se reutilizan solo en memoria de la
+misma cuenta/sesión. Copia Personal v2 procesa hasta cuatro transacciones
+independientes en paralelo, espera todas incluso ante rechazo y conserva
+versiones, cancelación, borrados y comprobación de moneda.
+
+Yape no descarta pendientes por antigüedad. El buzón Kotlin conserva todos los
+pendientes, entrega lotes de hasta 200 y solo retira lo confirmado. Cambio nativo:
+requiere APK nuevo; una recarga JS no actualiza ese buzón. No recupera avisos que
+versiones anteriores ya hubieran descartado. Se mantiene cifrado, consentimiento
+y limpieza al desactivar; no se cambian proveedores ni permisos.
+
+Regresión nueva: 14 escenarios ejecutan funciones originales con IO/React
+adaptados y Excel real en memoria; cada escenario falla sobre 8a342dea.
+Negocio también ejecuta guardado/borrados y fallos en SQLite real de prueba.
+Kotlin/JCE original comprueba 205 pendientes: 200 + 5, ACK/reintento y cifrado;
+la fuente anterior falla por perder esos cinco. Sin dinero real.
+
+Validación: 284 pruebas y ocho auditores, TypeScript y ESLint. Emulador habitual:
+arranque por servidor 8081 y navegación Personal → Familia → Cajas → Personal;
+un desbloqueo al arrancar, sin pedir PIN durante ese recorrido. Sin crear/borrar
+movimientos. Once claves financieras comparadas descifrando en modo solo lectura
+antes/después: contenido idéntico (el cifrado cambia sus bytes aleatorios al
+rehidratar). No se imprimen datos ni claves de cifrado en el diagnóstico.
+
+APK: NotificationStore compila con Android y pasa su ejecución Kotlin/JCE. El
+empaquetado completo no terminó: Windows/Gradle no pudo mover directorios de
+transformaciones en .gradle-cache (también con proceso único y vigilancia
+apagada). No se instaló un APK antiguo ni se borraron cachés/datos para forzarlo.
+El emulador tiene el JS actualizado; el buzón nativo instalado sigue pendiente
+de ese APK. No es una prueba de FPS ni una entrega al celular.
+
+Qué sigue/falta: pruebas con dos teléfonos, cortes reales de red/almacenamiento,
+micrófono/huella/avisos físicos y FPS en producción. Quedan las optimizaciones
+estructurales de resúmenes de Cajas/servidor, migración del respaldo de Negocio
+(800.000 bytes), actualización compatible de dependencias y revisión visual
+oscura. No se desplegaron servicios, reglas, OTA ni publicación Play.
+Telegram y tarjetas de crédito excluidos.
+
 # Estado actual de Fino
 
 ## Historial: quitar categoría repetida en una fila — 25/10/2026 — desarrollo

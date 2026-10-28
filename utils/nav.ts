@@ -48,6 +48,7 @@ function whenNavigationReady(
 // (por ejemplo, si se entró directo a esta pantalla sin pasar por Inicio),
 // en vez de fallar, te lleva a Inicio.
 export function safeBack() {
+  ultimosViajes.clear();
   if (router.canGoBack()) {
     router.back();
   } else {

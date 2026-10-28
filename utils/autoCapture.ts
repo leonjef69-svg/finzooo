@@ -72,7 +72,7 @@ const MAX_LOG = 40;
 // enciende la función y tiene el buzón lleno de avisos de hace semanas: es
 // mejor no registrarlos que meter de golpe gastos viejos en el presupuesto
 // del mes sin que nadie lo pida.
-const MAX_AGE_DAYS = 7;
+
 
 export function processCaptured(
   notifications: CapturedNotification[],
@@ -130,11 +130,8 @@ export function processCaptured(
 
     const raw = parsed.row;
 
-    const ageDays = (now - n.postedAt) / 86400000;
-    if (ageDays > MAX_AGE_DAYS) {
-      log.push({ at: n.postedAt, text: preview, result: "notMoney", amount: raw.amount });
-      continue;
-    }
+    // El buzón solo captura con consentimiento y registro activo. Un pendiente
+    // sigue siendo dinero aunque Android haya demorado su procesamiento.
 
     // ¿Ya está registrado? Puede pasar si lo escribiste a mano al instante,
     // o si además importaste el estado de cuenta. Solo se descarta cuando el

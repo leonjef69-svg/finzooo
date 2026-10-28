@@ -67,7 +67,7 @@ object NotificationStore {
 
   // Tope del buzón. Si alguien no abre Fino en semanas, preferimos perder
   // lo más viejo antes que llenarle el almacenamiento del celular.
-  private const val MAX_QUEUE = 200
+  private const val MAX_DRAIN = 200
   private const val MAX_SEEN = 300
 
   private fun prefs(context: Context): android.content.SharedPreferences {
@@ -272,7 +272,7 @@ object NotificationStore {
 
     val queue = readArray(p.getString(KEY_QUEUE, null))
     queue.put(item)
-    while (queue.length() > MAX_QUEUE) queue.remove(0)
+    // Los pagos pendientes se conservan hasta confirmar su guardado; nunca descartar dinero por capacidad.
 
     p.edit()
       .putString(KEY_SEEN, seen.toString())
@@ -292,13 +292,17 @@ object NotificationStore {
     prepareFinancialLists(p)
     val pendiente = p.getString(KEY_IN_FLIGHT, null)
     if (!pendiente.isNullOrBlank() && readArray(pendiente).length() > 0) return pendiente
-    val queue = p.getString(KEY_QUEUE, null) ?: "[]"
-    readArray(queue)
+    val queue = readArray(p.getString(KEY_QUEUE, null))
+    val batch = JSONArray()
+    val remaining = JSONArray()
+    for (i in 0 until queue.length()) {
+      if (i < MAX_DRAIN) batch.put(queue.getJSONObject(i)) else remaining.put(queue.getJSONObject(i))
+    }
     p.edit()
-      .putString(KEY_QUEUE, "[]")
-      .putString(KEY_IN_FLIGHT, queue)
+      .putString(KEY_QUEUE, remaining.toString())
+      .putString(KEY_IN_FLIGHT, batch.toString())
       .commit().also { check(it) { "notification-drain-unconfirmed" } }
-    return queue
+    return batch.toString()
   }
 
   /** Confirma que el último lote reclamado ya quedó guardado. */

@@ -362,6 +362,15 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (!familiaId) return;
     let active = true;
     const task = captureAccountTask(accountUid, () => mounted.current && active && familiaElegida.current === familiaId && getAccountStorageSession() === accountSession);
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        if (!task.current()) return;
+        if (familyMutationPending(accountUid, accountSession)) { refresh(); return; }
+        void recargar(familiaId, true, undefined, true);
+      }, 200);
+    };
     const stop = observarCierreFamilia(familiaId, () => {
       if (!task.current()) return;
       if (cierresPendientes.current.has(familiaId)) return;
@@ -369,8 +378,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       setFamilia(null); setMovimientos([]); setMiembros([]); setTipo(null);
       setInvitacion(""); setFilter(null);
       setVerTodas(true); void recargar(undefined, true);
-    }, () => { if (task.current()) toastRef.current(tRef.current("family.connectionError")); });
-    return () => { active = false; stop(); };
+    }, () => { if (task.current()) toastRef.current(tRef.current("family.connectionError")); }, refresh);
+    return () => { active = false; if (refreshTimer) clearTimeout(refreshTimer); stop(); };
   }, [accountSession, accountUid, familiaId, recargar, retirarFamiliasConfirmadas]);
   const saldo = useMemo(() => movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0), [movimientos]);
   const resumen = useMemo(() => movimientos.reduce(

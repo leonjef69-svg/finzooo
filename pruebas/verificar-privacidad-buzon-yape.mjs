@@ -15,7 +15,7 @@ assert.match(store, /if \(!p.getBoolean\(KEY_ENABLED, false\)\) return false/);
 assert.match(store, /notification-drain-unconfirmed/);
 assert.match(store, /notification-ack-unconfirmed/);
 assert.doesNotMatch(store.slice(store.indexOf("private fun readArray")), /catch|isNullOrBlank/);
-assert.match(store, /MAX_QUEUE = 200/);
+assert.doesNotMatch(store, /while \(queue\.length\(\) > MAX_QUEUE\) queue\.remove\(0\)/, "Los pendientes no se descartan por superar 200 pagos");
 assert.match(store, /MAX_SEEN = 300/);
 const prefs = read(base + "NotificationPreferences.kt");
 assert.ok(prefs.includes("JSONArray(plain)") && prefs.includes("notification-migration-unconfirmed"));

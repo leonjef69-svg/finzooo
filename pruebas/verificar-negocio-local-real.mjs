@@ -49,8 +49,12 @@ const live = { current: structuredClone(original) };
 const setDatosNegocio = handlerOriginal("contexts/AppDataContext.tsx", "updateBusinessData", {
   datosNegocioLive: live, markBusinessChanges: api.markBusinessChanges, mergeBusinessData: api.mergeBusinessData, setRenderedDatosNegocio() {},
 });
+const commitBusinessChange = handlerOriginal("contexts/AppDataContext.tsx", "commitBusinessChange", {
+  ...api, auth:{currentUser:null}, localSessionVersion:{current:1}, withLocalAccountOperation:fn=>fn(),
+  datosNegocioLive:live, setDatosNegocio, showToast(){}, t:key=>key,
+});
 try {
-  handlerOriginal("contexts/AppDataContext.tsx", "quitarVenta", { setDatosNegocio })("v1");
+  await handlerOriginal("contexts/AppDataContext.tsx", "quitarVenta", { commitBusinessChange, setDatosNegocio })("v1");
   assert.deepEqual(live.current.deleted.ventas, ["v1"]);
   assert.equal(await api.guardarDatosNegocio(live.current), true);
   assert.equal((await api.cargarNegocio()).ventas.length, 0);
@@ -83,7 +87,7 @@ try {
   assert.equal(api.mergeBusinessData(recent, confirmed).productos[0].precio, 18,
     "Una confirmación atrasada no reemplaza la edición local reciente");
   setDatosNegocio(original, true);
-  handlerOriginal("contexts/AppDataContext.tsx", "quitarNegocio", { setDatosNegocio, borrarNegocioYLoSuyo: api.borrarNegocio })("n1");
+  await handlerOriginal("contexts/AppDataContext.tsx", "quitarNegocio", { commitBusinessChange:fn=>setDatosNegocio(fn), setDatosNegocio, borrarNegocioYLoSuyo: api.borrarNegocio })("n1");
   const cascade = api.mergeBusinessData(live.current, original);
   for (const name of api.BUSINESS_LISTS) assert.equal(cascade[name].length, 0, name);
   assert.throws(() => api.mergeBusinessData({ ...original, deleted: { ventas: null } }, {}), /negocio-datos-invalidos/);

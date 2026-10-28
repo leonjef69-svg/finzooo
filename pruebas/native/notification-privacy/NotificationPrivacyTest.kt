@@ -167,6 +167,20 @@ fun main() {
   check(!NotificationStore.isEnabled(failedConsent))
   check(NotificationStore::class.java.methods.find { it.name == "hasDisclosureConsent" }
     ?.invoke(NotificationStore, failedConsent) == false)
+  val backlog = Context()
+  acceptIfAvailable(backlog)
+  NotificationStore.setEnabled(backlog, true)
+  for (i in 0 until 205) check(NotificationStore.add(backlog,
+    JSONObject().put("text", "Pago S/ 6.50").put("postedAt", 1729000000000L + i).put("captureId", "backlog-$i"), "backlog-$i"))
+  val batch = NotificationStore.drain(backlog)
+  check(JSONArray(batch).length() == 200) { "El lote debe mantenerse liviano" }
+  check(NotificationStore.drain(backlog) == batch) { "No cambiar el lote antes del ACK" }
+  NotificationStore.ackDrain(backlog)
+  val rest = JSONArray(NotificationStore.drain(backlog))
+  check(rest.length() == 5) { "Se descartaron pagos pendientes al superar 200" }
+  check(rest.getJSONObject(0).getString("captureId") == "backlog-200")
+  NotificationStore.ackDrain(backlog)
+  check(NotificationStore.drain(backlog) == "[]")
   NotificationStore.setEnabled(context, false)
   val cleared = p.disk.toMap()
   NotificationStore.noteSeen(context, "com.private.chat", false)

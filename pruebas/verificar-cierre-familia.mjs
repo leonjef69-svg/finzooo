@@ -79,10 +79,10 @@ const contributionApi = {
   prepararBorradoEspacioCompartido: async () => {},
   salirEspacioCompartido: async () => {},
 };
-const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["firebase/firestore", "@/utils/firebase", "@/utils/familia", "@/utils/personalContribution", "@/utils/legalAcceptance", "@/utils/sharedMovements"] });
+const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["@/utils/invitationCache", "firebase/firestore", "@/utils/firebase", "@/utils/familia", "@/utils/personalContribution", "@/utils/legalAcceptance", "@/utils/sharedMovements"] });
 const module = { exports: {} };
 // Solo el cierre financiero; aceptación se comprueba en su suite original aparte.
-vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.exports, require: id => id === "firebase/firestore" ? api : id === "@/utils/firebase" ? { db: {} } : id === "@/utils/sharedMovements" ? {
+vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.exports, require: id => id === "@/utils/invitationCache" ? { reusableInvitation:(_uid,_space,create)=>create() } : id === "firebase/firestore" ? api : id === "@/utils/firebase" ? { db: {} } : id === "@/utils/sharedMovements" ? {
   // Esta suite aísla el cierre; saldo/permisos del escritor real se ejecutan
   // con reglas y transacciones Firebase en shared-money.test.js.
   guardarMovimientoCompartido: async (_kind, familyId, uid, movimiento) => (await api.addDoc(`familySpaces/${familyId}/movements`, { ...movimiento, creadoPor: uid, creadoEn: 1 })).id,

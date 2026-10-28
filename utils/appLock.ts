@@ -330,6 +330,8 @@ export async function usaHuella(): Promise<boolean> {
 }
 
 export async function guardarUsaHuella(valor: boolean): Promise<void> {
-  await write(KEY_HUELLA, valor ? "1" : "0");
+  const expected = valor ? "1" : "0";
+  await SecureStore.setItemAsync(KEY_HUELLA, expected);
+  if (await SecureStore.getItemAsync(KEY_HUELLA) !== expected) throw new Error("lock-save-failed");
   notifyLockConfiguration("authentication-method");
 }

@@ -367,16 +367,16 @@ type AppDataContextValue = {
    */
   negocios: Negocio[];
   /** Crea uno nuevo o reemplaza el que tenga ese id. Devuelve el negocio guardado. */
-  guardarNegocio: (negocio: Negocio) => void;
+  guardarNegocio: (negocio: Negocio) => Promise<boolean>;
   /** Borra el negocio Y TODO LO SUYO: sus productos y sus ventas. */
-  quitarNegocio: (id: string) => void;
+  quitarNegocio: (id: string) => Promise<boolean>;
   /**
    * Manda los yapeos que ENTREN a la caja de este negocio, o los devuelve a lo personal.
    *
    * Encender uno apaga los demás: con dos negocios recibiendo, el mismo yapeo tendría dos
    * destinos y la respuesta dependería del orden de la lista.
    */
-  mandarYapesAlNegocio: (id: string, activar: boolean) => void;
+  mandarYapesAlNegocio: (id: string, activar: boolean) => Promise<boolean>;
   /**
    * Los productos de TODOS los negocios. Cada pantalla filtra por el suyo.
    *
@@ -386,9 +386,9 @@ type AppDataContextValue = {
    */
   productos: Producto[];
   /** Crea uno nuevo o reemplaza el que tenga ese id. */
-  guardarProducto: (producto: Producto) => void;
+  guardarProducto: (producto: Producto) => Promise<boolean>;
   /** Borra un producto. NO toca las ventas que lo incluían: ver utils/negocio. */
-  quitarProducto: (id: string) => void;
+  quitarProducto: (id: string) => Promise<boolean>;
   /**
    * Las ventas de TODOS los negocios, igual que los productos: cada pantalla filtra la suya.
    *
@@ -398,9 +398,9 @@ type AppDataContextValue = {
    */
   ventas: Venta[];
   /** Crea una venta o reemplaza la que tenga ese id. */
-  guardarVenta: (venta: Venta) => void;
+  guardarVenta: (venta: Venta) => Promise<boolean>;
   /** Borra una venta. La de un cobro que no fue, o la que se registró dos veces. */
-  quitarVenta: (id: string) => void;
+  quitarVenta: (id: string) => Promise<boolean>;
   /**
    * La plata que entra y sale de la CAJA del negocio: el pollo que se compró, el Yape que
    * entrará solo en el paso siguiente.
@@ -412,11 +412,11 @@ type AppDataContextValue = {
    */
   movimientosNegocio: MovimientoNegocio[];
   /** Anota plata que entra o sale de la caja del negocio. */
-  guardarMovimientoNegocio: (movimiento: MovimientoNegocio) => void;
+  guardarMovimientoNegocio: (movimiento: MovimientoNegocio) => Promise<boolean>;
   /** Borra un movimiento del negocio. */
-  quitarMovimientoNegocio: (id: string) => void;
-  borrarFilasDelNegocio: (negocioId: string, keys: string[]) => void;
-  vincularCobroDelNegocio: (negocioId: string, automaticoId: string, manualKey: string) => void;
+  quitarMovimientoNegocio: (id: string) => Promise<boolean>;
+  borrarFilasDelNegocio: (negocioId: string, keys: string[]) => Promise<boolean>;
+  vincularCobroDelNegocio: (negocioId: string, automaticoId: string, manualKey: string) => Promise<boolean>;
   setIsPremium: (v: boolean) => void;
   /**
    * Mirar la app como alguien que no paga. **Solo quita Premium, nunca lo da.**
@@ -2745,8 +2745,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * escribe en la lista a su manera y basta que uno olvide algo para que editar pierda un
    * dato que crear sí guardaba.
    */
+  async function commitBusinessChange(update: (before: DatosDelNegocio) => DatosDelNegocio): Promise<boolean> {
+    const owner = auth.currentUser, version = localSessionVersion.current;
+    const current = () => auth.currentUser === owner && version === localSessionVersion.current;
+    return withLocalAccountOperation(async () => {
+      const keys = [STORAGE_KEYS.negocios, STORAGE_KEYS.productos, STORAGE_KEYS.ventas, STORAGE_KEYS.movimientosNegocio, STORAGE_KEYS.businessDeleted];
+      const saved = await saveJSONBatchNow(keys, async () => {
+        const before = datosNegocioLive.current;
+        const disk = await cargarNegocio();
+        const base = mergeBusinessData(before, disk);
+        const next = markBusinessChanges(base, update(base));
+        return { entries: [[keys[0], next.negocios], [keys[1], next.productos], [keys[2], next.ventas], [keys[3], next.movimientos], [keys[4], next.deleted]] as [string, unknown][],
+          stillValid: () => current() && datosNegocioLive.current === before,
+          committed: () => setDatosNegocio(next, true) };
+      });
+      if (!saved && current()) showToast(t("toast.localSaveFailed"));
+      return saved && current();
+    });
+  }
+
   function guardarNegocio(negocio: Negocio) {
-    setDatosNegocio((antes) => {
+    return commitBusinessChange((antes) => {
       const yaEstaba = antes.negocios.some((n) => n.id === negocio.id);
       return {
         ...antes,
@@ -2766,7 +2785,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * comprobar con números en las pruebas.
    */
   function quitarNegocio(id: string) {
-    setDatosNegocio((antes) => borrarNegocioYLoSuyo(antes, id));
+    return commitBusinessChange((antes) => borrarNegocioYLoSuyo(antes, id));
   }
 
   /**
@@ -2779,8 +2798,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // Gratis sí puede detener un destino antiguo; no puede volver a activarlo.
     const premiumAhora = !verComoGratis &&
       (isPremiumDeLaCuenta || testerPremium.active || pruebaVigente(pruebaInicio, Date.now()));
-    if (activar && !premiumAhora) return;
-    setDatosNegocio((antes) => ({ ...antes, negocios: mandarYapesA(antes.negocios, id, activar) }));
+    if (activar && !premiumAhora) return Promise.resolve(false);
+    return commitBusinessChange((antes) => ({ ...antes, negocios: mandarYapesA(antes.negocios, id, activar) }));
   }
 
   /**
@@ -2790,7 +2809,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * separados basta que uno olvide un campo para que editar pierda lo que crear sí guardaba.
    */
   function guardarProducto(producto: Producto) {
-    setDatosNegocio((antes) => {
+    return commitBusinessChange((antes) => {
       const yaEstaba = antes.productos.some((p) => p.id === producto.id);
       return {
         ...antes,
@@ -2810,7 +2829,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * puede pasar aquí. La cuenta la hace utils/negocio para poder comprobarla con números.
    */
   function quitarProducto(id: string) {
-    setDatosNegocio((antes) => ({ ...antes, productos: quitarProductoDeLaLista(antes.productos, id) }));
+    return commitBusinessChange((antes) => ({ ...antes, productos: quitarProductoDeLaLista(antes.productos, id) }));
   }
 
   /**
@@ -2821,7 +2840,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * pierda lo que registrarla sí guardaba. Y aquí lo que se perdería es dinero.
    */
   function guardarVenta(venta: Venta) {
-    setDatosNegocio((antes) => {
+    return commitBusinessChange((antes) => {
       const yaEstaba = antes.ventas.some((v) => v.id === venta.id);
       return {
         ...antes,
@@ -2838,12 +2857,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * y el historial acabaría contando una historia que no pasó.
    */
   function quitarVenta(id: string) {
-    setDatosNegocio((antes) => ({ ...antes, ventas: antes.ventas.filter((v) => v.id !== id) }));
+    return commitBusinessChange((antes) => ({ ...antes, ventas: antes.ventas.filter((v) => v.id !== id) }));
   }
 
   /** Anota plata que entra o sale de la caja del negocio. Crear y editar, otra vez juntos. */
   function guardarMovimientoNegocio(movimiento: MovimientoNegocio) {
-    setDatosNegocio((antes) => {
+    return commitBusinessChange((antes) => {
       const yaEstaba = antes.movimientos.some((m) => m.id === movimiento.id);
       return {
         ...antes,
@@ -2855,13 +2874,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function quitarMovimientoNegocio(id: string) {
-    setDatosNegocio((antes) => ({ ...antes, movimientos: antes.movimientos.filter((m) => m.id !== id) }));
+    return commitBusinessChange((antes) => ({ ...antes, movimientos: antes.movimientos.filter((m) => m.id !== id) }));
   }
   function borrarFilasDelNegocio(negocioId: string, keys: string[]) {
-    setDatosNegocio(antes => borrarFilasNegocio(antes, negocioId, keys));
+    return commitBusinessChange(antes => borrarFilasNegocio(antes, negocioId, keys));
   }
   function vincularCobroDelNegocio(negocioId: string, automaticoId: string, manualKey: string) {
-    setDatosNegocio(antes => vincularCobroNegocio(antes, negocioId, automaticoId, manualKey));
+    return commitBusinessChange(antes => vincularCobroNegocio(antes, negocioId, automaticoId, manualKey));
   }
 
   async function activarPruebaPremium(): Promise<boolean> {

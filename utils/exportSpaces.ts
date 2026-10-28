@@ -2,7 +2,7 @@ import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
 import { type DatosCajas, CAJAS_VACIAS, type MovimientoCaja } from "@/utils/cajas";
 import {
-  cargarFamiliaActiva,
+  listarFamilias,
   listarMovimientosFamilia,
   type MovimientoFamilia,
 } from "@/utils/cloudFamilia";
@@ -138,13 +138,13 @@ export async function cargarEspaciosExportables(
 
   if (!uid) return espacios;
 
-  const [familia, cajasCompartidas] = await Promise.all([
-    incluirCatalogo || selectedSpaceId.startsWith("family:") ? cargarFamiliaActiva(uid).catch(() => null) : null,
+  const [familias, cajasCompartidas] = await Promise.all([
+    incluirCatalogo || selectedSpaceId.startsWith("family:") ? listarFamilias(uid) : [],
     incluirCatalogo || selectedSpaceId.startsWith("sharedBox:") ? listarCajasCompartidas(uid).catch(() => []) : [],
   ]);
   comprobarSesion();
 
-  if (familia) {
+  for (const familia of familias) {
     const elegida = selectedSpaceId === `family:${familia.id}`;
     const movimientos = elegida ? await listarMovimientosFamilia(familia.id).catch(() => null) : [];
     comprobarSesion();

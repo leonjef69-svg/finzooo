@@ -103,8 +103,8 @@ export function pickSheet(workbook: XLSX.WorkBook): string | null {
  * duda de si el 7 es el mes o el día, que es el otro error clásico al leer
  * estados de cuenta.
  */
-function serialADdmmaa(serial: number): string | null {
-  const d = XLSX.SSF.parse_date_code(serial);
+function serialADdmmaa(serial: number, date1904: boolean): string | null {
+  const d = XLSX.SSF.parse_date_code(serial, { date1904 });
   if (!d || !d.y || !d.m || !d.d) return null;
   return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
 }
@@ -141,7 +141,7 @@ export function extractExcelText(data: Uint8Array): ExcelRead {
     const celda = hoja[ref] as XLSX.CellObject;
     if (celda.t !== "n" || typeof celda.v !== "number") continue;
     if (!celda.z || !XLSX.SSF.is_date(String(celda.z))) continue;
-    const fecha = serialADdmmaa(celda.v);
+    const fecha = serialADdmmaa(celda.v, workbook.Workbook?.WBProps?.date1904 === true);
     if (!fecha) continue;
     celda.t = "s";
     celda.v = fecha;

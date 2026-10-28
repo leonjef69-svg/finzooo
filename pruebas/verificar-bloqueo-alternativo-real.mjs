@@ -122,7 +122,7 @@ try {
   assert.equal(await enableOriginal("2468"), true);
   assert.deepEqual(events, ["enabled"], "Solo el guardado confirmado emite la activación, no una preferencia genérica");
   const saveBiometricPreference = handlerOriginal(lockFileForEnable, "guardarUsaHuella", {
-    KEY_HUELLA: "biometric-preference", write: async (key, value) => storage.set(key, value),
+    SecureStore:{setItemAsync:async(k,v)=>storage.set(k,v),getItemAsync:async k=>storage.get(k)}, KEY_HUELLA: "biometric-preference", write: async (key, value) => storage.set(key, value),
     notifyLockConfiguration: change => events.push(change),
   }, lockSourceForEnable);
   await saveBiometricPreference(false);

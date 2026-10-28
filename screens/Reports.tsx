@@ -34,6 +34,8 @@ export default function Reports({
     userCurrency,
     categoryBudgets,
     categorySpent,
+    categoryOverrides,
+    categoriasPropias,
   } = useAppData();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -84,7 +86,7 @@ export default function Reports({
       hayLimites: todos.length > 0,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryBudgets, categorySpent, userLanguage]);
+  }, [categoryBudgets, categorySpent, userLanguage, categoryOverrides, categoriasPropias]);
 
   const availableMonths = useMemo(
     () => Array.from(new Set(transactions.filter((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.date)).map((t) => t.date.slice(0, 7)))).sort().reverse(),
@@ -107,7 +109,7 @@ export default function Reports({
       .sort((a, b) => b.value - a.value);
     return { pieData: pie };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, mk, userLanguage, categoryType]);
+  }, [transactions, mk, userLanguage, categoryType, categoryOverrides, categoriasPropias]);
 
   // Totales diarios del calendario. Solo presentación: no se guardan ni alteran movimientos.
   const dailyCalendar = useMemo(
@@ -191,7 +193,7 @@ export default function Reports({
               const over = b.spent > b.limit;
               const atLimit = b.spent === b.limit;
               const barColor = COLOR_HEX_600[b.color] || "#10b981";
-              const percentText = b.pct > 999
+              const percentText = b.pct * 100 > 999
                 ? t("categoryBudgets.usedPercentMoreThan999")
                 : t("categoryBudgets.usedPercent", { percent: String(Math.round(b.pct * 100)) });
               return (

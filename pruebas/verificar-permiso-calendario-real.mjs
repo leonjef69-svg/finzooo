@@ -18,7 +18,7 @@ const Notifications = {
   setNotificationChannelAsync: async () => { events.push("channel"); },
   getAllScheduledNotificationsAsync: async () => [...scheduled],
   cancelScheduledNotificationAsync: async id => { cancelled.push(id); scheduled.splice(scheduled.findIndex(x => x.identifier === id), 1); },
-  scheduleNotificationAsync: async item => { scheduled.push({ identifier: String(scheduled.length + 1), ...item }); },
+  scheduleNotificationAsync: async item => { const id=String(scheduled.length + 1); scheduled.push({ identifier:id, ...item }); return id; },
   AndroidImportance: { HIGH: 4 }, SchedulableTriggerInputTypes: { DATE: "date", TIME_INTERVAL: "interval" },
 };
 const deps = { Notifications, MARCA: "calendarioPagos", CANAL: "finzo-pagos-v2", MESES_POR_DELANTE: 3,
@@ -26,7 +26,7 @@ const deps = { Notifications, MARCA: "calendarioPagos", CANAL: "finzo-pagos-v2",
   CLAVE_AVISOS: "finzo:avisosEncendidos", estadoEn: () => "pendiente", cuandoAvisar: () => new Date(2027, 0, 1),
   mesDe: () => "2026-10", mesSiguiente: value => value + "+1", textoDelAviso: () => "Pago",
 };
-for (const name of ["avisosEncendidos", "guardarAvisosEncendidos", "prepararCanal", "retirarLosNuestros", "hacerlo", "probarAviso"]) {
+for (const name of ["avisosEncendidos", "guardarAvisosEncendidos", "prepararCanal", "retirarLosNuestros", "avisosPuestos", "hacerlo", "probarAviso"]) {
   deps[name] = handlerOriginal(utilFile, name, deps, read(utilFile));
 }
 // hacerlo captures its dependencies at construction; the helpers above already exist.

@@ -1,3 +1,16 @@
+## 28/10/2026 — guardados y fallos de auditoría (desarrollo)
+
+Marca 28oct-guardados-importacion-permisos-fluidez, base 8a342dea. Guardados de
+Negocio confirmados; fechas Excel1904, montos manuales, Familia al exportar,
+actualización de Familia, permiso de micrófono, preferencia de huella y renovación
+de recordatorios corregidos. Invitaciones vigentes reutilizadas y copia Personal
+v2 con concurrencia limitada. Capturas pendientes conservadas y lotes de 200 en
+Kotlin: requieren APK nuevo. Regresiones originales y pendientes en ESTADO.md.
+284 pruebas/ocho auditores; emulador con JS actualizado y once conjuntos
+financieros locales idénticos antes/después. No hay APK nuevo instalado:
+empaquetado bloqueado por movimientos de caché de Gradle en Windows.
+No es entrega de APK/OTA ni despliegue de servicios.
+
 # Entregas de Fino
 
 ## 25/10/2026 — elegir tipo por fila al importar (desarrollo)

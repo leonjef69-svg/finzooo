@@ -22,7 +22,7 @@ const bundle = await build({ entryPoints: ["utils/exportSpaces.ts"], bundle: tru
       "@/utils/storage": `export const STORAGE_KEYS={cajasDinero:'boxes'};
         export const getAccountStorageSession=()=>globalThis.__finoSelectiveExportTest.session;
         export async function loadJSON(){const h=globalThis.__finoSelectiveExportTest;h.calls.push('local');return structuredClone(h.local);}`,
-      "@/utils/cloudFamilia": `export async function cargarFamiliaActiva(){const h=globalThis.__finoSelectiveExportTest;h.calls.push('family-index');return h.family;}
+      "@/utils/cloudFamilia": `export async function listarFamilias(){const h=globalThis.__finoSelectiveExportTest;h.calls.push('family-index');return [h.family].filter(Boolean);}
         export async function listarMovimientosFamilia(id){const h=globalThis.__finoSelectiveExportTest;h.calls.push('family:'+id);
           if(h.familyGate){h.entered.resolve();await h.familyGate.promise;}if(h.failFamily)throw Error('synthetic-offline');return structuredClone(h.familyRows);}`,
       "@/utils/cloudCajasCompartidas": `export async function listarCajasCompartidas(){const h=globalThis.__finoSelectiveExportTest;h.calls.push('shared-index');return h.shared;}

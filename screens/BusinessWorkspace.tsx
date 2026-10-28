@@ -65,13 +65,14 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
   const [panels,setPanels]=useState<Panel[]>(initialPanel?[{kind:initialPanel,tipo:initialType,name:"",amount:"",method:"efectivo"}]:[]),[error,setError]=useState("");
   const panel=panels.at(-1);
   useEffect(()=>{busy.current=false;},[panels]);
+  const [saving,setSaving]=useState(false);
   const cache=useRef(new Map<string,Panel>()), busy=useRef(false);
   const [undo,setUndo]=useState<{id:string;businessId:string}|null>(null);
   const recibeYapes=negocio?.activo===true&&negocio.destinoYapes==="negocio";
   const otroRecibe=negocios.find(n=>n.id!==activeId&&n.activo&&n.destinoYapes==="negocio");
-  function close() { setPanels([]);cache.current.clear();setError(""); }
+  function close() { if(busy.current)return;setPanels([]);cache.current.clear();setError(""); }
   function open(next:Panel) {
-    busy.current=false;setError("");
+    if(busy.current)return;busy.current=false;setError("");
     if(panel) cache.current.set(keyOf(panel),panel);
     setPanels(previous=>{
       const existing=previous.findIndex(p=>keyOf(p)===keyOf(next));
@@ -79,12 +80,13 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
     });
   }
   function update(changes:Partial<Panel>) { setError("");setPanels(previous=>previous.map((p,i)=>i===previous.length-1?{...p,...changes}:p)); }
-  function back() { if(panel)cache.current.set(keyOf(panel),panel);setError("");if(panels.length>1)setPanels(p=>p.slice(0,-1));else close(); }
-  function commit(action:()=>void,message=copy("saved"),afterClose?:()=>void) {
+  function back() { if(busy.current)return;if(panel)cache.current.set(keyOf(panel),panel);setError("");if(panels.length>1)setPanels(p=>p.slice(0,-1));else close(); }
+  async function commit(action:()=>Promise<boolean>,message=copy("saved"),afterClose?:()=>void) {
     if(!canWrite||busy.current)return;
-    busy.current=true;
-    try { action();setSelecting(false);setSelectedKeys([]);showToast(message);if(afterClose)afterClose();else close(); }
-    catch {busy.current=false;setError(copy("invalid"));}
+    busy.current=true;setSaving(true);
+    try { if (!await action()) { busy.current=false;setError(app.t("toast.localSaveFailed"));return; } busy.current=false;setSelecting(false);setSelectedKeys([]);showToast(message);if(afterClose)afterClose();else close(); }
+    catch {busy.current=false;setError(app.t("toast.localSaveFailed"));}
+    finally {setSaving(false);}
   }
   function changeFilter(next:BusinessFilter) {setFilters(next);setSelectedKeys([]);}
   function choosePeriod(value:BusinessPeriod) {setPeriod(value);setSelectedKeys([]);close();}
@@ -97,7 +99,7 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
     if(!negocio)return;
     const {fecha,hora}=ahoraDelNegocio();
     const row=crearMovimientoNegocio({negocioId:negocio.id,tipo,monto,descripcion:description,metodo:method,fecha,hora,origen:"manual",...(lineas?{clasificacion:{estado:"confirmada" as const,lineas}}:{})});
-    commit(()=>{guardarMovimientoNegocio(row);setUndo({id:row.id,businessId:negocio.id});setPeriod("hoy");changeFilter({...BUSINESS_FILTER});});
+    commit(async()=>{if(!await guardarMovimientoNegocio(row))return false;setUndo({id:row.id,businessId:negocio.id});setPeriod("hoy");changeFilter({...BUSINESS_FILTER});return true;});
   }
   function saveEntry() {
     if(!panel)return;
@@ -108,7 +110,7 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
     if(!name||!isSafeMoneyAmount(amount)||amount<=0)return setError(copy("invalid"));
     record(amount,name,panel.tipo??"ingreso",panel.method??"efectivo",panel.kind==="priced"&&category?[{productoId:category.id,nombre:category.nombre,precio:category.precio,cantidad:qty}]:undefined);
   }
-  function saveCategory() {
+  async function saveCategory() {
     if(!negocio||!panel)return;
     const name=panel.name?.trim()??"",price=parseAmountInput(panel.amount??"",currency);
     if(!name||!Number.isFinite(price)||price<=0)return setError(copy("invalid"));
@@ -116,7 +118,9 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
     const old=mios.find(p=>p.id===panel.id);
     if(panel.id&&!old)return setError(copy("invalid"));
     if(!canWrite||busy.current)return;
-    busy.current=true;guardarProducto(old?{...old,nombre:name,precio:price}:crearProducto(negocio.id,name,price));
+    busy.current=true;setSaving(true);const saved=await guardarProducto(old?{...old,nombre:name,precio:price}:crearProducto(negocio.id,name,price)).catch(()=>false);
+    setSaving(false);busy.current=false;
+    if(!saved){busy.current=false;setError(app.t("toast.localSaveFailed"));return;}
     cache.current.delete(keyOf(panel));setError("");setPanels(previous=>previous.length>1?previous.slice(0,-1):[{kind:"categories"}]);showToast(copy("saved"));
   }
   function saveBusiness() {
@@ -195,7 +199,7 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
     if(panel.kind==="link")return <><Text className="text-xs text-amber-800 dark:text-amber-200">{copy("linkHint")}</Text>{candidates.map(r=><BusinessChoice key={r.key} label={r.detalle} detail={`${dinero(r.monto)} · ${r.fecha}`} onPress={()=>open({kind:"confirm-link",id:detail?.key,manualKey:r.key})}/>)}</>;
     if(panel.kind==="confirm-link")return <><Text className="text-sm text-slate-700 dark:text-slate-200">{copy("linkHint")}</Text><BusinessButton label={copy("link")} onPress={()=>{if(detail&&panel.manualKey)commit(()=>vincularCobroDelNegocio(activeId,detail.id,panel.manualKey!));}}/><BusinessButton secondary label={copy("cancel")} onPress={back}/></>;
     if(panel.kind==="confirm-yape")return <><Text className="text-sm text-slate-700 dark:text-slate-200">{copy("switchYape",{name:otroRecibe?.nombre??""})}</Text><BusinessButton label={copy("save")} onPress={()=>commit(()=>mandarYapesAlNegocio(activeId,true))}/><BusinessButton secondary label={copy("cancel")} onPress={back}/></>;
-    if(panel.kind==="confirm-business")return <><Text className="text-sm text-slate-700 dark:text-slate-200">{copy("deleteBusinessHint",{name:negocio?.nombre??""})}</Text><BusinessButton danger label={copy("deleteBusiness")} onPress={()=>commit(()=>{quitarNegocio(activeId);setActiveId(negocios.find(n=>n.id!==activeId)?.id??"");})}/><BusinessButton secondary label={copy("cancel")} onPress={back}/></>;
+    if(panel.kind==="confirm-business")return <><Text className="text-sm text-slate-700 dark:text-slate-200">{copy("deleteBusinessHint",{name:negocio?.nombre??""})}</Text><BusinessButton danger label={copy("deleteBusiness")} onPress={()=>commit(async()=>{if(!await quitarNegocio(activeId))return false;setActiveId(negocios.find(n=>n.id!==activeId)?.id??"");return true;})}/><BusinessButton secondary label={copy("cancel")} onPress={back}/></>;
     if(panel.kind==="confirm-delete")return <><Text className="text-sm text-slate-700 dark:text-slate-200">{panel.id?copy("deleteCategoryHint"):copy(panel.keys?.length===1?"deleteOneHint":"deleteHint",{count:panel.keys?.length??0,name:negocio?.nombre??""})}</Text><BusinessButton danger label={copy("delete")} onPress={()=>commit(()=>panel.id?quitarProducto(panel.id):borrarFilasDelNegocio(activeId,panel.keys??[]),copy("deleted"))}/><BusinessButton secondary label={copy("cancel")} onPress={back}/></>;
     return null;
   }
@@ -210,7 +214,7 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
       <View testID="business-summary-card" className="overflow-hidden rounded-xl border border-slate-300 bg-white dark:border-slate-600 dark:bg-noche-2"><View testID="business-totals" className={vertical?"gap-2 p-2":"flex-row gap-2 p-2"}>{(["ingresos","gastos"] as const).map(type=><View key={type} className={`min-w-0 flex-1 items-center justify-center rounded-lg px-2 py-3 ${type==="ingresos"?"bg-emerald-50 dark:bg-emerald-950/40":"bg-rose-50 dark:bg-rose-950/30"}`}><Text className="mb-1 text-xs text-slate-600 dark:text-slate-300">{copy(type==="ingresos"?"incomes":"expenses")}</Text><Text testID={`business-total-${type}`} className={`text-[22px] font-extrabold ${type==="ingresos"?"text-emerald-700 dark:text-emerald-300":"text-rose-600 dark:text-rose-300"}`}>{dinero(totals[type])}</Text></View>)}</View><View testID="business-result-divider" className="mx-3 h-px bg-slate-300 dark:bg-noche-borde"/><View className="min-h-11 flex-row items-center justify-between gap-3 px-3"><Text className="text-sm font-semibold text-slate-800 dark:text-slate-100">{copy("result")}</Text><Text testID="business-result-amount" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`max-w-[65%] text-right text-base font-extrabold ${result>0?"text-emerald-700 dark:text-emerald-300":result<0?"text-rose-700 dark:text-rose-300":"text-slate-700 dark:text-slate-200"}`}>{dinero(result)}</Text></View></View>
       <View className="flex-row items-stretch gap-2.5">{canWrite?<View className="min-w-0 flex-1"><BusinessButton testID="business-register" label={`+ ${copy("register")}`} onPress={register}/></View>:null}{pending>0||filters.pendientes?<TouchableOpacity testID="business-pending" accessibilityRole="button" accessibilityState={{selected:filters.pendientes}} onPress={()=>changeFilter({...BUSINESS_FILTER,pendientes:!filters.pendientes})} className={`min-h-11 flex-row items-center justify-center gap-1 rounded-xl border px-3 ${filters.pendientes?"border-amber-700 bg-amber-200 dark:border-amber-400 dark:bg-amber-800":"border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}><Text className="text-xs font-semibold text-amber-900 dark:text-amber-100">{copy("pending")} · {pending}</Text><Text className="text-xs font-bold text-amber-900 dark:text-amber-100">{filters.pendientes?"✓":"›"}</Text></TouchableOpacity>:null}</View>
       {canWrite?<Text className="-mt-1 text-xs text-slate-500 dark:text-slate-300">{copy(mode==="categorias"?"quickHint":"simpleHint")}</Text>:null}
-      {undo&&undo.businessId===activeId&&canWrite?<BusinessButton secondary label={copy("undo")} onPress={()=>{borrarFilasDelNegocio(undo.businessId,[`movimiento:${undo.id}`]);setUndo(null);}}/>:null}
+      {undo&&undo.businessId===activeId&&canWrite?<BusinessButton secondary label={copy("undo")} onPress={()=>commit(async()=>{if(!await borrarFilasDelNegocio(undo.businessId,[`movimiento:${undo.id}`]))return false;setUndo(null);return true;})}/>:null}
       <View className="mt-1 flex-row flex-wrap items-center justify-between gap-1"><Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{copy("movements")} · {rows.length}</Text><View className="flex-row items-center gap-3">{["search","filters",...(canWrite?["select"]:[])] .map(action=><TouchableOpacity key={action} accessibilityRole="button" onPress={()=>action==="search"?setSearchOpen(!searchOpen):action==="filters"?open({kind:"filters",filter:{...filters}}):(setSelecting(!selecting),setSelectedKeys([]))} className="min-h-11 justify-center"><Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{copy(action==="select"&&selecting?"cancel":action as "search"|"filters"|"select")}</Text></TouchableOpacity>)}</View></View>
       {searchOpen||filters.buscar?<TextInput disableFullscreenUI accessibilityLabel={copy("search")} placeholder={copy("search")} placeholderTextColor="#64748b" value={filters.buscar} onChangeText={buscar=>changeFilter({...filters,buscar})} className="min-h-11 rounded-xl border border-slate-200 px-3 text-base text-slate-900 dark:border-noche-borde dark:text-slate-100"/>:null}
       {hasFilters?<TouchableOpacity accessibilityRole="button" onPress={()=>changeFilter({...BUSINESS_FILTER})} className="min-h-11 justify-center"><Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{copy("clear")}</Text></TouchableOpacity>:null}
@@ -231,6 +235,6 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
         </TouchableOpacity>
       </View>;
     }}/>
-    {panel?<BusinessSheet title={sheetTitle()} onClose={close} onBack={panels.length>1?back:undefined} backLabel={copy("back")} closeLabel={copy("close")}>{sheetBody()}{error?<Text accessibilityRole="alert" className="text-sm font-semibold text-rose-700 dark:text-rose-300">{error}</Text>:null}</BusinessSheet>:null}
+    {panel?<BusinessSheet title={sheetTitle()} onClose={close} onBack={panels.length>1?back:undefined} backLabel={copy("back")} closeLabel={copy("close")}><View pointerEvents={saving?"none":"auto"}>{sheetBody()}</View>{saving?<Text accessibilityLiveRegion="polite" className="text-sm text-slate-600 dark:text-slate-300">{app.t("common.saving")}</Text>:null}{error?<Text accessibilityRole="alert" className="text-sm font-semibold text-rose-700 dark:text-rose-300">{error}</Text>:null}</BusinessSheet>:null}
   </View>;
 }

@@ -188,7 +188,7 @@ for (const historyFormat of [1, 2]) {
 
 // Reconsulta por fila: si cambia la raíz tras el primer control, no escribe
 // esa fila de importes. El SDK de red se adapta; no se copia el guardado.
-const historyWrites = [], historyDeps = { ...api, ...historyFormats, db: {},
+const historyWrites = [], historyDeps = { caches: new Map(), ...api, ...historyFormats, db: {},
   withPrivateBoxCloudLease: async (_uid, _lease, work) => work({ wait: work => work(), remember: value => value, assertCurrent() {} }),
   exclusive: (_uid, work) => work(), refresh: async () => ({ entries: [], checkpoint: null }),
   planLocalHistoryChanges: () => [{ id: 1, deleted: false, transaction: { id: 1, amount: 100 } }],

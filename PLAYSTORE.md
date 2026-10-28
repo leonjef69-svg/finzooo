@@ -1,3 +1,11 @@
+28/10/2026 — El buzón cifrado local de avisos ya capturados conserva los pagos
+pendientes hasta confirmar su registro, en lugar de descartar los más antiguos
+al superar 200 o al demorar siete días. Android entrega lotes de hasta 200 para
+limitar el trabajo de cada recogida; el resto permanece cifrado en el mismo
+almacén. Conserva consentimiento, activación y limpieza al desactivar/cerrar la
+cuenta. No añade datos, proveedores, permisos ni destinos. Requiere APK nuevo;
+revisar declaración final antes de distribuir. Sin publicación de ficha/política.
+
 # Lo que hay que rellenar en Play Console
 
 25/10/2026 — Recuperación de registros compartidos: nueva cola local cifrada

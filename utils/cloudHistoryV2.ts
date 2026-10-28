@@ -94,7 +94,10 @@ export function saveHistoryV2(
   return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
     let cache = await approved.wait(() => refresh(uid));
     const changes = planLocalHistoryChanges(transactions, deletedIds, cache.entries, deletedOrigins, metadata);
-    for (const change of changes) {
+    // Cuatro registros independientes a la vez; todas las respuestas terminan
+    // antes de liberar la cuenta, incluso si una petición falla.
+    for (let offset = 0; offset < changes.length; offset += 4) {
+      const responses = await Promise.allSettled(changes.slice(offset, offset + 4).map(async change => {
       if (!current()) throw new Error("cloud-copy-paused");
       const rootRef = doc(db, "users", uid);
       const rowRef = doc(db, "users", uid, "history", historyDocumentId(change.id));
@@ -115,8 +118,13 @@ export function saveHistoryV2(
         }
         return merged;
       }));
-      cache = { ...cache, entries: mergeHistoryEntries(cache.entries, [saved]) };
+      return saved;
+      }));
+      const saved = responses.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
+      cache = { ...cache, entries: mergeHistoryEntries(cache.entries, saved) };
       caches.set(uid, cache);
+      const failure = responses.find(result => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
     }
     return approved.remember(asLists((await approved.wait(() => refresh(uid))).entries));
   }));

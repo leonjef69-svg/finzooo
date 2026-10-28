@@ -1,3 +1,4 @@
+import { reusableInvitation } from "@/utils/invitationCache";
 import {
   arrayUnion,
   collection,
@@ -139,6 +140,7 @@ export async function crearFamilia(
 }
 
 export async function crearInvitacionFamilia(uid: string, familiaId: string): Promise<string> {
+  return reusableInvitation(uid, "crearInvitacionFamilia:" + familiaId, async () => {
   const codigo = crearCodigoFamilia();
   await writeWithAcceptedSharedContent(uid, () => setDoc(doc(db, "familyInvites", codigo), {
     familyId: familiaId,
@@ -147,6 +149,7 @@ export async function crearInvitacionFamilia(uid: string, familiaId: string): Pr
     creadoEn: serverTimestamp(),
   }));
   return codigo;
+  });
 }
 
 export async function renombrarFamilia(familiaId: string, nombre: string): Promise<void> {
@@ -174,10 +177,23 @@ export async function cerrarFamilia(uid: string, familiaId: string): Promise<voi
   }
 }
 
-export function observarCierreFamilia(familiaId: string, cerrado: () => void, error: () => void) {
-  return onSnapshot(doc(db, "familySpaces", familiaId), { includeMetadataChanges: true }, snap => {
-    if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites && (!snap.exists() || snap.data().closed === true)) cerrado();
+export function observarCierreFamilia(familiaId: string, cerrado: () => void, error: () => void, changed?: () => void) {
+  let previousVersion: number | undefined;
+  const stopRoot = onSnapshot(doc(db, "familySpaces", familiaId), { includeMetadataChanges: true }, snap => {
+    if (snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
+    if (!snap.exists() || snap.data().closed === true) { cerrado(); return; }
+    const version = Number(snap.data().sharedMoneyVersion || 0);
+    if (previousVersion !== undefined && previousVersion !== version) changed?.();
+    previousVersion = version;
   }, error);
+  // Aportes/devoluciones heredados no siempre actualizan la versión del espacio.
+  // Escuchar únicamente la Familia abierta también cubre esas escrituras.
+  const stopMovements = changed ? onSnapshot(collection(db, "familySpaces", familiaId, "movements"),
+    { includeMetadataChanges: true }, snap => {
+      if (snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
+      if (snap.docChanges().length > 0) changed();
+    }, error) : undefined;
+  return () => { stopRoot(); stopMovements?.(); };
 }
 
 export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: string): Promise<EspacioFamilia> {

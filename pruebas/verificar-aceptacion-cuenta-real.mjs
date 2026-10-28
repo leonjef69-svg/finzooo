@@ -133,7 +133,7 @@ const guarded = [
 for (const [file, name, args] of guarded) {
   const a = environment(); enter(a, "A"); let calls = 0;
   const remote = async () => { calls++; throw new Error("remote-reached"); };
-  const deps = { assertSharedContentAccepted: a.assertSharedContentAccepted, writeWithAcceptedSharedContent: a.writeWithAcceptedSharedContent, db: {},
+  const deps = { assertSharedContentAccepted: a.assertSharedContentAccepted, writeWithAcceptedSharedContent: a.writeWithAcceptedSharedContent, db: {}, reusableInvitation:(_uid,_space,create)=>create(),
     doc: () => ({}), collection: () => ({}), crearCodigoFamilia: () => "CODE", isSafeMoneyAmount: () => true,
     getDoc: remote, setDoc: remote, updateDoc: remote, addDoc: remote, runTransaction: remote, serverTimestamp: () => 1,
     functions: {}, httpsCallable: () => remote, guardarMovimientoCompartido: remote };

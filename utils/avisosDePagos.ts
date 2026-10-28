@@ -55,6 +55,9 @@ const MESES_POR_DELANTE = 3;
 /**
  * Vuelve a dejar programados TODOS los avisos del calendario.
  *
+ * Primero se preparan los nuevos; solo con todos confirmados se retiran los anteriores.
+ * Ante un fallo de preparación se retiran las altas parciales y se permite reintentar.
+ *
  * **Se rehacen enteros en vez de tocar el que cambió.** Llevar la cuenta de qué aviso es de
  * qué pago es un segundo almacén que puede desincronizarse, y cuando lo hace el resultado es
  * un aviso de algo ya pagado o uno que no suena nunca. Son unos pocos avisos: rehacerlos
@@ -118,11 +121,13 @@ async function hacerlo(
   // Cada paso dice dónde está, para que si algo revienta el mensaje diga EN CUÁL. Sin esto,
   // "cannot read property of undefined" no distingue el permiso del canal ni del programado.
   let paso = "empezando";
+  const nuevos: string[] = [];
+  let retirandoAnteriores = false;
   try {
     // Apagar o quitar pagos siempre limpia solo sus avisos, sin abrir permisos.
     paso = "retirando";
-    await retirarLosNuestros();
-    if (!(await avisosEncendidos()) || lista.length === 0) return { puestos: 0 };
+    if (!(await avisosEncendidos()) || lista.length === 0) { await retirarLosNuestros(); return { puestos: 0 }; }
+    const anteriores = (await Notifications.getAllScheduledNotificationsAsync()).filter(item => item.content?.data?.[MARCA]);
 
     // Rehidratar la cuenta, cambiar moneda o volver a la app NO autoriza un diálogo.
     // Solo guardar un pago o activar sus avisos transmite la intención explícita.
@@ -159,7 +164,7 @@ async function hacerlo(
         if (cuando.getTime() <= ahora.getTime()) continue;
 
         paso = `programando ${pago.nombre} de ${mes}`;
-        await Notifications.scheduleNotificationAsync({
+        const id = await Notifications.scheduleNotificationAsync({
           content: {
             title: t("calendario.avisoTitulo", { nombre: pago.nombre }),
             body: textoDelAviso(pago, mes, t, formatAmount),
@@ -172,16 +177,22 @@ async function hacerlo(
             date: cuando,
           },
         });
+        nuevos.push(id);
         puestos++;
       }
       mes = mesSiguiente(mes);
     }
+    retirandoAnteriores = true;
+    for (const item of anteriores) await Notifications.cancelScheduledNotificationAsync(item.identifier);
     return { puestos };
   } catch (e) {
     // Un aviso que no se pudo programar no puede tumbar la app ni impedir que el pago se
     // guarde: lo que se guarda es el dato, y el aviso es su consecuencia. Pero el motivo SÍ
     // se cuenta, con el paso en el que estaba.
-    return { puestos: 0, fallo: `${paso}: ${String((e as Error)?.message ?? e)}` };
+    // Si no se terminó la preparación, conservar los anteriores y retirar
+    // exclusivamente las altas de este intento. Un reintento no duplica avisos.
+    if (!retirandoAnteriores) for (const id of nuevos) { try { await Notifications.cancelScheduledNotificationAsync(id); } catch { /* El recuento siguiente refleja lo que quedó. */ } }
+    return { puestos: await avisosPuestos(), fallo: `${paso}: ${String((e as Error)?.message ?? e)}` };
   }
 }
 

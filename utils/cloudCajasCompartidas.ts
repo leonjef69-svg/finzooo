@@ -1,3 +1,4 @@
+import { reusableInvitation } from "@/utils/invitationCache";
 import {
   collection, doc, getDoc, getDocFromServer, getDocs, orderBy, query,
   runTransaction, serverTimestamp, setDoc, onSnapshot, updateDoc, writeBatch,
@@ -180,9 +181,11 @@ export async function compartirCajaExistente(
 }
 
 export async function crearInvitacionCaja(uid: string, boxId: string): Promise<string> {
+  return reusableInvitation(uid, "crearInvitacionCaja:" + boxId, async () => {
   const codigo = crearCodigoFamilia();
   await writeWithAcceptedSharedContent(uid, () => setDoc(doc(db, "boxInvites", codigo), { boxId, createdBy: uid, expiresAt: Date.now() + 7 * 86400000, creadoEn: serverTimestamp() }));
   return codigo;
+  });
 }
 
 export async function renombrarCajaCompartida(boxId: string, nombre: string): Promise<void> {

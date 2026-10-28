@@ -27,7 +27,7 @@ function environment() {
 }
 for (const [file, name] of [["utils/cloudFamilia.ts", "crearInvitacionFamilia"], ["utils/cloudCajasCompartidas.ts", "crearInvitacionCaja"]]) {
   const e = environment(), saved = [];
-  const fn = handlerOriginal(file, name, { ...e, db: {}, crearCodigoFamilia: () => "ABCDEFGH",
+  const fn = handlerOriginal(file, name, { ...e, db: {}, reusableInvitation:(_uid,_space,create)=>create(), crearCodigoFamilia: () => "ABCDEFGH",
     doc: (_db, kind, code) => ({ kind, code }), serverTimestamp: () => 1,
     setDoc: async (ref, data) => { saved.push({ ref, data }); e.calls.push("write-ack"); } }, read(file));
   assert.equal(await fn("A", "space"), "ABCDEFGH");

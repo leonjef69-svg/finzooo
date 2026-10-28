@@ -186,6 +186,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // ya había empezado — matándola al instante, con la persona hablando.
   // Ahora cada escucha lleva su número y los avisos que traen uno viejo se
   // ignoran.
+  const listeningGeneration = useRef(0);
   const runId = useRef(0);
   const activeRun = useRef(-1);
   // ¿Hay una escucha abierta AHORA?
@@ -260,6 +261,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     start();
     return () => {
+      listeningGeneration.current += 1;
       // Al salir de la pantalla sí hay que cerrar siempre: si quedara
       // abierta, el micrófono seguiría encendido con la app en otra parte.
       try {
@@ -325,6 +327,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // probar. Separado de start() porque un fallo de idioma vuelve a entrar
   // aquí con el siguiente, sin reiniciar el resto.
   async function listen() {
+    const generation = ++listeningGeneration.current;
     runId.current += 1;
 
     // Cierra la escucha anterior SOLO si de verdad hay una abierta.
@@ -356,6 +359,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     setStage("listening");
     try {
       const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (generation !== listeningGeneration.current) return;
       if (!permission.granted) {
         setStage("denied");
         return;

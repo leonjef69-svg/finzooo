@@ -18,7 +18,7 @@ const mocks = {
   "@/utils/firebase": "export const auth = globalThis.__finoExportFixture.auth;",
   "@/utils/cajas": "export const CAJAS_VACIAS = {cajas:[],movimientos:[]};",
   "@/utils/storage": "export const STORAGE_KEYS={cajasDinero:'cajas'}; export const getAccountStorageSession=()=>1; export async function loadJSON(){return globalThis.__finoExportFixture.local;}",
-  "@/utils/cloudFamilia": `export async function cargarFamiliaActiva(){return globalThis.__finoExportFixture.family;}
+  "@/utils/cloudFamilia": `export async function listarFamilias(){return [globalThis.__finoExportFixture.family].filter(Boolean);}
     export async function listarMovimientosFamilia(){if(globalThis.__finoExportFixture.failFamily) throw Error('offline');return globalThis.__finoExportFixture.familyMovements;}`,
   "@/utils/cloudCajasCompartidas": `export async function listarCajasCompartidas(){return globalThis.__finoExportFixture.shared;}
     export async function listarMovimientosCajaCompartida(){return globalThis.__finoExportFixture.sharedMovements;}`,

@@ -37,10 +37,11 @@ export function sanitizeAmountInput(raw: string, currency = "PEN"): string {
     const gruposDeMiles = separadores.length > 1
       && limpio.split(/[.,]/).slice(1).every((grupo) => grupo.length === 3);
     const unicoPareceMiles = currencyDecimals(currency) !== 3 && separadores.length === 1
-      && fraccion.length === 3
+      && limpio.includes(",") && fraccion.length === 3
       && entero.length > 0
       && entero !== "0";
 
+    if (separadores.length > 1 && !tieneAmbos && !gruposDeMiles) return limpio;
     if (gruposDeMiles || (!tieneAmbos && unicoPareceMiles)) {
       s = limpio.replace(/[.,]/g, "");
     } else {
@@ -71,7 +72,7 @@ export function amountInputError(raw: string, currency = "PEN"): "tooLarge" | "t
   const clean = sanitizeAmountInput(raw, currency);
   const decimals = currencyDecimals(currency);
   const fraction = clean.split(".")[1] ?? "";
-  if (fraction.length > decimals) return "tooManyDecimals";
+  if (clean.split(".").length > 2 || fraction.length > decimals) return "tooManyDecimals";
   const amount = Number(clean);
   if (Number.isFinite(amount) && (amount > MAX_MONEY_AMOUNT
     || (fraction.length > 0 && amount > (MAX_WITH_FRACTION[decimals] ?? MAX_MONEY_AMOUNT)))) return "tooLarge";

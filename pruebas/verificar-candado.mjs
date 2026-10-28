@@ -72,7 +72,7 @@ console.log("\n--- Y NO SE PUEDE CREAR NI CAMBIAR NADA ---");
   ok(panel.includes('canWrite?<BusinessButton label={`+ ${copy("createBusiness")}'), "crear negocios se protege por el mismo acceso");
   const ctx = leer("contexts/AppDataContext.tsx");
   ok(/if \(soloLectura && v\) return;/.test(panel)
-    && /if \(activar && !premiumAhora\) return;/.test(ctx)
+    && /if \(activar && !premiumAhora\) return Promise\.resolve\(false\);/.test(ctx)
     && /pruebaVigente\(pruebaInicio, Date\.now\(\)\)/.test(ctx),
     "sin Pro solo se puede apagar un destino antiguo de yapeos, nunca encenderlo");
   ok(panel.includes('selecting&&canWrite?') && panel.includes('if(!canWrite && !['), "sin Premium no se borra ni se mantienen formularios activos");
