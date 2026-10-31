@@ -13,6 +13,7 @@ import GoalFormSheet from "@/screens/GoalFormSheet";
 import MoveMoneySheet from "@/screens/MoveMoneySheet";
 import UseSavingsSheet from "@/screens/UseSavingsSheet";
 import SavingsFlowSummaryCard from "@/components/SavingsFlowSummaryCard";
+import MovementDivider from "@/components/MovementDivider";
 import { summarizeGoalFunding } from "@/utils/savingsSummary";
 
 export default function SavingsList({ goals, onBack, disponible, apartado, libre, descuadre, monthLabel, soloLectura = false }: {
@@ -132,8 +133,11 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.movementSummary")}</Text>
         </View>
         {movementGoals.length === 0 && <View className="items-center rounded-2xl bg-slate-50 p-6 dark:bg-noche-2"><PiggyBank size={30} color="#7c3aed" /><Text className="mt-3 text-center text-sm text-slate-500 dark:text-slate-300">{t("savings.noMovements")}</Text></View>}
-        {movementGoals.slice(0, goalLimit).map(goal => <SavingsFlowSummaryCard key={`movement-${goal.id}`} testID={`savings-movement-summary-${goal.id}`}
-          goal={goal} summary={fundingSummaries.get(goal.id) ?? { received: 0, returned: 0 }} view="savings" fmt={fmt} t={t} />)}
+        {movementGoals.slice(0, goalLimit).map((goal, index) => <View key={`movement-${goal.id}`}>
+          {index > 0 ? <MovementDivider /> : null}
+          <SavingsFlowSummaryCard testID={`savings-movement-summary-${goal.id}`}
+            goal={goal} summary={fundingSummaries.get(goal.id) ?? { received: 0, returned: 0 }} view="savings" fmt={fmt} t={t} />
+        </View>)}
       </>}
     </ScrollView>
     {panel?.kind === "create" || panel?.kind === "edit" && selected ? <GoalFormSheet goal={selected} onClose={closePanel} onSave={(goal, initial, expectedSaved) => commit({ kind: panel.kind === "edit" ? "edit" : "create", goal, initial, ...(panel.kind === "edit" ? { saved: goal.saved, expectedSaved } : {}) })} /> : null}

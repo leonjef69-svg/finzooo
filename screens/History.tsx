@@ -10,6 +10,7 @@ import { visiblePersonalMovement } from "@/utils/personalHistory";
 import { matchesPersonalMovementFilter, type PersonalMovementFilter } from "@/utils/savingsActions";
 import MonthSelector from "@/components/MonthSelector";
 import MovementDateHeader from "@/components/MovementDateHeader";
+import MovementDivider from "@/components/MovementDivider";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
@@ -69,11 +70,7 @@ const Fila = memo(function Fila({
   return (
     <TouchableOpacity
       onPress={() => transferGroup ? onOpenTransferGroup() : onOpenDetail(tx.id)}
-      // Mismo contorno que las filas de Inicio: medio píxel más
-      // de grosor y un tono más claro, porque la tarjeta y el
-      // fondo de la pantalla son del mismo color en oscuro.
-      className="flex-row items-center gap-3 bg-white dark:bg-noche-2 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-noche-borde mb-2.5"
-      style={CARD_SHADOW}
+      className="flex-row items-center gap-3 py-3"
     >
       {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
           calendario, y la categoria sigue mandando en las cuentas. */}
@@ -250,15 +247,16 @@ export default function History({
   }, [allMonthTx, transactions, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, fmt, t]);
 
   const dibujar = useCallback(
-    ({ item }: { item: Renglon }) =>
+    ({ item, index }: { item: Renglon; index: number }) =>
       item.tipo === "fecha" ? (
         <MovementDateHeader date={item.fecha} monthNames={monthNames} inset />
       ) : (
         <View className="px-5">
+          {index > 0 && renglones[index - 1]?.tipo === "fila" ? <MovementDivider /> : null}
           <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} timeLabel={item.timeLabel} />
         </View>
       ),
-    [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses]
+    [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses, renglones]
   );
 
   return (

@@ -5,6 +5,7 @@ import { Check, MoreHorizontal } from "lucide-react-native";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
 import MovementDateHeader from "@/components/MovementDateHeader";
+import MovementDivider from "@/components/MovementDivider";
 import Toggle from "@/components/Toggle";
 import { BusinessButton, BusinessChoice, BusinessField, BusinessQuantityStepper, BusinessSheet } from "@/components/business/BusinessPrimitives";
 import BusinessReports from "@/components/business/BusinessReports";
@@ -226,9 +227,11 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
       const amountForeground=r.tipo==="gasto"?"text-rose-700 dark:text-rose-300":"text-emerald-700 dark:text-emerald-300";
       const methodTone=METHOD_TONE[r.metodo];
       const sourceLabel=r.tipo==="gasto"?(r.automatico?"expenseAutomatic":"expenseManual"):(r.automatico?"incomeAutomatic":"incomeManual");
-      return <View>
-        {startsMovementDay(rows,index,item=>item.fecha)?<MovementDateHeader date={r.fecha} monthNames={app.monthNames}/>:null}
-        <TouchableOpacity testID={`business-row-${r.key}`} accessibilityRole={selecting?"checkbox":"button"} accessibilityState={selecting?{checked:selectedSet.has(r.key)}:undefined} accessibilityLabel={`${r.detalle||copy(r.tipo==="gasto"?"expense":"income")}, ${dinero(r.monto)}`} onPress={()=>selecting?setSelectedKeys(previous=>previous.includes(r.key)?previous.filter(k=>k!==r.key):[...previous,r.key]):open({kind:"detail",id:r.key})} className="my-1 min-h-[72px] flex-row items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-noche-borde dark:bg-noche-2">
+       const startsDay=startsMovementDay(rows,index,item=>item.fecha);
+       return <View>
+         {startsDay?<MovementDateHeader date={r.fecha} monthNames={app.monthNames}/>:null}
+         {index>0&&!startsDay?<MovementDivider/>:null}
+         <TouchableOpacity testID={`business-row-${r.key}`} accessibilityRole={selecting?"checkbox":"button"} accessibilityState={selecting?{checked:selectedSet.has(r.key)}:undefined} accessibilityLabel={`${r.detalle||copy(r.tipo==="gasto"?"expense":"income")}, ${dinero(r.monto)}`} onPress={()=>selecting?setSelectedKeys(previous=>previous.includes(r.key)?previous.filter(k=>k!==r.key):[...previous,r.key]):open({kind:"detail",id:r.key})} className="min-h-[72px] flex-row items-center gap-3 px-1 py-3">
           {selecting?<View className={`h-5 w-5 items-center justify-center rounded border ${selectedSet.has(r.key)?"border-emerald-600 bg-emerald-600":"border-slate-400"}`}>{selectedSet.has(r.key)?<Check size={14} color="#fff"/>:null}</View>:null}
           <View className="min-w-0 flex-1 gap-1"><Text numberOfLines={1} className="text-sm font-bold text-slate-900 dark:text-slate-100">{r.detalle||copy(r.pendiente?"noMatch":r.tipo==="gasto"?"expense":"income")}</Text><Text numberOfLines={1} className="text-[11px] text-slate-500 dark:text-slate-300">{horaVisible(r.hora)} · {copy(sourceLabel)}</Text>{r.pendiente?<Text className="text-xs text-amber-800 dark:text-amber-200">{copy("classify")} ›</Text>:null}</View>
           <View className="min-w-0 shrink-0 items-end gap-1" style={{maxWidth:width*0.43}}><Text testID={`business-amount-${r.key}`} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`max-w-full text-right text-sm font-extrabold ${amountForeground}`}>{r.tipo==="gasto"?"−":"+"} {dinero(r.monto)}</Text><View testID={`business-method-${r.key}`} className={`max-w-full rounded-full px-2.5 py-1 ${methodTone.background}`}><Text numberOfLines={1} className={`text-[10px] font-semibold ${methodTone.foreground}`}>{methodName(r.metodo)}</Text></View></View>

@@ -5,6 +5,7 @@ import BackButton from "@/components/BackButton";
 import LegalAcceptancePanel from "@/components/LegalAcceptancePanel";
 import MovementAllButton from "@/components/MovementAllButton";
 import MovementDateHeader from "@/components/MovementDateHeader";
+import MovementDivider from "@/components/MovementDivider";
 import { movementRowsByDay, startsMovementDay, linkedMovementRowTime } from "@/utils/movementDates";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
@@ -1024,9 +1025,11 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
           const retorno = isLinkedSpaceReturn(item);
           const idsDeFila = movementIdsForCompactRow(row, visibles);
           const filaSeleccionada = idsDeFila.length > 0 && idsDeFila.every(id => seleccionados.includes(id));
+          const startsDay = startsMovementDay(filasVisibles, index, row => row.item.fecha);
           return <View key={key}>
-            {startsMovementDay(filasVisibles, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
-          <TouchableOpacity disabled={!seleccionando} accessible={seleccionando} accessibilityRole={seleccionando ? "checkbox" : undefined} accessibilityState={{ checked: filaSeleccionada, disabled: !seleccionando }} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+            {startsDay ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
+            {index > 0 && !startsDay ? <MovementDivider /> : null}
+          <TouchableOpacity disabled={!seleccionando} accessible={seleccionando} accessibilityRole={seleccionando ? "checkbox" : undefined} accessibilityState={{ checked: filaSeleccionada, disabled: !seleccionando }} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`min-h-[62px] flex-row items-center border-l-2 px-2 py-3 ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950/40" : "border-transparent"}`}>
             <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
             {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={familia.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmtFamilia} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <><View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text>{rowTime || item.method ? <Text className="text-xs text-slate-500 dark:text-slate-300">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text> : null}</View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmtFamilia(item.monto)}</Text></>}
             {!seleccionando ? <ContentReportButton key={`${familia.id}:${item.id}`} target={transferencia

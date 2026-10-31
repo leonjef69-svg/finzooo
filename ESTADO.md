@@ -1,3 +1,19 @@
+# Movimientos: filas sin tarjetas, separadas por línea — 30/10/2026 — desarrollo
+
+Marca `30oct-movimientos-linea-divisora`. Las listas de Inicio/Personal,
+Historial, Familia, Cajas (incluidas las archivadas), cajas compartidas,
+Negocio y los resúmenes de movimientos de Ahorro muestran filas transparentes
+con una línea divisora entre movimientos del mismo día. Se quitaron los marcos
+redondeados individuales de esos registros. Se mantienen encabezados de fecha,
+montos y colores, selección, informes, apertura de detalles y acciones de cada
+lista. Las metas y tarjetas de resumen no relacionadas con movimientos siguen
+como estaban.
+
+Cambio solo de presentación: no altera registros, saldos, permisos ni código
+nativo. TypeScript y ESLint pasan; no se ha comprobado el aspecto en el
+emulador. Qué sigue/falta: recargar el emulador y revisar las listas
+visualmente; no requiere APK, pero la entrega al celular queda pendiente.
+
 ## Correcciones de auditoría — 28/10/2026 — desarrollo
 
 Marca 28oct-guardados-importacion-permisos-fluidez; base 8a342dea.

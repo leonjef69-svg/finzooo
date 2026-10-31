@@ -47,7 +47,7 @@ export default function SavingsFlowSummaryCard({
   t: (key: string) => string;
   testID?: string;
 }) {
-  return <View testID={testID} className="mb-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-noche-borde dark:bg-noche-2">
+  return <View testID={testID} className="py-3">
     <SavingsSummaryHeader key={`${goal.name}:${view}`} name={goal.name} allowInline={view === "personal"}
       returnedLabel={goal.saved === 0 && summary.received > 0 && summary.returned === summary.received ? t("savings.fullyReturned") : undefined} />
     <View className="mt-2 flex-row items-center gap-3">

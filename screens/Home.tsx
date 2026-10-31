@@ -6,6 +6,7 @@ import IconBadge from "@/components/IconBadge";
 import MonthSelector from "@/components/MonthSelector";
 import MovementAllButton from "@/components/MovementAllButton";
 import MovementDateHeader from "@/components/MovementDateHeader";
+import MovementDivider from "@/components/MovementDivider";
 import PressableScale from "@/components/PressableScale";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
@@ -123,6 +124,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
   onPress,
   transferGroup,
   timeLabel,
+  separator,
 }: {
   tx: Transaction;
   marcada: boolean;
@@ -133,6 +135,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
   onPress: (id: number, grouped: boolean) => void;
   transferGroup?: TransferGroupSummary;
   timeLabel?: string;
+  separator: boolean;
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
@@ -147,19 +150,14 @@ const FilaMovimiento = memo(function FilaMovimiento({
   // además ocho entradas escalonadas cada vez que se regresa a Personal.
   return (
     <View className="px-5">
+        {separator ? <MovementDivider /> : null}
         <PressableScale
           onPress={() => onPress(tx.id, Boolean(transferGroup))}
-          // El contorno se ve poco, sobre todo de noche: la tarjeta
-          // es slate-900 y el fondo de la pantalla TAMBIÉN, así que
-          // lo único que las separaba era un borde casi del mismo
-          // color. Se sube medio píxel de grosor y se aclara el
-          // color un tono en cada tema.
-          className={`flex-row items-center gap-3 bg-white dark:bg-noche-2 rounded-2xl p-3 border-[1.5px] mb-2.5 ${
+          className={`flex-row items-center gap-3 border-l-2 px-2 py-3 ${
             marcada
-              ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-              : "border-slate-200 dark:border-noche-borde"
+              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40"
+              : "border-transparent"
           }`}
-          style={softShadow}
         >
           {selectMode &&
             (marcada ? (
@@ -620,22 +618,24 @@ export default function Home({
   );
 
   const dibujarFila = useCallback(
-    ({ item: row, index }: { item: ReturnType<typeof compactPersonalTransferRows<Transaction>>[number]; index: number }) => (
-      <View>
-      {startsMovementDay(visibleRecentRows, index, item => item.item.date) ? <MovementDateHeader date={row.item.date} monthNames={monthNames} inset /> : null}
-      <FilaMovimiento
-        tx={row.item}
-        marcada={marcadas.has(row.item.id)}
-        selectMode={selectMode}
-        oscuro={colorScheme === "dark"}
-        fmt={fmt}
-        t={t}
-        onPress={alTocarFila}
-        transferGroup={row.transferGroup}
-        timeLabel={personalMovementRowTime(row)}
-      />
-      </View>
-    ),
+    ({ item: row, index }: { item: ReturnType<typeof compactPersonalTransferRows<Transaction>>[number]; index: number }) => {
+      const startsDay = startsMovementDay(visibleRecentRows, index, item => item.item.date);
+      return <View>
+        {startsDay ? <MovementDateHeader date={row.item.date} monthNames={monthNames} inset /> : null}
+        <FilaMovimiento
+          tx={row.item}
+          marcada={marcadas.has(row.item.id)}
+          selectMode={selectMode}
+          oscuro={colorScheme === "dark"}
+          fmt={fmt}
+          t={t}
+          onPress={alTocarFila}
+          transferGroup={row.transferGroup}
+          timeLabel={personalMovementRowTime(row)}
+          separator={index > 0 && !startsDay}
+        />
+      </View>;
+    },
     [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila, visibleRecentRows]
   );
   function confirmBulkDelete() {
@@ -1053,9 +1053,11 @@ export default function Home({
               <Text className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{t("savings.viewGoals")}</Text>
             </TouchableOpacity>
           </View>
-          {personalSavingsSummaries.slice(0, 8).map(({ goal, summary }) => <SavingsFlowSummaryCard key={`personal-savings-${goal.id}`}
-            testID={`personal-savings-summary-${goal.id}`} goal={goal}
-            summary={summary ?? { received: 0, returned: 0 }} view="personal" fmt={fmt} t={t} />)}
+          {personalSavingsSummaries.slice(0, 8).map(({ goal, summary }, index) => <View key={`personal-savings-${goal.id}`}>
+            {index > 0 ? <MovementDivider /> : null}
+            <SavingsFlowSummaryCard testID={`personal-savings-summary-${goal.id}`} goal={goal}
+              summary={summary ?? { received: 0, returned: 0 }} view="personal" fmt={fmt} t={t} />
+          </View>)}
         </View> : null}
         ListEmptyComponent={personalSavingsSummaries.length > 0 && recentFilter === null ? null :
           <View className="px-5">
