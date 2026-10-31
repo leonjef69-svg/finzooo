@@ -21,13 +21,17 @@ Los huecos entre bloques son de hasta dos puntos y nunca superan el 12% de
 la longitud del bloque, para no borrar uno pequeño por su separación.
 
 El centro muestra el nombre y porcentaje de la categoría elegida o Todas las
-categorías/100%. El monto está debajo, en un bloque de ancho completo sin
-alto fijo ni límite de líneas. Usa fmtExact y el símbolo/decimales reales,
-sin K/M/B. Tocar icono o bloque selecciona su categoría; el segundo toque
-devuelve el total. La selección no modifica movimientos ni presupuestos.
-Una categoría retirada deja de mostrarse seleccionada; tipo/mes reinicia.
-En anchos muy reducidos, el nombre permanece en el resumen inferior y el
-centro prioriza el porcentaje, para no invadir el anillo.
+categorías/100%. El monto usa un resumen sin alto fijo ni límite de líneas y
+conserva fmtExact y la moneda real, sin K/M/B. Si el espacio inmediatamente
+debajo del anillo está libre de iconos/conectores y el texto cabe en una fila,
+el resumen ocupa ese hueco y alinea el nombre a la izquierda y el monto a la
+derecha. Si alguna categoría necesita esa franja o la cifra es demasiado larga,
+el resumen vuelve debajo del gráfico con su distribución vertical anterior.
+Tocar icono o bloque selecciona su categoría; el segundo toque devuelve el
+total. La selección no modifica movimientos ni presupuestos. Una categoría
+retirada deja de mostrarse seleccionada; tipo/mes reinicia. En anchos muy
+reducidos, el nombre permanece en el resumen y el centro prioriza el porcentaje,
+para no invadir el anillo.
 
 Cada conector sale del punto medio del bloque, a radio +10 (borde exterior
 del trazo de 20), y llega al borde de su icono. La curva interpola ángulos en
