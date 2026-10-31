@@ -938,17 +938,17 @@ export default function Home({
             <View className="flex-row gap-2.5">
               {mainSpent > 0 ? <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ flex: 1, minWidth: 0 }}>
                 <PressableScale
-                  className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-2 border-[1.5px] border-rose-100 dark:border-noche-borde justify-center"
+                  className="bg-rose-50 dark:bg-rose-700 rounded-2xl px-3 py-2 border-[1.5px] border-rose-100 dark:border-rose-600 justify-center"
                   style={[softShadow, { minHeight: 68 }]}
                 >
                   <View className="flex-row items-center gap-1.5 mb-1">
-                    <ArrowDown size={18} color="#f43f5e" strokeWidth={2.6} />
-                    <Text className="flex-1 text-base text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={1}>
+                    <ArrowDown size={18} color={colorScheme === "dark" ? "#ffffff" : "#f43f5e"} strokeWidth={2.6} />
+                    <Text className="flex-1 text-base text-slate-600 dark:text-white font-semibold" numberOfLines={1}>
                       {t("home.spent")}
                     </Text>
                   </View>
                   <Text
-                    className="text-lg font-extrabold text-rose-500"
+                    className="text-lg font-extrabold text-rose-500 dark:text-white"
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.72}
@@ -959,17 +959,17 @@ export default function Home({
               </Animated.View> : null}
               {mainIncome > 0 ? <Animated.View entering={FadeInDown.delay(mainSpent > 0 ? 2 * 70 : 1 * 70).duration(300)} style={{ flex: 1, minWidth: 0 }}>
                 <PressableScale
-                  className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-2 border-[1.5px] border-emerald-100 dark:border-noche-borde justify-center"
+                  className="bg-emerald-50 dark:bg-emerald-700 rounded-2xl px-3 py-2 border-[1.5px] border-emerald-100 dark:border-emerald-600 justify-center"
                   style={[softShadow, { minHeight: 68 }]}
                 >
                   <View className="flex-row items-center gap-1.5 mb-1">
-                    <ArrowUp size={18} color="#059669" strokeWidth={2.6} />
-                    <Text className="flex-1 text-base text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={1}>
+                    <ArrowUp size={18} color={colorScheme === "dark" ? "#ffffff" : "#059669"} strokeWidth={2.6} />
+                    <Text className="flex-1 text-base text-slate-600 dark:text-white font-semibold" numberOfLines={1}>
                       {t("home.income")}
                     </Text>
                   </View>
                   <Text
-                    className="text-lg font-extrabold text-emerald-600"
+                    className="text-lg font-extrabold text-emerald-600 dark:text-white"
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.72}

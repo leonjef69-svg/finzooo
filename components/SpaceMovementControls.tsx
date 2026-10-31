@@ -28,11 +28,11 @@ export function SpaceOverviewTotals({ income, expense, filter, onFilter, format 
     accessibilityRole="button"
     accessibilityState={{ selected: filter === type }}
     onPress={() => onFilter(filter === type ? null : type)}
-    className={`min-h-[70px] justify-center rounded-2xl border-[1.5px] px-3 py-2.5 ${type === "ingreso" ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/35"}`}
+    className={`min-h-[70px] justify-center rounded-2xl border-[1.5px] px-3 py-2.5 ${type === "ingreso" ? "border-emerald-300 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-700" : "border-rose-300 bg-rose-50 dark:border-rose-600 dark:bg-rose-700"}`}
     style={{ flex: vertical ? undefined : 1 }}
   >
-    <Text numberOfLines={1} className={`text-xs font-bold ${type === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`text-lg font-extrabold ${type === "ingreso" ? "text-emerald-800 dark:text-emerald-200" : "text-rose-800 dark:text-rose-200"}`}>{format(amount)}</Text>
+    <Text numberOfLines={1} className={`text-xs font-bold ${type === "ingreso" ? "text-emerald-700 dark:text-white" : "text-rose-700 dark:text-white"}`}>{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`text-lg font-extrabold ${type === "ingreso" ? "text-emerald-800 dark:text-white" : "text-rose-800 dark:text-white"}`}>{format(amount)}</Text>
   </TouchableOpacity>;
   return <View className={`mt-2 gap-2 ${vertical ? "" : "flex-row"}`}>
     {hasIncome ? card("ingreso", income) : null}
@@ -46,7 +46,7 @@ export function SpaceFilteredTotal({ filter, amount, format }: {
   format: (value: number) => string;
 }) {
   const { t } = useAppData();
-  return <View className={`mb-2 w-full rounded-xl px-3 py-2 ${filter === "ingreso" ? "bg-emerald-50 dark:bg-emerald-950/40" : "bg-rose-50 dark:bg-rose-950/35"}`}><Text className={`text-xs font-bold ${filter === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>{t(filter === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`text-lg font-extrabold ${filter === "ingreso" ? "text-emerald-800 dark:text-emerald-200" : "text-rose-800 dark:text-rose-200"}`}>{format(amount)}</Text></View>;
+  return <View className={`mb-2 w-full rounded-xl px-3 py-2 ${filter === "ingreso" ? "bg-emerald-50 dark:bg-emerald-700" : "bg-rose-50 dark:bg-rose-700"}`}><Text className={`text-xs font-bold ${filter === "ingreso" ? "text-emerald-700 dark:text-white" : "text-rose-700 dark:text-white"}`}>{t(filter === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`text-lg font-extrabold ${filter === "ingreso" ? "text-emerald-800 dark:text-white" : "text-rose-800 dark:text-white"}`}>{format(amount)}</Text></View>;
 }
 
 export function SpaceTotals({ income, expense, filter, onFilter, format }: {
@@ -69,10 +69,10 @@ export function SpaceTotals({ income, expense, filter, onFilter, format }: {
     // recalcular esa sombra recién al filtrar y dejar la vista sin montar.
     // Un borde nativo expresa el estado seleccionado sin ese riesgo.
     style={filter === type ? { borderWidth: 1, borderColor: "#64748b" } : undefined}
-    className={`min-h-12 flex-1 justify-center rounded-xl px-2 py-1.5 ${type === "ingreso" ? "bg-emerald-50 dark:bg-emerald-950/40" : "bg-rose-50 dark:bg-rose-950/35"}`}
+    className={`min-h-12 flex-1 justify-center rounded-xl px-2 py-1.5 ${type === "ingreso" ? "bg-emerald-50 dark:bg-emerald-700" : "bg-rose-50 dark:bg-rose-700"}`}
   >
-    <Text numberOfLines={1} className={`text-[11px] font-semibold ${type === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")} ›</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} className={`text-base font-extrabold ${type === "ingreso" ? "text-emerald-700 dark:text-emerald-200" : "text-rose-700 dark:text-rose-200"}`}>{format(amount)}</Text>
+    <Text numberOfLines={1} className={`text-[11px] font-semibold ${type === "ingreso" ? "text-emerald-700 dark:text-white" : "text-rose-700 dark:text-white"}`}>{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")} ›</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} className={`text-base font-extrabold ${type === "ingreso" ? "text-emerald-700 dark:text-white" : "text-rose-700 dark:text-white"}`}>{format(amount)}</Text>
   </TouchableOpacity>;
   if (!hasIncome && !hasExpense) return null;
   return <View className="mt-2 border-t border-white/25 pt-1.5">
