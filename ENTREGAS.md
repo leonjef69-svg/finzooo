@@ -28,7 +28,7 @@ entre controles de paneles de Negocio; se neutralizan tarjetas y bordes oscuros
 de creación/listas de Familia y Cajas y se aclara el aviso de pago vencido.
 Verificado en el emulador habitual, sin guardar ni alterar datos. TypeScript,
 ESLint, 287 pruebas y 8 auditores aprobados. Es un cambio visual de desarrollo,
-no requiere APK ni publicación.
+no requiere APK ni publicación. Código en `2ec4914` (rama `master`).
 
 ## 30/10/2026 — fondo carbón cálido (desarrollo)
 
