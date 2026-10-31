@@ -592,10 +592,8 @@ function RootNavigator() {
   // que ser el MISMO que el de las pantallas, o en ese instante aparece un rectangulo de otro
   // color por detras.
   //
-  // Aqui ponia "#000000", de cuando el modo oscuro era negro puro. Al pasar a carbon se quedo
-  // atras —*"por que aparece ese color del antiguo fondo?"*— porque el color estaba escrito a
-  // mano en vez de salir de un sitio comun. Es el mismo fallo que dejo la barra de pestañas
-  // azul, y por eso ahora los dos beben de `NOCHE`.
+  // El fondo nativo sale de NOCHE para coincidir con el color de las pantallas y
+  // evitar un destello de otro tono antes de que React pinte el contenido.
   const screenBg = entry ? ENTRY_COLORS.background : screenBackgroundForVisualStyle(visualStyle, colorScheme === "dark");
   // El reemplazo lateral mantiene la pantalla saliente bajo la entrante.
   // No fundir todo el contenido hacia un fondo vacío entre espacios.

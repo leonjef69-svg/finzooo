@@ -76,7 +76,7 @@ export const SALDO_TARJETA = {
  * vuelve a partir la app en dos colores, y hay una prueba que lo vigila.
  */
 export const NOCHE = {
-  fondo: "#121212",
+  fondo: "#000000",
   tarjeta: "#1e1e1e",
   encima: "#2a2a2a",
   borde: "#2f2f2f",

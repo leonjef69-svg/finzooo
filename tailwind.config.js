@@ -54,7 +54,7 @@ module.exports = {
          */
         noche: {
           // El fondo de la pantalla.
-          DEFAULT: "#121212",
+          DEFAULT: "#000000",
           // Las tarjetas y las filas. UN TONO MAS CLARO QUE EL FONDO: esa es toda la idea.
           2: "#1e1e1e",
           // Lo que va encima de una tarjeta: un campo, un boton apagado.
