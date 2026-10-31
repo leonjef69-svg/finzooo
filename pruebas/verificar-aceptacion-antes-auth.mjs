@@ -45,6 +45,7 @@ assert.equal(dependencies.authBusy.current, false);
 const changes = [], routes = [];
 const React = { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
 const component = handlerOriginal("components/AuthLegalAcceptance.tsx", "AuthLegalAcceptance", {
+  useEntryTheme: () => ({ colors: {}, dark: false }),
   React, Text: "Text", View: "View", TouchableOpacity: "TouchableOpacity", LEGAL_LAST_UPDATED: "8 de octubre de 2026", irUnaVez: path => routes.push(path),
 });
 const flatten = node => !node || typeof node !== "object" ? [] : [node, ...node.children.flat(Infinity).flatMap(flatten)];

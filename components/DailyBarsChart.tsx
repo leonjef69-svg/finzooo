@@ -181,7 +181,7 @@ export default function DailyBarsChart({
                 left: 0,
                 width: AXIS_W - 6,
               }}
-              className="text-[9px] text-slate-400 text-right"
+              className="text-[9px] text-slate-400 text-right dark:text-slate-300"
             >
               {fmtAxis(v)}
             </Text>
@@ -245,7 +245,7 @@ export default function DailyBarsChart({
                       fontSize: AMOUNT_FONT,
                     }}
                     className={`font-bold text-center ${
-                      isSelected ? "text-emerald-500" : "text-slate-500 dark:text-slate-300"
+                      isSelected ? "text-emerald-500 dark:text-emerald-300" : "text-slate-500 dark:text-slate-300"
                     }`}
                   >
                     {amountText(d.amount)}
@@ -276,7 +276,7 @@ export default function DailyBarsChart({
                     }}
                     className={`text-center ${
                       isSelected
-                        ? "text-emerald-500 font-extrabold"
+                        ? "text-emerald-500 font-extrabold dark:text-emerald-300"
                         : "text-slate-500 dark:text-slate-300"
                     }`}
                   >

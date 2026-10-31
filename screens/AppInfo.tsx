@@ -28,7 +28,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? "1.0.8";
  * La versión comercial no sirve para distinguir dos ajustes de la misma entrega.
  * Esta sí.
  */
-const CODE_MARKER = "30oct-movimientos-linea-divisora";
+const CODE_MARKER = "30oct-oscuro-mate-completo";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();
@@ -125,7 +125,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
               {t("appInfo.codeMarker", { marker: CODE_MARKER })}
             </Text>
           </TouchableOpacity>
-          <Text className="text-[10px] text-slate-400 mt-0.5" selectable>
+          <Text className="text-[10px] text-slate-400 mt-0.5 dark:text-slate-300" selectable>
             {runningLabel}
           </Text>
 
@@ -151,7 +151,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
               esto viene dentro del APK y solo cambia reinstalando. Sin verlo
               no hay forma de saber si un arreglo nativo está o no, y se
               acaba arreglando dos veces algo que ya estaba bien. */}
-          <Text className="text-[10px] text-slate-400 mt-1" selectable>
+          <Text className="text-[10px] text-slate-400 mt-1 dark:text-slate-300" selectable>
             {t("appInfo.nativeParts")}: {incomingFile.isSupported ? "✓" : "✗"} {t("appInfo.nativeShare")} ·{" "}
             {/* Ponía "gmail", y es el mismo módulo que abre el chat de
                 WhatsApp con el número puesto. Viéndolo así parecía que lo de
@@ -238,7 +238,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           <View className="gap-2">
             {WHATS_NEW.map((item, i) => (
               <View key={i} className="flex-row gap-2 pl-1">
-                <Text className="text-emerald-600">•</Text>
+                <Text className="text-emerald-600 dark:text-emerald-300">•</Text>
                 <Text className="text-sm text-slate-600 dark:text-slate-300 flex-1 leading-relaxed">{item}</Text>
               </View>
             ))}

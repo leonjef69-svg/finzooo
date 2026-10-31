@@ -5,12 +5,13 @@ import { BusFront, ChartPie, PiggyBank, Utensils } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import { useEntryOperation, type EntryOperationGuard } from "@/utils/entryOperation";
-import { ENTRY_COLORS, ENTRY_FONT, EntryButton, EntryLink, EntryPanel, EntryScreen, entryStyles } from "@/components/EntryUI";
+import { ENTRY_FONT, EntryButton, EntryLink, EntryPanel, EntryScreen, useEntryTheme } from "@/components/EntryUI";
 import GoogleButton from "@/components/GoogleButton";
 
 type Props = { onGoogle: (current?: EntryOperationGuard, accepted?: boolean) => Promise<void>; onCreateAccount: () => void | boolean; onLogin: () => void | boolean };
 
 export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { fmt, t } = useAppData();
   const { height, width } = useWindowDimensions();
   const illustrationHeight = Math.max(180, Math.min(430, height * (height < 720 ? 0.34 : 0.47)));
@@ -161,6 +162,7 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
 }
 
 function Feature({ icon, title, subtitle, width, onHeight }: { icon: ReactNode; title: string; subtitle: string; width: number; onHeight?: (height: number) => void }) {
+  const { colors: ENTRY_COLORS } = useEntryTheme();
   return (
     <View onLayout={event => onHeight?.(event.nativeEvent.layout.height)} style={{ width, minHeight: 64, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: ENTRY_COLORS.line, borderRadius: 15, backgroundColor: ENTRY_COLORS.paper, padding: 9 }}>
       <View style={{ width: 34, height: 34, flexShrink: 0, backgroundColor: ENTRY_COLORS.soft, borderRadius: 11, alignItems: "center", justifyContent: "center" }}>{icon}</View>

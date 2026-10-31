@@ -791,7 +791,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
               {heard || t("voice.example")}
             </Text>
             {!heard && (
-              <Text className="text-[11px] text-center text-slate-400 leading-4 mt-2">
+              <Text className="text-[11px] text-center text-slate-400 leading-4 mt-2 dark:text-slate-300">
                 {t("voice.example2")}
               </Text>
             )}
@@ -814,7 +814,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
         {stage === "confirm" && rows.length > 0 && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4 dark:text-slate-300">{`"${heard}"`}</Text>
 
             {single ? (
               <SingleCard
@@ -861,7 +861,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                         <TouchableOpacity onPress={() => toggleKind(i)}>
                           <Text
                             className={`text-sm font-extrabold ${
-                              kind === "expense" ? "text-rose-500" : "text-emerald-600"
+                              kind === "expense" ? "text-rose-500 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"
                             }`}
                           >
                             {kind === "expense" ? "-" : "+"}
@@ -901,7 +901,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                 {t(single ? "voice.correct" : "voice.retry")}
               </Text>
             </TouchableOpacity>
-            <Text className="text-[10px] text-center text-slate-400 mt-3 leading-4">
+            <Text className="text-[10px] text-center text-slate-400 mt-3 leading-4 dark:text-slate-300">
               {t(single ? "voice.editHint" : "voice.manyHint")}
             </Text>
           </View>
@@ -909,7 +909,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
         {stage === "summary" && summary && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4 dark:text-slate-300">{`"${heard}"`}</Text>
 
             <View
               className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
@@ -931,7 +931,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                 <>
                   <Text
                     className={`text-3xl font-extrabold text-center mt-1 ${
-                      summary.isIncome ? "text-emerald-600" : "text-rose-500"
+                      summary.isIncome ? "text-emerald-600 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"
                     }`}
                   >
                     {fmt(summary.total)}
@@ -944,7 +944,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                   {summary.otherTotal > 0 && !summary.category && (
                     <Text
                       className={`text-[11px] text-center mt-0.5 ${
-                        summary.isIncome ? "text-rose-500" : "text-emerald-600"
+                        summary.isIncome ? "text-rose-500 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"
                       }`}
                     >
                       {t(summary.isIncome ? "voice.summaryOutLine" : "voice.summaryIncome", {
@@ -969,7 +969,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                         </View>
                       ))}
                       {summary.count > summary.items.length && (
-                        <Text className="text-[10px] text-slate-400 text-center mt-1">
+                        <Text className="text-[10px] text-slate-400 text-center mt-1 dark:text-slate-300">
                           {t("voice.summaryMore", { count: summary.count - summary.items.length })}
                         </Text>
                       )}
@@ -985,7 +985,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                             <Text className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100">
                               {t(cat.label)}
                             </Text>
-                            <Text className="text-[11px] text-slate-400">{share}%</Text>
+                            <Text className="text-[11px] text-slate-400 dark:text-slate-300">{share}%</Text>
                             <Text className="text-xs font-bold text-slate-900 dark:text-slate-100 w-20 text-right">
                               {fmt(amount)}
                             </Text>
@@ -1024,7 +1024,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         {/* "¿En qué mes gasté más?" */}
         {stage === "topMonth" && topMonth && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4 dark:text-slate-300">{`"${heard}"`}</Text>
 
             <View
               className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
@@ -1053,7 +1053,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                   </Text>
                   <Text
                     className={`text-3xl font-extrabold text-center mt-1 ${
-                      topFocus === "income" ? "text-emerald-600" : "text-rose-500"
+                      topFocus === "income" ? "text-emerald-600 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"
                     }`}
                   >
                     {fmt(topMonth.winner.value)}
@@ -1061,7 +1061,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
                   {topMonth.others.length > 0 && (
                     <>
-                      <Text className="text-[11px] font-bold text-slate-400 mt-5 mb-2">
+                      <Text className="text-[11px] font-bold text-slate-400 mt-5 mb-2 dark:text-slate-300">
                         {t("voice.topMonthOthers")}
                       </Text>
                       <View className="gap-2.5">
@@ -1105,7 +1105,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         {/* "Compara junio con mayo" */}
         {stage === "compare" && compare && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4 dark:text-slate-300">{`"${heard}"`}</Text>
 
             <View
               className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
@@ -1165,7 +1165,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                         <Text
                           key={m.key}
                           className={`flex-1 text-xs font-extrabold text-right ${
-                            queda < 0 ? "text-rose-500" : "text-slate-900 dark:text-slate-100"
+                            queda < 0 ? "text-rose-500 dark:text-rose-300" : "text-slate-900 dark:text-slate-100"
                           }`}
                         >
                           {fmt(queda)}
@@ -1211,7 +1211,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 text-center">
               {t(failure === "noAmount" ? "voice.noAmountTitle" : "voice.emptyTitle")}
             </Text>
-            {heard ? <Text className="text-xs text-center text-slate-400 mb-2">{`"${heard}"`}</Text> : null}
+            {heard ? <Text className="text-xs text-center text-slate-400 mb-2 dark:text-slate-300">{`"${heard}"`}</Text> : null}
             <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mb-3">
               {t(failure === "noAmount" ? "voice.noAmountHint" : "voice.emptyHint")}
             </Text>
@@ -1219,7 +1219,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                 para el uso diario, es para poder arreglarlo cuando algo
                 falla y desde fuera todo se ve igual. */}
             {errorCode ? (
-              <Text className="text-[10px] text-center text-slate-400 mb-3">{errorCode}</Text>
+              <Text className="text-[10px] text-center text-slate-400 mb-3 dark:text-slate-300">{errorCode}</Text>
             ) : null}
             <View className="h-3" />
             <TouchableOpacity
@@ -1283,7 +1283,7 @@ function SingleCard({
       style={CARD_SHADOW}
     >
       <View className="mb-1"><CategoryAvatar id={cat.id} size={36} /></View>
-      <Text className={`text-3xl font-extrabold ${kind === "expense" ? "text-rose-500" : "text-emerald-600"}`}>
+      <Text className={`text-3xl font-extrabold ${kind === "expense" ? "text-rose-500 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"}`}>
         {kind === "expense" ? "-" : "+"}
         {fmt(row.amount)}
       </Text>
@@ -1309,7 +1309,7 @@ function SingleCard({
           }`}
         >
           <ArrowUpRight size={13} color={kind === "expense" ? "#f43f5e" : "#94a3b8"} />
-          <Text className={`text-[11px] font-bold ${kind === "expense" ? "text-rose-500" : "text-slate-400"}`}>
+          <Text className={`text-[11px] font-bold ${kind === "expense" ? "text-rose-500 dark:text-rose-300" : "text-slate-400 dark:text-slate-300"}`}>
             {t("addSheet.expense")}
           </Text>
         </TouchableOpacity>
@@ -1322,7 +1322,7 @@ function SingleCard({
           }`}
         >
           <ArrowDownRight size={13} color={kind === "income" ? "#059669" : "#94a3b8"} />
-          <Text className={`text-[11px] font-bold ${kind === "income" ? "text-emerald-600" : "text-slate-400"}`}>
+          <Text className={`text-[11px] font-bold ${kind === "income" ? "text-emerald-600 dark:text-emerald-300" : "text-slate-400 dark:text-slate-300"}`}>
             {t("addSheet.income")}
           </Text>
         </TouchableOpacity>

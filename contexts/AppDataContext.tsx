@@ -20,6 +20,7 @@ import {
 import { Alert, AppState, Modal, Platform, Text, View } from "react-native";
 import { colorScheme, useColorScheme, vars } from "nativewind";
 import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTheme";
+import { NOCHE } from "@/constants/style";
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
 import { requestNotificationConsent } from "@/utils/notificationConsent";
@@ -3763,11 +3764,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       <View style={[{ flex: 1 }, visualStyleVariables]}>{children}</View>
       <Modal visible={storageReadBlocked} transparent animationType="fade" onRequestClose={() => undefined}>
         <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.72)" }}>
-          <View style={{ borderRadius: 20, padding: 24, backgroundColor: "#FFFFFF" }}>
-            <Text style={{ color: "#1B1B1B", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
+          <View style={{ borderRadius: 20, padding: 24, backgroundColor: activeColorScheme === "dark" ? NOCHE.tarjeta : "#FFFFFF" }}>
+            <Text style={{ color: activeColorScheme === "dark" ? NOCHE.texto : "#1B1B1B", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
               {t("storage.readBlockedTitle")}
             </Text>
-            <Text style={{ color: "#3D3D3D", fontSize: 16, lineHeight: 24 }}>
+            <Text style={{ color: activeColorScheme === "dark" ? NOCHE.textoSuave : "#3D3D3D", fontSize: 16, lineHeight: 24 }}>
               {t("storage.readBlockedBody")}
             </Text>
           </View>

@@ -67,7 +67,7 @@ export default function SpaceMovementSheet({
       <Pressable accessibilityRole="button" accessibilityLabel={t("common.cancel")} disabled={disabled} onPress={onClose} className="absolute inset-0" />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="justify-end">
         <ScrollView
-          className="rounded-t-[28px] bg-white px-5 dark:bg-noche"
+          className="rounded-t-[28px] bg-white px-5 dark:bg-noche-panel"
           style={{ maxHeight: height * 0.92 }}
           contentContainerStyle={{ paddingTop: 10, paddingBottom: 20 }}
           keyboardShouldPersistTaps="handled"
@@ -109,7 +109,7 @@ export default function SpaceMovementSheet({
               keyboardType="decimal-pad"
               placeholder="0.00"
               placeholderTextColor="#94a3b8"
-              className={`h-12 p-0 text-[30px] font-extrabold ${type === "gasto" ? "text-rose-600" : "text-emerald-700 dark:text-emerald-300"}`}
+              className={`h-12 p-0 text-[30px] font-extrabold ${type === "gasto" ? "text-rose-600 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"}`}
             />
           </View>
 
@@ -125,7 +125,7 @@ export default function SpaceMovementSheet({
                 <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(value === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text>
               </TouchableOpacity>)}
             </View>
-            {origin === "personal" && availableText ? <Text className="mt-1 text-[11px] text-slate-500">{availableText}</Text> : null}
+            {origin === "personal" && availableText ? <Text className="mt-1 text-[11px] text-slate-500 dark:text-slate-300">{availableText}</Text> : null}
           </View> : null}
 
           <SpaceMovementFields type={type} category={category} onOpenCategory={() => setShowCategories(true)} date={date} onDate={onDate} notes={notes} onNotes={onNotes} disabled={disabled} />

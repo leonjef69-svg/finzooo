@@ -41,8 +41,8 @@ export default function Row({
       </View>
       <View className="flex-1 min-w-0">
         <Text
-          className={`text-left text-sm font-bold ${danger ? "text-rose-500" : ""}`}
-          style={!danger ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
+          className={`text-left text-sm font-bold ${danger ? "text-rose-500 dark:text-rose-300" : ""}`}
+          style={!danger ? { color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" } : undefined}
           numberOfLines={2}
         >
           {label}

@@ -175,8 +175,8 @@ export default function ImportSheet({
   ].sort((a, b) => (a.raw.sourceRow ?? 0) - (b.raw.sourceRow ?? 0)), [candidates, rowsSinFecha]);
   const previewStart = previewPage * PREVIEW_LIMIT;
 
-  const iconMuted = colorScheme === "dark" ? "#94a3b8" : "#475569";
-  const primaryText = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  const iconMuted = colorScheme === "dark" ? "#b8b2a8" : "#475569";
+  const primaryText = colorScheme === "dark" ? "#f4f0e8" : "#0f172a";
 
   const newOnes = useMemo(() => candidates.filter((c) => !c.match), [candidates]);
   const dupes = useMemo(() => candidates.filter((c) => c.match), [candidates]);
@@ -552,7 +552,7 @@ export default function ImportSheet({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} disabled={saving} onPress={close} />
       <View
-        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-panel rounded-t-3xl px-5 pt-3"
         style={{ paddingBottom: 32 + insets.bottom, maxHeight: "88%" }}
       >
         <View className="items-center mb-3">

@@ -230,12 +230,13 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
        const startsDay=startsMovementDay(rows,index,item=>item.fecha);
        return <View>
          {startsDay?<MovementDateHeader date={r.fecha} monthNames={app.monthNames}/>:null}
-         {index>0&&!startsDay?<MovementDivider/>:null}
+
          <TouchableOpacity testID={`business-row-${r.key}`} accessibilityRole={selecting?"checkbox":"button"} accessibilityState={selecting?{checked:selectedSet.has(r.key)}:undefined} accessibilityLabel={`${r.detalle||copy(r.tipo==="gasto"?"expense":"income")}, ${dinero(r.monto)}`} onPress={()=>selecting?setSelectedKeys(previous=>previous.includes(r.key)?previous.filter(k=>k!==r.key):[...previous,r.key]):open({kind:"detail",id:r.key})} className="min-h-[72px] flex-row items-center gap-3 px-1 py-3">
           {selecting?<View className={`h-5 w-5 items-center justify-center rounded border ${selectedSet.has(r.key)?"border-emerald-600 bg-emerald-600":"border-slate-400"}`}>{selectedSet.has(r.key)?<Check size={14} color="#fff"/>:null}</View>:null}
           <View className="min-w-0 flex-1 gap-1"><Text numberOfLines={1} className="text-sm font-bold text-slate-900 dark:text-slate-100">{r.detalle||copy(r.pendiente?"noMatch":r.tipo==="gasto"?"expense":"income")}</Text><Text numberOfLines={1} className="text-[11px] text-slate-500 dark:text-slate-300">{horaVisible(r.hora)} · {copy(sourceLabel)}</Text>{r.pendiente?<Text className="text-xs text-amber-800 dark:text-amber-200">{copy("classify")} ›</Text>:null}</View>
           <View className="min-w-0 shrink-0 items-end gap-1" style={{maxWidth:width*0.43}}><Text testID={`business-amount-${r.key}`} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`max-w-full text-right text-sm font-extrabold ${amountForeground}`}>{r.tipo==="gasto"?"−":"+"} {dinero(r.monto)}</Text><View testID={`business-method-${r.key}`} className={`max-w-full rounded-full px-2.5 py-1 ${methodTone.background}`}><Text numberOfLines={1} className={`text-[10px] font-semibold ${methodTone.foreground}`}>{methodName(r.metodo)}</Text></View></View>
         </TouchableOpacity>
+        <MovementDivider/>
       </View>;
     }}/>
     {panel?<BusinessSheet title={sheetTitle()} onClose={close} onBack={panels.length>1?back:undefined} backLabel={copy("back")} closeLabel={copy("close")}><View pointerEvents={saving?"none":"auto"}>{sheetBody()}</View>{saving?<Text accessibilityLiveRegion="polite" className="text-sm text-slate-600 dark:text-slate-300">{app.t("common.saving")}</Text>:null}{error?<Text accessibilityRole="alert" className="text-sm font-semibold text-rose-700 dark:text-rose-300">{error}</Text>:null}</BusinessSheet>:null}

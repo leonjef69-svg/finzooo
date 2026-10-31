@@ -374,7 +374,7 @@ export default function AddSheet({
       <View
         className={transaction
           ? "flex-1 bg-white dark:bg-noche"
-          : "w-full overflow-hidden rounded-t-[28px] border-t border-slate-200 bg-white dark:border-noche-borde dark:bg-noche"}
+          : "w-full overflow-hidden rounded-t-[28px] border-t border-slate-200 bg-white dark:border-noche-borde dark:bg-noche-panel"}
         style={transaction
           ? { paddingTop: insets.top }
           : { maxHeight: keyboardVisible ? "90%" : "64%", paddingTop: 4 }}
@@ -385,7 +385,7 @@ export default function AddSheet({
         <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
           <Text
             className="font-extrabold text-lg"
-            style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+            style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
           >
             {title || (transaction ? t("addSheet.editTitle") : t("addSheet.newTitle"))}
           </Text>
@@ -464,7 +464,7 @@ export default function AddSheet({
                   placeholder="0"
                   placeholderTextColor="#94a3b8"
                   className="h-9 py-0 text-2xl font-extrabold"
-                  style={{ padding: 0, color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  style={{ padding: 0, color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
                 />
               </View>
               {amountError ? <Text className="mt-1 text-xs text-red-600 dark:text-red-400">{t(amountError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text> : null}
@@ -482,7 +482,7 @@ export default function AddSheet({
                   placeholder={t("addSheet.descriptionPlaceholder")}
                   placeholderTextColor="#94a3b8"
                   className="h-12 w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 text-sm dark:border-noche-borde dark:bg-noche-2"
-                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
                 />
               </View>
 
@@ -536,10 +536,10 @@ export default function AddSheet({
                     placeholder="AAAA-MM-DD"
                     placeholderTextColor="#94a3b8"
                     className="min-w-0 flex-1 text-xs font-semibold"
-                    style={{ padding: 0, color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                    style={{ padding: 0, color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
                   />
                 </View>
-                {!dateOk ? <Text className="mt-1 text-[11px] font-semibold text-rose-500">{t("addSheet.dateError")}</Text> : null}
+                {!dateOk ? <Text className="mt-1 text-[11px] font-semibold text-rose-500 dark:text-rose-300">{t("addSheet.dateError")}</Text> : null}
                 <View className="mt-1.5 flex-row items-center gap-1.5 pl-1">
                   {time ? <><Clock size={13} color="#94a3b8" /><Text className="text-xs font-medium text-slate-500 dark:text-slate-300">{time}</Text></> : null}
                 </View>
@@ -556,7 +556,7 @@ export default function AddSheet({
                 placeholder={t("addSheet.notesPlaceholder")}
                 placeholderTextColor="#94a3b8"
                 className="h-12 w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 text-sm dark:border-noche-borde dark:bg-noche-2"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
               />
             </View>
           </ScrollView>

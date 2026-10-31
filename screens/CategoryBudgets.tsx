@@ -21,7 +21,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const dark = colorScheme === "dark";
-  const primaryTextColor = dark ? "#f1f5f9" : "#0f172a";
+  const primaryTextColor = dark ? "#f4f0e8" : "#0f172a";
   const dividerColor = dark ? "#475569" : "#cbd5e1";
   const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
 
@@ -94,7 +94,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
 
       <View className="px-4 pb-2">
         <View className="h-11 flex-row items-center gap-2 rounded-full border border-slate-300 bg-white px-3 dark:border-noche-borde dark:bg-noche-2">
-          <Search size={17} color={dark ? "#94a3b8" : "#64748b"} />
+          <Search size={17} color={dark ? "#b8b2a8" : "#64748b"} />
           <TextInput
             testID="category-budget-search"
             accessibilityLabel={t("categoryBudgets.search")}
@@ -194,7 +194,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
                     >
                       {limit > 0 ? fmt(limit) : t("categoryBudgets.noLimit")}
                     </Text>
-                    <Pencil size={13} color={dark ? "#94a3b8" : "#64748b"} />
+                    <Pencil size={13} color={dark ? "#b8b2a8" : "#64748b"} />
                   </View>
                 )}
                 <Text testID={`category-budget-monthly-label-${category.id}`} className="text-[10px] text-slate-500 dark:text-slate-400">

@@ -2,9 +2,10 @@ import { Text, View } from "react-native";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/constants/legal";
 import { useAppData } from "@/contexts/AppDataContext";
 import LegalAcceptancePanel from "@/components/LegalAcceptancePanel";
-import { ENTRY_COLORS, ENTRY_FONT, EntryHeading, EntryScreen, entryStyles } from "@/components/EntryUI";
+import { ENTRY_FONT, EntryHeading, EntryScreen, useEntryTheme } from "@/components/EntryUI";
 
 export default function Legal({ onBack }: { onBack: () => void }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { t } = useAppData();
   return (
     <EntryScreen onBack={onBack}>

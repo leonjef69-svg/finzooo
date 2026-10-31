@@ -431,13 +431,13 @@ export default function AppLockGate() {
             <Text className="text-sm font-bold text-white">{t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")}</Text>
           </TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" onPress={usePin} className="mt-3 px-6 py-3">
-            <Text className="text-sm font-bold text-emerald-600">{t("lock.usePin")}</Text>
+            <Text className="text-sm font-bold text-emerald-600 dark:text-emerald-300">{t("lock.usePin")}</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {showPin && retrySeconds > 0 && (
-        <Text className="mt-4 text-center text-xs font-bold text-rose-500">
+        <Text className="mt-4 text-center text-xs font-bold text-rose-500 dark:text-rose-300">
           {t("lock.retryIn", { seconds: retrySeconds })}
         </Text>
       )}
@@ -446,7 +446,7 @@ export default function AppLockGate() {
           reinstale la app asusta más de lo que ayuda: lo normal es haberse
           equivocado al teclear. */}
       {showPin && failures >= 3 && (
-        <Text className="text-[11px] text-slate-400 text-center mt-6 leading-4 px-4">
+        <Text className="text-[11px] text-slate-400 text-center mt-6 leading-4 px-4 dark:text-slate-300">
           {t("lock.forgot")}
         </Text>
       )}

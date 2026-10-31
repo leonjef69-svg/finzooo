@@ -203,7 +203,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
                 onPress={() => cambiar(abierta, { image: null })}
                 className="py-2.5 mb-3 items-center rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde"
               >
-                <Text className="text-sm font-bold text-rose-500">{t("catCustom.removeImage")}</Text>
+                <Text className="text-sm font-bold text-rose-500 dark:text-rose-300">{t("catCustom.removeImage")}</Text>
               </TouchableOpacity>
             )}
             <View className="mb-5" />

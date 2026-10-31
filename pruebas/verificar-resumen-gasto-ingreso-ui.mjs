@@ -10,9 +10,9 @@ const gasto = home.slice(home.lastIndexOf("<PressableScale", gastoLabel), cierre
 const ingreso = home.slice(home.lastIndexOf("<PressableScale", ingresoLabel), cierreIngreso);
 
 assert.ok(gastoLabel > 0 && ingresoLabel > gastoLabel, "se encontraron las dos tarjetas de resumen");
-assert.match(gasto, /<ArrowDown size=\{18\} color="#f43f5e" strokeWidth=\{2\.6\} \/>/,
+assert.match(gasto, /<ArrowDown size=\{18\} color=\{colorScheme === "dark" \? "#ffffff" : "#f43f5e"\} strokeWidth=\{2\.6\} \/>/,
   "Gastado usa una flecha hacia abajo del color de gasto");
-assert.match(ingreso, /<ArrowUp size=\{18\} color="#059669" strokeWidth=\{2\.6\} \/>/,
+assert.match(ingreso, /<ArrowUp size=\{18\} color=\{colorScheme === "dark" \? "#ffffff" : "#059669"\} strokeWidth=\{2\.6\} \/>/,
   "Ingresos usa una flecha hacia arriba del color de ingreso");
 assert.doesNotMatch(`${gasto}\n${ingreso}`, /📉|📈/, "las tarjetas ya no usan iconos de gráfica");
 assert.match(gasto, /text-base text-slate-600.*numberOfLines=\{1\}/,

@@ -50,11 +50,12 @@ module.exports = {
           // El fondo de la pantalla.
           DEFAULT: "#000000",
           // Las tarjetas y las filas. UN TONO MAS CLARO QUE EL FONDO: esa es toda la idea.
-          2: "#1b1b1b",
+          2: "#242321",
           // Lo que va encima de una tarjeta: un campo, un boton apagado.
-          3: "#272727",
+          3: "#302e2b",
+          panel: "#211f1d",
           // Las lineas. Mas claras que las tarjetas o no se ven.
-          borde: "#3a3a3a",
+          borde: "#494641",
         },
       },
     },

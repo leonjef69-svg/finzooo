@@ -73,7 +73,7 @@ export default function MoveMoneySheet({
     >
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-panel rounded-t-3xl px-5 pt-3"
         style={{
           maxHeight: "100%",
           paddingBottom: keyboardVisible ? 20 : 32 + insets.bottom,
@@ -91,7 +91,7 @@ export default function MoveMoneySheet({
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
-            <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <X size={16} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
           </TouchableOpacity>
         </View>
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">
@@ -112,7 +112,7 @@ export default function MoveMoneySheet({
           />
         </View>
         {!isAdd && amt > goal.saved && (
-          <Text className="text-rose-500 text-xs font-semibold text-center mb-2">
+          <Text className="text-rose-500 text-xs font-semibold text-center mb-2 dark:text-rose-300">
             {t("moveMoney.cannotWithdrawMore")}
           </Text>
         )}
@@ -128,7 +128,7 @@ export default function MoveMoneySheet({
         {isAdd && (
           <Text
             className={`text-xs font-semibold text-center mb-2 ${
-              sePasa ? "text-rose-500" : "text-slate-400 dark:text-slate-500"
+              sePasa ? "text-rose-500 dark:text-rose-300" : "text-slate-400 dark:text-slate-500"
             }`}
           >
             {t(sePasa ? "moveMoney.overFree" : "moveMoney.freeAvailable", { amount: fmt(tope) })}

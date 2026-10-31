@@ -41,7 +41,7 @@ export function BusinessSheet({title,children,onClose,onBack,backLabel,closeLabe
     <View className="flex-1 justify-end bg-black/45" accessibilityViewIsModal>
       <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} className="absolute inset-0" />
       <KeyboardAvoidingView behavior={Platform.OS==="ios"?"padding":undefined}>
-        <View className="rounded-t-[28px] bg-white px-5 dark:bg-noche" style={{maxHeight:height*0.92,paddingBottom:Math.max(insets.bottom,16)}}>
+        <View className="rounded-t-[28px] bg-white px-5 dark:bg-noche-panel" style={{maxHeight:height*0.92,paddingBottom:Math.max(insets.bottom,16)}}>
           <View className="my-2.5 h-1 w-9 self-center rounded-full bg-slate-300 dark:bg-slate-600" />
           {onBack?<TouchableOpacity accessibilityRole="button" onPress={onBack} className="min-h-11 flex-row items-center gap-1 self-start"><ChevronLeft size={17} color="#059669"/><Text className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{backLabel}</Text></TouchableOpacity>:null}
           <View className="mb-2 flex-row items-center justify-between gap-2"><Text accessibilityRole="header" className="min-w-0 flex-1 text-base font-extrabold text-slate-900 dark:text-slate-100">{title}</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} className="h-11 w-11 items-center justify-center"><X size={20} color="#64748b" /></TouchableOpacity></View>

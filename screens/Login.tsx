@@ -3,7 +3,7 @@ import { Alert, Keyboard, Platform, Text, TouchableOpacity, View } from "react-n
 import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion } from "react-native-reanimated";
 import { KeyRound, Mail, Smile } from "lucide-react-native";
 import { reemplazarUnaVez } from "@/utils/nav";
-import { ENTRY_COLORS, ENTRY_FONT, EntryButton, EntryHeading, EntryLink, EntryScreen, entryStyles } from "@/components/EntryUI";
+import { ENTRY_FONT, EntryButton, EntryHeading, EntryLink, EntryScreen, useEntryTheme } from "@/components/EntryUI";
 import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import AuthField from "@/components/AuthField";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
@@ -29,6 +29,7 @@ export default function Login({
   onRegistered: (name: string, email: string, current?: EntryOperationGuard) => void | Promise<void>;
   initialMode?: EntryMode;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { t, showToast } = useAppData();
   const [mode, setMode] = useState<EntryMode>(initialMode);
   const [recovering, setRecovering] = useState(false);

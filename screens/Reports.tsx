@@ -41,7 +41,7 @@ export default function Reports({
   const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const [categoryType, setCategoryType] = useState<"expense" | "income">("expense");
-  const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  const primaryTextColor = colorScheme === "dark" ? "#f4f0e8" : "#0f172a";
   const mk = monthKey(month.y, month.m);
 
   /**
@@ -139,7 +139,7 @@ export default function Reports({
           <Text className="flex-1 text-sm font-bold" style={{ color: primaryTextColor }}>
             {t(categoryType === "expense" ? "reports.byCategory" : "reports.incomeByCategory")}
           </Text>
-          <View className="flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche">
+          <View className="flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche-3">
             <TouchableOpacity
               onPress={() => setCategoryType("income")}
               accessibilityRole="button"

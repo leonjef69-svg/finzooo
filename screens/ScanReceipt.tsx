@@ -258,7 +258,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               </Text>
             </TouchableOpacity>
 
-            <Text className="text-[11px] text-center text-slate-400 mt-5 leading-4">
+            <Text className="text-[11px] text-center text-slate-400 mt-5 leading-4 dark:text-slate-300">
               {t("scan.privacy")}
             </Text>
           </>
@@ -331,9 +331,9 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                       className={`text-xs font-bold ${
                         kind === k
                           ? k === "expense"
-                            ? "text-rose-500"
-                            : "text-emerald-600"
-                          : "text-slate-400"
+                            ? "text-rose-500 dark:text-rose-300"
+                            : "text-emerald-600 dark:text-emerald-300"
+                          : "text-slate-400 dark:text-slate-300"
                       }`}
                     >
                       {t(k === "expense" ? "addSheet.expense" : "addSheet.income")}
@@ -375,19 +375,19 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                   className="text-sm font-bold text-slate-900 dark:text-slate-100 py-1"
                 />
                 {!dateValid && (
-                  <Text className="text-[11px] text-rose-500 mt-0.5">{t("scan.dateInvalid")}</Text>
+                  <Text className="text-[11px] text-rose-500 mt-0.5 dark:text-rose-300">{t("scan.dateInvalid")}</Text>
                 )}
               </Field>
 
               {/* Lo que se leyó pero no se guarda como campo propio: sirve
                   para comprobar de un vistazo que la foto era la correcta. */}
               {(read?.time || read?.docNumber) && (
-                <Text className="text-[11px] text-slate-400 mt-1">
+                <Text className="text-[11px] text-slate-400 mt-1 dark:text-slate-300">
                   {[read?.time, read?.docNumber].filter(Boolean).join(" · ")}
                 </Text>
               )}
 
-              <Text className="text-[11px] font-bold text-slate-400 mt-5 mb-2">
+              <Text className="text-[11px] font-bold text-slate-400 mt-5 mb-2 dark:text-slate-300">
                 {t("scan.fieldCategory")}
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
@@ -405,7 +405,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                       <CategoryAvatar id={c.id} size={14} />
                       <Text
                         className={`text-[11px] font-bold ${
-                          category === c.id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500"
+                          category === c.id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500 dark:text-slate-300"
                         }`}
                       >
                         {t(c.label)}
@@ -424,7 +424,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               }`}
             >
               <Check size={18} color={canSave ? "#ffffff" : "#94a3b8"} />
-              <Text className={`font-bold ${canSave ? "text-white" : "text-slate-400"}`}>
+              <Text className={`font-bold ${canSave ? "text-white" : "text-slate-400 dark:text-slate-300"}`}>
                 {canSave
                   ? t("scan.save", { amount: fmt(parseAmountInput(amountText, userCurrency)) })
                   : t("scan.saveDisabled")}
@@ -448,7 +448,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View className="mb-3">
-      <Text className="text-[11px] font-bold text-slate-400 mb-0.5">{label}</Text>
+      <Text className="text-[11px] font-bold text-slate-400 mb-0.5 dark:text-slate-300">{label}</Text>
       {children}
     </View>
   );

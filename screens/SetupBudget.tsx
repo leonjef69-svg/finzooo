@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { ENTRY_COLORS, ENTRY_FONT, EntryButton, EntryHeading, EntryScreen, entryStyles } from "@/components/EntryUI";
+import { ENTRY_FONT, EntryButton, EntryHeading, EntryScreen, useEntryTheme } from "@/components/EntryUI";
 import { Bell, ChevronRight, Globe2, WalletCards } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
 import { languageLabelFor } from "@/constants/i18n";
@@ -12,6 +12,7 @@ import { irUnaVez } from "@/utils/nav";
 import { useSetupNotifications } from "@/utils/setupNotifications";
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void | Promise<void> }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { userCurrency, userLanguage, t, monthNames } = useAppData();
   const [amount, setAmount] = useState("");
   const { notificationsEnabled, notificationBusy, notificationErrorKey, enableNotifications } = useSetupNotifications(auth.currentUser?.uid ?? null);

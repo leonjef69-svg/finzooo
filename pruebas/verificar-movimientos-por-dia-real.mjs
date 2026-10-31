@@ -36,6 +36,7 @@ function texts(node) {
   return texts(node.children);
 }
 const ui = { React, memo: fn => fn, View: "View", Text: "Text", PressableScale: "PressableScale",
+  MovementDivider: "MovementDivider",
   TouchableOpacity: "TouchableOpacity", IconBadge: "IconBadge", EtiquetaMetodo: "Method",
   CheckCircle2: "Check", Circle: "Circle", ArrowRightLeft: "Transfer", ArrowUp: "Up", ArrowDown: "Down",
   ContentReportButton: "Report", Pencil: "Pencil", Trash2: "Trash", SpaceTransferAmounts: "TransferAmounts",
@@ -70,6 +71,8 @@ const rows = dates.movementRowsByDay([tx, { ...tx, id: 2 }, { ...tx, id: 3, date
 const renderHome = variable("screens/Home.tsx", "dibujarFila", { ...ui, visibleRecentRows: rows, marcadas: new Set(), selectMode: false, colorScheme: "light", FilaMovimiento: HomeCard, alTocarFila() {} });
 const rendered = rows.map((item, index) => renderHome({ item, index }));
 assert.equal(expand(rendered).filter(node => node.props.accessibilityRole === "header").length, 2);
+assert.equal(expand(rendered).filter(node => node.type === "MovementDivider").length, rows.length, "cada movimiento de Personal tiene línea, incluso al cambiar de día");
+assert.equal(expand(renderHome({ item: rows[0], index: 0 })).filter(node => node.type === "MovementDivider").length, 1, "la primera fila también tiene línea visible");
 assert.equal(texts(rendered).split("14 octubre 2026").length - 1, 1);
 assert.ok(texts(rendered).includes("13 octubre 2026"));
 
@@ -104,6 +107,7 @@ for (const file of ["screens/Family.tsx", "screens/Cajas.tsx", "screens/SharedBo
     setSeleccionados: fn => { selected = fn(selected); }, methodLabel: () => "Efectivo" };
   const node = compile(map.getText(source), env);
   assert.equal(expand(node).filter(item => item.props.accessibilityRole === "header").length, 2, file + ": encabezados diarios reales");
+  assert.equal(expand(node).filter(item => item.type === "MovementDivider").length, grouped.length, file + ": línea por registro, incluidos días diferentes");
   assert.ok(!texts(node).includes("2026-10-14"), file + ": sin ISO dentro de tarjeta");
   if (!file.endsWith("SharedBoxes.tsx")) {
     const button = expand(node).find(item => item.type === "TouchableOpacity" && item.props.disabled === false);
@@ -127,6 +131,7 @@ function mapExpression(file, expression, env) {
 const archivedRows = dates.movementRowsByDay(space, item => item.fecha, items => items.map(item => ({ key: item.id, item })));
 const archived = mapExpression("screens/Cajas.tsx", "filasArchivadas.slice(0, movementLimit).map", { ...ui, filasArchivadas: archivedRows, movementLimit: 60 });
 assert.equal(expand(archived).filter(node => node.props.accessibilityRole === "header").length, 2, "archivo solo lectura también agrupado");
+assert.equal(expand(archived).filter(node => node.type === "MovementDivider").length, archivedRows.length, "archivo de cajas conserva una línea por registro");
 const businessItems = [{ id: "new", fecha: "2026-10-14", hora: "06:30", clase: "ingreso", monto: 5, metodo: "efectivo" }, { id: "old", fecha: "2026-10-13", hora: "03:20", clase: "gasto", monto: 2, metodo: "efectivo" }];
 const businessSource=ts.createSourceFile("screens/BusinessWorkspace.tsx",read("screens/BusinessWorkspace.tsx"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 let businessRender;
@@ -135,6 +140,7 @@ findBusinessRender(businessSource);assert.ok(businessRender,"Negocio conserva li
 const drawBusiness=compile(businessRender.getText(businessSource),{...ui,app:{monthNames:months},rows:businessItems,selecting:false,selected:[],selectedSet:new Set(),selectedKeys:[],copy:key=>key,width:390,setSelectedKeys(){},open(){},dinero:fmt,horaVisible:time=>time,methodName:value=>value,Check:"Check"});
 const business=businessItems.map((item,index)=>drawBusiness({item,index}));
 assert.equal(expand(business).filter(node => node.props.accessibilityRole === "header").length, 2, "negocio mantiene el mismo patrón");
+assert.equal(expand(business).filter(node => node.type === "MovementDivider").length, businessItems.length, "Negocio también separa todos los registros");
 assert.ok(texts(business).includes("06:30") && !texts(business).includes("14 oct."));
 assert.equal(dates.movementDayLabel("2026-02-31", months), "2026-02-31");
 assert.equal(dates.movementDayLabel("2024-02-29", months), "29 febrero 2024");

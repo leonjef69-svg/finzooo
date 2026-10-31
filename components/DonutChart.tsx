@@ -104,7 +104,7 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
       })}
       </View>
       <View accessible accessibilityLiveRegion="polite" accessibilityLabel={`${amountLabel}: ${centerValue}`}
-        className="bg-slate-50 dark:bg-noche rounded-2xl" style={{ width: "100%", padding: 12, marginTop: 10 }}>
+        className="bg-slate-50 dark:bg-noche-3 rounded-2xl" style={{ width: "100%", padding: 12, marginTop: 10 }}>
         <Text className="text-slate-500 dark:text-slate-300" style={{ fontFamily: ENTRY_FONT.medium, fontSize: 13, textAlign: "center", marginBottom: 4 }}>{amountLabel}</Text>
         <Text selectable className="text-slate-900 dark:text-slate-100"
           style={{ fontFamily: ENTRY_FONT.bold, fontSize: Math.max(16, Math.min(26, (layout.width - 24) / Math.max(1, centerValue.length * 0.61))), textAlign: "center" }}>{centerValue}</Text>

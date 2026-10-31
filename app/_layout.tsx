@@ -8,7 +8,7 @@ import { Stack, router, useNavigationContainerRef, usePathname } from "expo-rout
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useFonts } from "expo-font";
-import { ENTRY_COLORS, ENTRY_FONTS } from "@/components/EntryUI";
+import { ENTRY_FONTS, useEntryTheme } from "@/components/EntryUI";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import "react-native-reanimated";
@@ -577,6 +577,7 @@ function RootLayout() {
 }
 
 function RootNavigator() {
+  const { colors: ENTRY_COLORS } = useEntryTheme();
   const { visualStyle } = useAppData();
   const reducedMotion = useReduceMotion();
   const { colorScheme } = useColorScheme();

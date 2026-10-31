@@ -79,7 +79,7 @@ export default function DeleteAccount({
               error={error}
             />
           ) : error ? (
-            <Text className="text-sm text-rose-500 text-center">{error}</Text>
+            <Text className="text-sm text-rose-500 text-center dark:text-rose-300">{error}</Text>
           ) : null}
 
           <TouchableOpacity

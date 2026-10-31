@@ -116,7 +116,7 @@ export function SpacePaymentMethod({ value, onChange, disabled = false, compact 
     <Modal transparent visible={open} animationType="fade" statusBarTranslucent onRequestClose={() => setOpen(false)}>
       <View className="flex-1 items-center justify-center bg-black/45 px-8">
         <Pressable accessibilityRole="button" accessibilityLabel={t("common.cancel")} onPress={() => setOpen(false)} className="absolute inset-0" />
-        <View className="max-h-[78%] w-full rounded-2xl bg-white p-4 dark:bg-noche">
+        <View className="max-h-[78%] w-full rounded-2xl bg-white p-4 dark:bg-noche-3">
           <Text className="mb-3 text-base font-extrabold text-slate-900 dark:text-slate-100">{t("detail.method")}</Text>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6 }}>
             {methods.map(method => <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: value === method.id }} key={method.id} disabled={disabled} onPress={() => { onChange(method.id); setOpen(false); }} className={`min-h-11 justify-center rounded-xl px-3 ${value === method.id ? "bg-emerald-100 dark:bg-emerald-950" : "bg-slate-50 dark:bg-noche-2"}`}><Text className={value === method.id ? "text-sm font-bold text-emerald-800 dark:text-emerald-200" : "text-sm text-slate-700 dark:text-slate-200"}>{t(method.labelKey)}</Text></TouchableOpacity>)}

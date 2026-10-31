@@ -26,7 +26,7 @@ export default function ImportPreviewRow({ raw, title, date, category, amount, d
             {date}{pending ? "" : ` · ${category}`}
           </Text>
         </View>
-        <Text className={`text-xs font-extrabold flex-shrink ${pending ? "text-slate-700 dark:text-slate-100" : raw.type === "expense" ? "text-rose-600" : "text-emerald-600"}`}>
+        <Text className={`text-xs font-extrabold flex-shrink ${pending ? "text-slate-700 dark:text-slate-100" : raw.type === "expense" ? "text-rose-600 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"}`}>
           {pending ? "" : raw.type === "expense" ? "−" : "+"}{amount}
         </Text>
       </View>

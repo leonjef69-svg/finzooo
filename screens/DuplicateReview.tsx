@@ -42,7 +42,7 @@ export default function DuplicateReview({
   const { t, fmt, monthNames } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  const primaryText = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  const primaryText = colorScheme === "dark" ? "#f4f0e8" : "#0f172a";
 
   const [index, setIndex] = useState(0);
   const [resolutions] = useState<Map<number, Resolution>>(new Map());
@@ -91,7 +91,7 @@ export default function DuplicateReview({
           disabled={saving}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >
-          <ChevronLeft size={20} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+          <ChevronLeft size={20} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
         </TouchableOpacity>
         <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
           {t("dupes.progress", { current: index + 1, total: dupes.length })}
@@ -158,7 +158,7 @@ export default function DuplicateReview({
             disabled={saving}
             className="flex-row items-center gap-3 bg-slate-100 dark:bg-noche-2 rounded-2xl p-4"
           >
-            <Layers size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <Layers size={18} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
             <Text className="font-bold text-slate-700 dark:text-slate-200 flex-1">{t("dupes.keepBoth")}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => decide("skip")} disabled={saving} className="items-center py-3">

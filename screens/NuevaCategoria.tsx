@@ -1428,7 +1428,7 @@ export default function NuevaCategoria({
             distinguir al anotar un gasto: se elige una al azar y los totales
             quedan repartidos sin que nadie entienda por qué. */}
           {repetido && (
-            <Text className="text-[11px] text-rose-500 mt-1.5">{t("nuevaCat.repetido")}</Text>
+            <Text className="text-[11px] text-rose-500 mt-1.5 dark:text-rose-300">{t("nuevaCat.repetido")}</Text>
           )}
         </View>
 
@@ -1463,7 +1463,7 @@ export default function NuevaCategoria({
               <Text
                 numberOfLines={1}
                 className={`text-sm font-bold ${
-                  pestana === p ? "text-emerald-600" : "text-slate-400"
+                  pestana === p ? "text-emerald-600 dark:text-emerald-300" : "text-slate-400 dark:text-slate-300"
                 }`}
               >
                 {p === "tuyas"
@@ -1553,7 +1553,7 @@ export default function NuevaCategoria({
                         className="flex-row items-center justify-center gap-1.5 mt-5"
                       >
                         <Trash2 size={13} color="#e11d48" />
-                        <Text className="text-xs font-bold text-rose-600">
+                        <Text className="text-xs font-bold text-rose-600 dark:text-rose-300">
                           {t("nuevaCat.quitarFotoDe", { nombre: info.label })}
                         </Text>
                       </TouchableOpacity>
@@ -1607,7 +1607,7 @@ export default function NuevaCategoria({
                           className="flex-row items-center justify-center gap-1.5 mt-4"
                         >
                           <Trash2 size={13} color="#e11d48" />
-                          <Text className="text-xs font-bold text-rose-600">
+                          <Text className="text-xs font-bold text-rose-600 dark:text-rose-300">
                             {t("nuevaCat.borrarLa", { nombre: info.label })}
                           </Text>
                         </TouchableOpacity>
@@ -1816,7 +1816,7 @@ export default function NuevaCategoria({
               className="flex-row items-center justify-center gap-2 py-3 mb-3"
             >
               <Trash2 size={15} color="#e11d48" />
-              <Text className="text-sm font-bold text-rose-600">{t("nuevaCat.borrar")}</Text>
+              <Text className="text-sm font-bold text-rose-600 dark:text-rose-300">{t("nuevaCat.borrar")}</Text>
             </TouchableOpacity>
           ))}
 
@@ -1827,7 +1827,7 @@ export default function NuevaCategoria({
             puedeGuardar ? "bg-emerald-600" : "bg-slate-200 dark:bg-noche-2"
           }`}
         >
-          <Text className={`font-extrabold ${puedeGuardar ? "text-white" : "text-slate-400"}`}>
+          <Text className={`font-extrabold ${puedeGuardar ? "text-white" : "text-slate-400 dark:text-slate-300"}`}>
             {t(editando ? "nuevaCat.guardar" : "nuevaCat.aplicar")}
           </Text>
         </TouchableOpacity>

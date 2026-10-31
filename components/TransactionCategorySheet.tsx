@@ -116,7 +116,7 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
         className="absolute inset-0 bg-slate-950/45"
       />
       <View
-        className="overflow-hidden rounded-t-[28px] border-t border-slate-200 bg-white dark:border-noche-borde dark:bg-noche-2"
+        className="overflow-hidden rounded-t-[28px] border-t border-slate-200 bg-white dark:border-noche-borde dark:bg-noche-panel"
         style={{ maxHeight: "82%", paddingBottom: Math.max(insets.bottom, 12) }}
       >
         <View className="items-center pt-2 pb-1">
@@ -153,7 +153,7 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
               returnKeyType="done"
               className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-900 dark:border-noche-borde dark:bg-noche-3 dark:text-slate-100"
             />
-            {repeated ? <Text className="-mt-2 text-xs font-semibold text-rose-600">{t("nuevaCat.repetido")}</Text> : null}
+            {repeated ? <Text className="-mt-2 text-xs font-semibold text-rose-600 dark:text-rose-300">{t("nuevaCat.repetido")}</Text> : null}
 
             <View className="flex-row items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-noche-borde dark:bg-noche-3">
               <View className="h-14 w-14 overflow-hidden items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-noche-borde dark:bg-noche-2">

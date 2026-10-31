@@ -1,6 +1,6 @@
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { ENTRY_COLORS, ENTRY_FONT } from "@/components/EntryUI";
+import { ENTRY_FONT, useEntryTheme } from "@/components/EntryUI";
 
 // Logo oficial de Google (la "G" de cuatro colores). Se dibuja como SVG en
 // vez de usar una imagen para que se vea nítido en cualquier pantalla y no
@@ -48,6 +48,7 @@ export default function GoogleButton({
   light?: boolean;
   warm?: boolean;
 }) {
+  const { colors: ENTRY_COLORS } = useEntryTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -57,7 +58,7 @@ export default function GoogleButton({
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={warm ? { backgroundColor: ENTRY_COLORS.paper, borderColor: ENTRY_COLORS.line, borderWidth: 1, minHeight: 51, paddingVertical: 13, borderRadius: 16 } : undefined}
-      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white ${light ? "border-slate-300" : "dark:bg-noche-2 border-slate-200 dark:border-noche-borde"} border-[1.5px] ${
+      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white $ dark:bg-noche-3{light ? "border-slate-300" : "dark:bg-noche-2 border-slate-200 dark:border-noche-borde"} border-[1.5px] ${
         disabled || loading ? "opacity-70" : ""
       }`}
     >
@@ -66,7 +67,7 @@ export default function GoogleButton({
       ) : (
         <>
           <GoogleLogo />
-          <Text style={warm ? { fontFamily: ENTRY_FONT.bold, color: ENTRY_COLORS.ink, fontSize: 15 } : undefined} className={`font-bold ${light ? "text-slate-800" : "text-slate-700 dark:text-slate-100"}`}>{label}</Text>
+          <Text style={warm ? { fontFamily: ENTRY_FONT.bold, color: ENTRY_COLORS.ink, fontSize: 15 } : undefined} className={`font-bold ${light ? "text-slate-800 dark:text-slate-100" : "text-slate-700 dark:text-slate-100"}`}>{label}</Text>
         </>
       )}
     </TouchableOpacity>

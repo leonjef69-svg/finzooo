@@ -24,7 +24,7 @@ export default function SavingsReceipt({ transaction: tx, onBack, onDelete }: { 
     <Text className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-200">{t("savings.receipt")}</Text>
     <Text className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.retained")}</Text>
     <TouchableOpacity onPress={() => irUnaVez("/savings")} className="mt-5 items-center rounded-xl bg-emerald-600 p-3"><Text className="font-bold text-white">{t("savings.viewGoals")}</Text></TouchableOpacity>
-    <TouchableOpacity onPress={() => setConfirm(true)} accessibilityRole="button" className="mt-3 items-center rounded-xl bg-rose-50 p-3 dark:bg-rose-950"><Text className="font-bold text-rose-500">{t("history.removeRecord")}</Text></TouchableOpacity>
+    <TouchableOpacity onPress={() => setConfirm(true)} accessibilityRole="button" className="mt-3 items-center rounded-xl bg-rose-50 p-3 dark:bg-rose-950"><Text className="font-bold text-rose-500 dark:text-rose-300">{t("history.removeRecord")}</Text></TouchableOpacity>
     <ConfirmDialog visible={confirm} title={t("history.removeTitle")} message={t("history.removeSavingsBody")} confirmLabel={t("history.removeRecord")} cancelLabel={t("common.cancel")}
       onCancel={() => { if (!lock.current) setConfirm(false); }} onConfirm={async () => { if (lock.current) return; lock.current = true; try { if (await onDelete(tx.id)) setConfirm(false); } finally { lock.current = false; } }} />
   </View>;

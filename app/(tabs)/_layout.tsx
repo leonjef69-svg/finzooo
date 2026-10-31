@@ -23,8 +23,8 @@ export default function TabsLayout() {
   const { t, visualStyle } = useAppData();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
-  const accentColor = accentForVisualStyle(visualStyle);
-  const surfaceColor = isDark ? NOCHE.fondo : visualStyle === "peachOlive" ? "#fff8ef" : "#ffffff";
+  const accentColor = isDark ? NOCHE.texto : accentForVisualStyle(visualStyle);
+  const surfaceColor = isDark ? NOCHE.panel : visualStyle === "peachOlive" ? "#fff8ef" : "#ffffff";
   const insets = useSafeAreaInsets();
   return (
     <Tabs
@@ -168,6 +168,7 @@ function FinoTabBar({
           navigation.emit({ type: "tabLongPress", target: route.key })
         }
       >
+        {isDark && focused ? <View style={{ position: "absolute", top: 3, width: 18, height: 3, borderRadius: 2, backgroundColor: NOCHE.textoSuave }} /> : null}
         {options.tabBarIcon?.({ focused, color, size: 22 })}
         <Text
           numberOfLines={1}
@@ -215,14 +216,14 @@ function FinoTabBar({
             borderRadius: 15,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: accentColor,
+            backgroundColor: isDark ? NOCHE.encima : accentColor,
             borderWidth: 2,
-            borderColor: isDark ? NOCHE.fondo : "#ffffff",
+            borderColor: isDark ? NOCHE.borde : "#ffffff",
             shadowColor: isDark ? accentColor : surfaceColor === "#fff8ef" ? "#526b43" : "#047857",
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.35,
+            shadowOpacity: isDark ? 0 : 0.35,
             shadowRadius: 7,
-            elevation: 9,
+            elevation: isDark ? 0 : 9,
           }}
         >
           <Plus size={31} color="#ffffff" strokeWidth={3} />
@@ -232,10 +233,10 @@ function FinoTabBar({
           .map((route, offset) => renderTab(route, offset + 2))}
       </View>
       {hintReady && plusHint ? <View style={{ position: "absolute", left: 0, right: 0, bottom: barHeight + bottomInset + 4, alignItems: "center", zIndex: 10 }}>
-        <View className="flex-row items-center gap-2 rounded-full bg-slate-900 px-3 py-2 shadow-lg dark:bg-white">
-          <Text className="text-xs font-bold text-white dark:text-slate-900">{t("tab.addMovementHint")}</Text>
+        <View className="flex-row items-center gap-2 rounded-full bg-slate-900 px-3 py-2 shadow-lg dark:bg-noche-3">
+          <Text className="text-xs font-bold text-white dark:text-slate-100">{t("tab.addMovementHint")}</Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("tab.dismissAddHint")} onPress={hidePlusHint} hitSlop={8}>
-            <X size={15} color={isDark ? "#0f172a" : "#ffffff"} />
+            <X size={15} color={isDark ? NOCHE.texto : "#ffffff"} />
           </TouchableOpacity>
         </View>
       </View> : null}

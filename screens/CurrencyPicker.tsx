@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { ENTRY_COLORS, ENTRY_FONT, EntryPanel, entryStyles } from "@/components/EntryUI";
+import { ENTRY_FONT, EntryPanel, useEntryTheme } from "@/components/EntryUI";
 import { Check, Search } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import { filterCurrencies } from "@/utils/catalogSearch";
@@ -12,6 +12,7 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   onBack: () => void;
   onSelect: (id: string) => void | Promise<void>;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { t, showToast, userLanguage, hasOnboarded } = useAppData();
   const [query, setQuery] = useState("");
   const navigationBusy = useRef(false);

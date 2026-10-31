@@ -8,3 +8,4 @@ export const entryUIFixture = {
   EntryScreen: "EntryScreen", EntryHeading: "EntryHeading", EntryButton: "EntryButton", EntryLink: "EntryLink", EntryPanel: "EntryPanel",
   entryStyles: Object.fromEntries(["text", "muted", "error", "card", "title", "subtitle"].map(key => [key, {}])),
 };
+entryUIFixture.useEntryTheme = () => ({ dark: false, colors: entryUIFixture.ENTRY_COLORS, styles: entryUIFixture.entryStyles });

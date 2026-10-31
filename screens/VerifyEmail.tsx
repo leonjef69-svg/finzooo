@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { MailCheck } from "lucide-react-native";
-import { ENTRY_COLORS, EntryButton, EntryHeading, EntryLink, EntryScreen, entryStyles } from "@/components/EntryUI";
+import { EntryButton, EntryHeading, EntryLink, EntryScreen, useEntryTheme } from "@/components/EntryUI";
 import { useAppData } from "@/contexts/AppDataContext";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 
@@ -16,6 +16,7 @@ export default function VerifyEmail({
   onResend: () => Promise<void>;
   onLogout: () => void;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { t } = useAppData();
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);

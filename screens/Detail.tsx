@@ -31,7 +31,7 @@ export default function Detail({
   const [confirm, setConfirm] = useState(false);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  const primaryTextColor = colorScheme === "dark" ? "#f4f0e8" : "#0f172a";
   if (!transaction) return <MissingItem onBack={onBack} />;
   const c = catInfo(transaction.category);
   const linkedCreditPayment = transaction.method === "credit-card-payment";
@@ -68,7 +68,7 @@ export default function Detail({
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.62}
-          className={`text-3xl font-extrabold mt-4 ${managedTransfer ? "text-blue-600 dark:text-blue-300" : transaction.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
+          className={`text-3xl font-extrabold mt-4 ${managedTransfer ? "text-blue-600 dark:text-blue-300" : transaction.type === "expense" ? "text-rose-500 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"}`}
         >
           {managedTransfer ? (transaction.type === "expense" ? "→ " : "↩ ") : transaction.type === "expense" ? "-" : "+"}
           {fmt(transaction.amount)}
@@ -100,7 +100,7 @@ export default function Detail({
           <Text className="text-center text-sm font-semibold text-teal-700 dark:text-teal-200">
             {t(legacyReturn ? "history.deleteLegacyReturnBody" : returnedCompletely ? "history.removeTransferBody" : "history.returnBeforeRemove", { amount: fmt(transaction.amount) })}
           </Text>
-          {(returnedCompletely || legacyReturn) && <TouchableOpacity onPress={() => setConfirm(true)} accessibilityRole="button" className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-white py-3 dark:bg-noche-2"><Trash2 size={16} color="#f43f5e" /><Text className="text-sm font-bold text-rose-500">{t(legacyReturn ? "history.deleteLegacyReturn" : "history.removeRecord")}</Text></TouchableOpacity>}
+          {(returnedCompletely || legacyReturn) && <TouchableOpacity onPress={() => setConfirm(true)} accessibilityRole="button" className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-white py-3 dark:bg-noche-2"><Trash2 size={16} color="#f43f5e" /><Text className="text-sm font-bold text-rose-500 dark:text-rose-300">{t(legacyReturn ? "history.deleteLegacyReturn" : "history.removeRecord")}</Text></TouchableOpacity>}
         </View>
       ) : <View className="mt-auto px-6 pb-8 pt-4 flex-row gap-3">
         <TouchableOpacity
@@ -108,7 +108,7 @@ export default function Detail({
           className="flex-1 py-3.5 rounded-2xl bg-rose-50 flex-row items-center justify-center gap-2"
         >
           <Trash2 size={16} color="#f43f5e" />
-          <Text className="font-bold text-rose-500">{t("common.delete")}</Text>
+          <Text className="font-bold text-rose-500 dark:text-rose-300">{t("common.delete")}</Text>
         </TouchableOpacity>
         {!linkedCreditPayment && (
           <TouchableOpacity

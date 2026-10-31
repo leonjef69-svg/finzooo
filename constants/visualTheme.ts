@@ -9,8 +9,8 @@ export function screenBackgroundForVisualStyle(style: VisualStyle, isDark: boole
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
-const DARK_NEUTRAL_SLATE = ["#fafafa", "#f2f2f2", "#e5e5e5", "#b8b8b8", "#a3a3a3", "#858585", "#686868", "#484848", "#303030", "#1b1b1b", "#0a0a0a"] as const;
-const DARK_EMERALD = ["#ecfdf5", "#d1fae5", "#a7f3d0", "#86d1a7", "#57b980", "#30976a", "#287c58", "#246b4a", "#164d36", "#103927", "#0a251b"] as const;
+const DARK_NEUTRAL_SLATE = ["#faf7f0", "#f4f0e8", "#e2dbcf", "#c6bfb3", "#b8b2a8", "#a49d91", "#706a60", "#494641", "#302e2b", "#242321", "#211f1d"] as const;
+const DARK_EMERALD = ["#ecfdf5", "#d1fae5", "#a7d9b9", "#81c39a", "#72b98d", "#479d6e", "#39734d", "#287c58", "#234e35", "#1c3d2a", "#172f23"] as const;
 const DARK_ROSE = ["#fff1f2", "#ffe4e6", "#fecdd3", "#e6a0a7", "#dc7b86", "#ce5a68", "#ac4654", "#923a45", "#6c2d36", "#4a2229", "#2d171a"] as const;
 
 const CLASSIC = {
@@ -54,6 +54,6 @@ export function accentForVisualStyle(style: VisualStyle): string {
 }
 
 export function balanceGradientForVisualStyle(style: VisualStyle, isDark = false): readonly [string, string] {
-  if (isDark) return ["#1b1b1b", "#272727"];
+  if (isDark) return ["#292825", "#201f1d"];
   return style === "peachOlive" ? ["#f4d9c4", "#efd1b7"] : ["#059669", "#0f766e"];
 }

@@ -141,7 +141,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
    * que es lo que debe cambiar.
    */
   const { width: anchoPantalla } = useWindowDimensions();
-  const ladoDia = Math.min((anchoPantalla - 40) / 7, 46);
+  const ladoDia = Math.min((anchoPantalla - (oscuro ? 64 : 40)) / 7, 46);
 
   const hoy = useMemo(() => new Date(), []);
   const [mes, setMes] = useState(() => mesDe(hoy));
@@ -415,6 +415,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           />
         )}
 
+        <View className="dark:rounded-3xl dark:border dark:border-noche-borde dark:bg-noche-2 dark:p-3 dark:mb-3">
         <View className="flex-row items-center justify-between mb-3">
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.previousMonth")} hitSlop={6} onPress={() => { setMes(mesAnterior(mes)); setDiaAbierto(null); }} className="p-1.5">
             <ChevronLeft size={19} color="#94a3b8" />
@@ -528,7 +529,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                           height: 4,
                           borderRadius: 2,
                           marginTop: 2,
-                          backgroundColor: x ? "#ffffff" : oscuro ? "#f1f5f9" : "#0f172a",
+                          backgroundColor: x ? "#ffffff" : oscuro ? "#f4f0e8" : "#0f172a",
                         }}
                       />
                     )}
@@ -550,6 +551,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </View>
         ))}
 
+        </View>
         {/* SIN LEYENDA. Hasta el 20/08 aquí había una fila de puntitos explicando los colores,
             primero tres y luego solo el rojo. Se quitó entera: los cuatro botones de abajo ya
             dicen nombre y color, y el rojo se entiende solo —la fila vencida lo lleva en la
@@ -656,7 +658,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                       Estando en "Pagados", "borrar todo" tiene que borrar los pagados — que es
                       lo que se ve— y no llevarse por delante lo que aún queda por pagar. */}
                   <TouchableOpacity onPress={() => setConfirmandoBorrarTodo(true)} hitSlop={6}>
-                    <Text className="text-[13px] font-bold text-rose-500">
+                    <Text className="text-[13px] font-bold text-rose-500 dark:text-rose-300">
                       {t("calendario.borrarTodo")}
                     </Text>
                   </TouchableOpacity>
@@ -667,7 +669,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                     }}
                     hitSlop={6}
                   >
-                    <Text className="text-[13px] font-bold text-emerald-600">
+                    <Text className="text-[13px] font-bold text-emerald-600 dark:text-emerald-300">
                       {t("common.cancel")}
                     </Text>
                   </TouchableOpacity>
@@ -775,7 +777,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         >
           <Plus size={17} color={seleccionando ? "#94a3b8" : "#ffffff"} strokeWidth={2.6} />
           <Text
-            className={`text-[14px] font-bold ${seleccionando ? "text-slate-400" : "text-white"}`}
+            className={`text-[14px] font-bold ${seleccionando ? "text-slate-400 dark:text-slate-300" : "text-white"}`}
           >
             {diaAbierto == null
               ? t("calendario.agregar")
@@ -866,7 +868,7 @@ function TarjetaProxima({
          Muy suave a propósito (un 12% de color): el botón verde de Pagar tiene que seguir
          siendo lo más llamativo de la tarjeta. */
       className="rounded-2xl p-3.5 mb-4 border"
-      style={{ backgroundColor: color + (oscuro ? "22" : "14"), borderColor: color + (oscuro ? "44" : "33") }}
+      style={{ backgroundColor: oscuro ? "#242321" : color + "14", borderColor: oscuro ? "#494641" : color + "33", ...(oscuro ? { borderLeftWidth: 3, borderLeftColor: color } : {}) }}
     >
       {/* EL RÓTULO, EN VERSALITAS Y DEL COLOR DEL PAGO.
           Era gris y del mismo tamaño que la fecha de abajo, así que competía con ella.
@@ -979,7 +981,7 @@ function Fila({
       <View className="items-end">
         {pago.monto != null && (
           <Text
-            className={`text-[15px] ${pagado ? "text-slate-400" : "text-slate-900 dark:text-slate-100"}`}
+            className={`text-[15px] ${pagado ? "text-slate-400 dark:text-slate-300" : "text-slate-900 dark:text-slate-100"}`}
           >
             {pago.tipo === "ingreso" ? "+" : "−"}
             {fmt(pago.monto)}

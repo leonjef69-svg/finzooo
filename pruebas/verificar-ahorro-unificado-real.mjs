@@ -147,7 +147,7 @@ const screen = handlerOriginal("screens/SavingsList.tsx", "SavingsList", {
   irUnaVez() {}, BackButton: "Back", ScrollView: "Scroll", View: "View", Text: "Text", TouchableOpacity: "Button",
   PiggyBank: "Pig", Plus: "Plus", MoreHorizontal: "More", CheckCircle2: "Check", CircleHelp: "Help", ArrowUpRight: "Arrow", LinearGradient: "Gradient",
   GoalFormSheet: "GoalForm", MoveMoneySheet: "Move", ConfirmDialog: "Confirm", AvisoSoloLectura: "ReadOnly",
-  UseSavingsSheet: "Use", SavingsFlowSummaryCard: "SavingsFlowSummaryCard",
+  UseSavingsSheet: "Use", SavingsFlowSummaryCard: "SavingsFlowSummaryCard", MovementDivider: "MovementDivider",
 });
 const screenGoal = { ...goal, target: 1000, completed: false };
 const props = { goals: [screenGoal], disponible: 500, apartado: 200, libre: 300, monthLabel: "Octubre", onBack() {} };
@@ -207,6 +207,7 @@ const cardModule={exports:{}};
 vm.runInNewContext(ts.transpile(cardSource,{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}),{
   module:cardModule,exports:cardModule.exports,React:{createElement},require:name=>{
     if(name==="react-native")return {Text:"Text",View:"View"};
+    if(name==="nativewind")return {useColorScheme:()=>({colorScheme:"light"})};
     if(name==="react")return {useState:initial=>{const i=headerCursor++;if(!(i in headerHooks))headerHooks[i]=initial;return [headerHooks[i],value=>{headerHooks[i]=typeof value==="function"?value(headerHooks[i]):value;}];}};
     throw Error("Dependencia no adaptada: "+name);
   },

@@ -42,7 +42,7 @@ export default function SavingsDetail({
           onPress={onEdit}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >
-          <Pencil size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+          <Pencil size={16} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
         </TouchableOpacity>
       </View>
       <ScrollView className="flex-1">
@@ -52,7 +52,7 @@ export default function SavingsDetail({
           </View>
           <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100 text-center">{goal.name}</Text>
           <View className={`mt-2 px-2.5 py-1 rounded-full ${goal.completed ? "bg-emerald-100" : "bg-amber-100"}`}>
-            <Text className={`text-xs font-bold ${goal.completed ? "text-emerald-600" : "text-amber-600"}`}>
+            <Text className={`text-xs font-bold ${goal.completed ? "text-emerald-600 dark:text-emerald-300" : "text-amber-600"}`}>
               {goal.completed ? t("savingsDetail.completed") : t("savingsDetail.inProgress")}
             </Text>
           </View>
@@ -75,7 +75,7 @@ export default function SavingsDetail({
         <View className="px-6 flex-row gap-3 mb-3">
           <View className="flex-1 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5">
             <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold mb-1">{t("savingsDetail.saved")}</Text>
-            <Text className="text-base font-extrabold text-emerald-600">{fmt(goal.saved)}</Text>
+            <Text className="text-base font-extrabold text-emerald-600 dark:text-emerald-300">{fmt(goal.saved)}</Text>
           </View>
           <View className="flex-1 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5">
             <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold mb-1">{t("savingsDetail.target")}</Text>
@@ -96,7 +96,7 @@ export default function SavingsDetail({
             className="flex-1 py-3.5 rounded-2xl bg-rose-50 flex-row items-center justify-center gap-2"
           >
             <Minus size={16} color="#f43f5e" />
-            <Text className="font-bold text-rose-500">{t("savings.use")}</Text>
+            <Text className="font-bold text-rose-500 dark:text-rose-300">{t("savings.use")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onAdd}
@@ -112,7 +112,7 @@ export default function SavingsDetail({
           className="mt-5 mb-6 flex-row items-center justify-center gap-1.5"
         >
           <Trash2 size={13} color="#f43f5e" />
-          <Text className="text-rose-500 text-xs font-bold">{t("savingsDetail.deleteGoal")}</Text>
+          <Text className="text-rose-500 text-xs font-bold dark:text-rose-300">{t("savingsDetail.deleteGoal")}</Text>
         </TouchableOpacity>
       </ScrollView>
 

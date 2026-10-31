@@ -43,7 +43,7 @@ export default function PremiumLocked({
               "dark:text-slate-100" se volvía casi blanco sobre amarillo y
               no se leía. */}
           <Crown size={18} color="#0f172a" />
-          <Text className="text-slate-900 font-extrabold">{t("savingsLocked.seePremium")}</Text>
+          <Text className="text-slate-900 font-extrabold dark:text-slate-100">{t("savingsLocked.seePremium")}</Text>
         </TouchableOpacity>
       </View>
     </View>

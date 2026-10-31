@@ -1,3 +1,11 @@
+## 30/10/2026 — apariencia oscura mate completa (desarrollo)
+
+Marca `30oct-oscuro-mate-completo`: paleta oscura común, superficies elevadas,
+formularios/paneles, navegación inferior neutra, calendarios y separación de
+todos los registros. Gráfico/categorías y datos financieros conservados.
+285 pruebas y ocho auditores; detalles y límites en ESTADO.md. Servidor local
+8081 actualizado para el emulador habitual. No es un APK/OTA ni publicación.
+
 ## 28/10/2026 — guardados y fallos de auditoría (desarrollo)
 
 Marca 28oct-guardados-importacion-permisos-fluidez, base 8a342dea. Guardados de

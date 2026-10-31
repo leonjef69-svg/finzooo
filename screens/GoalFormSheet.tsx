@@ -68,7 +68,7 @@ export default function GoalFormSheet({
     >
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-panel rounded-t-3xl px-5 pt-3"
         style={{
           maxHeight: "100%",
           paddingBottom: keyboardVisible ? 20 : 32 + insets.bottom,
@@ -86,7 +86,7 @@ export default function GoalFormSheet({
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
-            <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <X size={16} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
           </TouchableOpacity>
         </View>
         <View className="gap-4">
@@ -135,15 +135,15 @@ export default function GoalFormSheet({
               onFocus={() => onFieldFocus("initial")} onBlur={() => onFieldBlur("initial")} placeholder="0.00" placeholderTextColor="#94a3b8"
               className="rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold text-slate-900 dark:border-noche-borde dark:bg-noche-2 dark:text-slate-100" />
             <Text className="mt-1.5 text-xs text-slate-500 dark:text-slate-300">{t("savings.initialHelp")}</Text>
-            <Text className={`mt-2 text-xs ${initialAmount > maximoAApartar ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>{t("savings.previewPersonal", { amount: fmt(libre - initialAmount) })}</Text>
-            {initialError && <Text className="mt-1 text-xs text-rose-500">{t(initialError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
+            <Text className={`mt-2 text-xs ${initialAmount > maximoAApartar ? "text-rose-500 dark:text-rose-300" : "text-slate-500 dark:text-slate-300"}`}>{t("savings.previewPersonal", { amount: fmt(libre - initialAmount) })}</Text>
+            {initialError && <Text className="mt-1 text-xs text-rose-500 dark:text-rose-300">{t(initialError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
           </View>}
           {goal && <View className="rounded-xl bg-violet-50 p-3 dark:bg-violet-950">
-            {stale && <Text className="mb-2 text-xs font-bold text-rose-500">{t("savings.reopenGoal")}</Text>}
+            {stale && <Text className="mb-2 text-xs font-bold text-rose-500 dark:text-rose-300">{t("savings.reopenGoal")}</Text>}
             {delta !== 0 && <Text className="mb-1 text-xs font-semibold text-violet-700 dark:text-violet-200">{t(delta > 0 ? "savings.editAdd" : "savings.editReturn", { amount: fmt(Math.abs(delta)) })}</Text>}
             <Text className="text-xs text-slate-600 dark:text-slate-200">{t("savings.previewPersonal", { amount: fmt(libre - delta) })}</Text>
-            {savedError && <Text className="mt-1 text-xs text-rose-500">{t(savedError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
-            {delta > maximoAApartar && <Text className="mt-1 text-xs text-rose-500">{t("moveMoney.overFree", { amount: fmt(maximoAApartar) })}</Text>}
+            {savedError && <Text className="mt-1 text-xs text-rose-500 dark:text-rose-300">{t(savedError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text>}
+            {delta > maximoAApartar && <Text className="mt-1 text-xs text-rose-500 dark:text-rose-300">{t("moveMoney.overFree", { amount: fmt(maximoAApartar) })}</Text>}
           </View>}
         </View>
         <View className="flex-row gap-3 mt-6">

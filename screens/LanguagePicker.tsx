@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useFocusEffect } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { ENTRY_COLORS, ENTRY_FONT, EntryPanel, entryStyles } from "@/components/EntryUI";
+import { ENTRY_FONT, EntryPanel, useEntryTheme } from "@/components/EntryUI";
 import { Check } from "lucide-react-native";
 import { LANGUAGES } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -16,6 +16,7 @@ export default function LanguagePicker({
   onBack: () => void;
   onSelect: (id: string) => void | Promise<void>;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const { t, showToast } = useAppData();
   const navigationBusy = useRef(false);
   const focusVersion = useRef(0);

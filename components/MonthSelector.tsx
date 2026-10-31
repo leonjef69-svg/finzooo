@@ -63,23 +63,23 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
         accessibilityState={{ expanded: open }}
         className="flex-row items-center gap-1.5 rounded-full border-[1.5px] border-slate-200 bg-slate-50 px-3 py-2 dark:border-noche-borde dark:bg-noche-2"
       >
-        <CalendarDays size={14} color={dark ? "#cbd5e1" : "#475569"} />
+        <CalendarDays size={14} color={dark ? "#c6bfb3" : "#475569"} />
         <Text className="max-w-[132px] text-xs font-bold text-slate-700 dark:text-slate-100" numberOfLines={1}>
           {label}
         </Text>
-        <ChevronDown size={14} color={dark ? "#cbd5e1" : "#475569"} />
+        <ChevronDown size={14} color={dark ? "#c6bfb3" : "#475569"} />
       </TouchableOpacity>
 
       {open ? <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <View className="flex-1 justify-end bg-black/45">
-          <View className="max-h-[72%] rounded-t-3xl bg-white px-5 pb-8 pt-4 dark:bg-noche-2">
+          <View className="max-h-[72%] rounded-t-3xl bg-white px-5 pb-8 pt-4 dark:bg-noche-panel">
             <View className="mb-4 flex-row items-center justify-between">
               <View>
                 <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{t("monthPicker.title")}</Text>
                 <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">{t("monthPicker.help")}</Text>
               </View>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={4} onPress={() => setOpen(false)} className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-noche">
-                <X size={18} color={dark ? "#cbd5e1" : "#475569"} />
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={4} onPress={() => setOpen(false)} className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
+                <X size={18} color={dark ? "#c6bfb3" : "#475569"} />
               </TouchableOpacity>
             </View>
 

@@ -962,7 +962,7 @@ export default function ExportPdfSheet({
           podía exportar. El tope, más el ScrollView de más abajo, dejan el
           botón siempre pegado al borde inferior y todo lo demás se desliza. */}
       <View
-        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-panel rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "88%", paddingBottom: 20 + insets.bottom }}
       >
         <View className="items-center mb-3">
@@ -976,7 +976,7 @@ export default function ExportPdfSheet({
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
-            <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <X size={16} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
           </TouchableOpacity>
         </View>
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">
@@ -1076,7 +1076,7 @@ export default function ExportPdfSheet({
             >
               <opt.Icon
                 size={16}
-                color={format === opt.id ? "#ffffff" : colorScheme === "dark" ? "#94a3b8" : "#475569"}
+                color={format === opt.id ? "#ffffff" : colorScheme === "dark" ? "#b8b2a8" : "#475569"}
               />
               <Text
                 className={`text-sm font-bold ${
@@ -1148,7 +1148,7 @@ export default function ExportPdfSheet({
             >
               <opt.Icon
                 size={16}
-                color={destination === opt.id ? "#ffffff" : colorScheme === "dark" ? "#94a3b8" : "#475569"}
+                color={destination === opt.id ? "#ffffff" : colorScheme === "dark" ? "#b8b2a8" : "#475569"}
               />
               <Text
                 className={`text-sm font-bold ${
@@ -1420,7 +1420,7 @@ export default function ExportPdfSheet({
                 : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
             }`}
           >
-            <BarChart3 size={17} color={charts ? "#059669" : colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <BarChart3 size={17} color={charts ? "#059669" : colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
             <View className="flex-1">
               <Text
                 className={`text-sm font-bold ${
@@ -1457,7 +1457,7 @@ export default function ExportPdfSheet({
               </Text>
               <Text
                 className="text-lg font-extrabold mt-0.5"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
               >
                 {fmt(total)}
               </Text>
@@ -1525,7 +1525,7 @@ export default function ExportPdfSheet({
             onPress={() => setPreviewHtml(construirHtml())}
             className="w-full mt-3 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
           >
-            <Eye size={17} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <Eye size={17} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
             <Text className="text-slate-600 dark:text-slate-200 font-bold">
               {t("exportPdf.seeDocument")}
             </Text>

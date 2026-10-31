@@ -24,7 +24,7 @@ export default function GoalPickerSheet({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-panel rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "80%", paddingBottom: 32 + insets.bottom }}
       >
         <View className="items-center mb-3">
@@ -36,7 +36,7 @@ export default function GoalPickerSheet({
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
-            <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <X size={16} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
           </TouchableOpacity>
         </View>
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">

@@ -47,7 +47,7 @@ export default function ContentReportButton({ target }: { target: ReportTarget }
       <View className="flex-1 justify-end bg-black/45">
         <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0" />
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="justify-end">
-        <ScrollView className="max-h-[80%] rounded-t-[28px] bg-white px-5 py-4 dark:bg-noche" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <ScrollView className="max-h-[80%] rounded-t-[28px] bg-white px-5 py-4 dark:bg-noche-panel" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-slate-900 dark:text-white">{t("report.title")}</Text>
             <TouchableOpacity onPress={close} accessibilityRole="button" accessibilityLabel={t("common.close")} disabled={busy} className="h-10 w-10 items-center justify-center"><X size={20} color="#64748b" /></TouchableOpacity>

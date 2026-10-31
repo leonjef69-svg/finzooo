@@ -162,7 +162,7 @@ export default function Premium({
     );
   }
 
-  const fondo = dark ? "#141b16" : "#f7f5ee";
+  const fondo = dark ? "#000000" : "#f7f5ee";
   const textoBoton = dark ? "#142018" : "#ffffff";
 
   return (

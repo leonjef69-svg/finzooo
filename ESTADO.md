@@ -1,3 +1,40 @@
+# Apariencia oscura mate completa — 30/10/2026 — desarrollo
+
+Marca `30oct-oscuro-mate-completo`. Fondo negro, superficies carbón cálido
+`#242321`, controles `#302e2b`, paneles `#211f1d`, texto marfil y secundarios
+legibles. Una paleta oscura compartida por Clásico y Melocotón/oliva; las paletas
+claras conservan sus valores. Se extiende a formularios, menús, selectores,
+acceso/configuración inicial, idioma/moneda, bloqueo, exportación/importación,
+Personal, Familia, Cajas, Ahorro, Negocio, Ajustes, Premium y calendarios.
+Navegación inferior carbón, iconos neutros y botón central sin verde ni brillo.
+Totales de ingresos/gastos en verde/rojo con cifras blancas. Calendario de pagos
+en superficie propia; calendario diario sin celdas azul pizarra. El gráfico de
+categorías conserva sus colores, geometría, conectores y barras por categoría;
+solo cambia la superficie de su total y los controles circundantes.
+
+Las listas de movimientos llevan una línea al final de cada registro, incluidos
+el primero, el único y los cambios de día; también transferencias, archivo de
+Cajas y resúmenes de Ahorro. Se conservan encabezados diarios y acciones.
+Regresión ejecuta JSX original en Personal/Familia/Cajas/Negocio y falla en
+15e3734c por mostrar solo una línea para tres registros. La prueba de tema
+ejecuta paleta/estilos originales, comprueba contraste y formularios/paneles;
+también falla en esa base. Adaptadores de pruebas incorporan el tema/separador;
+las aserciones visuales antiguas se ajustan al color oscuro sin modificar las
+comprobaciones financieras. 285 pruebas y ocho auditores aprobados, tarjetas
+excluidas. TypeScript y ESLint completos, sin errores.
+
+Emulador habitual, misma cuenta: imágenes directas de Android confirman Inicio,
+Ajustes/navegación, calendario de pagos, Reportes/gráfico y formulario/panel de
+registro. No se pulsa Guardar/Pagar ni se crean/eliminan movimientos. Servidor
+habitual 8081 regenerado con la paleta nueva y marca comprobada en el paquete.
+Sin almacenamiento nuevo, cambios nativos, permisos ni servicios; no requiere
+modificar PLAYSTORE.md. Telegram y tarjetas de crédito permanecen fuera.
+Revisión visual final tras la recarga: Inicio muestra línea debajo de cada
+registro, también al cambiar de fecha, y queda abierto en el emulador habitual.
+La revisión manual cubre las pantallas indicadas, no todas las combinaciones
+posibles de navegación. Qué sigue/falta: revisión en celular y entrega cuando
+corresponda. No se publica APK, OTA ni Play Store aquí.
+
 # Movimientos: filas sin tarjetas, separadas por línea — 30/10/2026 — desarrollo
 
 Marca `30oct-movimientos-linea-divisora`. Las listas de Inicio/Personal,

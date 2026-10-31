@@ -58,7 +58,7 @@ export default function SpaceInvitationSheet({
           className="absolute inset-0"
         />
         <View
-          className="rounded-t-[28px] bg-white px-5 pt-3 dark:bg-noche"
+          className="rounded-t-[28px] bg-white px-5 pt-3 dark:bg-noche-panel"
           style={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}
         >
           <View className="mb-4 h-1 w-10 self-center rounded-full bg-slate-300 dark:bg-slate-600" />

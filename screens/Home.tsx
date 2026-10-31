@@ -150,7 +150,6 @@ const FilaMovimiento = memo(function FilaMovimiento({
   // además ocho entradas escalonadas cada vez que se regresa a Personal.
   return (
     <View className="px-5">
-        {separator ? <MovementDivider /> : null}
         <PressableScale
           onPress={() => onPress(tx.id, Boolean(transferGroup))}
           className={`flex-row items-center gap-3 border-l-2 px-2 py-3 ${
@@ -185,16 +184,16 @@ const FilaMovimiento = memo(function FilaMovimiento({
           />{timeLabel || tx.time ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{timeLabel ?? tx.time}</Text> : null}</View> : <><View className="flex-1 min-w-0">
             <Text
               className="text-base font-bold"
-              style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
+              style={{ color: oscuro ? "#f4f0e8" : "#0f172a" }}
               numberOfLines={1}
             >
               {title}
             </Text>
-            {timeLabel || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>{timeLabel ?? tx.time}</Text> : null}
+            {timeLabel || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#b8b2a8" : "#64748b" }} numberOfLines={1}>{timeLabel ?? tx.time}</Text> : null}
           </View>
           <View className="items-end self-stretch justify-start">
             <Text
-              className={`text-base font-extrabold ${tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
+              className={`text-base font-extrabold ${tx.type === "expense" ? "text-rose-500 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"}`}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.72}
@@ -202,13 +201,14 @@ const FilaMovimiento = memo(function FilaMovimiento({
               {tx.type === "expense" ? "-" : "+"}{fmt(tx.amount)}
             </Text>
             {!repeatsCategory ? (
-              <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
+              <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#c6bfb3" : "#475569" }} numberOfLines={1}>
                 {t(c.label)}
               </Text>
             ) : null}
             <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View>
           </View></>}
         </PressableScale>
+        {separator ? <MovementDivider /> : null}
     </View>
   );
 });
@@ -459,9 +459,6 @@ export default function Home({
   const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;
   const visiblePct = Math.max(0, Math.min(100, pct));
   const progressColor = pct >= 100 ? "#fb7185" : pct >= 80 ? "#fbbf24" : peachOlive ? "#65764a" : "#6ee7b7";
-  const previousActionText = peachOlive ? "#4338ca" : "#eef2ff";
-  const previousActionBackground = peachOlive ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.12)";
-  const previousActionBorder = peachOlive ? "#c7d2fe" : "rgba(224,231,255,0.62)";
 
   /**
    * ¿HAY ALGO QUE PAGAR YA? Se mantiene separado de lo que es solo próximo.
@@ -569,6 +566,9 @@ export default function Home({
   };
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
+  const previousActionText = colorScheme === "dark" ? "#f4f0e8" : peachOlive ? "#4338ca" : "#eef2ff";
+  const previousActionBackground = colorScheme === "dark" ? "#302e2b" : peachOlive ? "rgba(255,255,255,0.78)" : "rgba(255,255,255,0.12)";
+  const previousActionBorder = colorScheme === "dark" ? "#625e56" : peachOlive ? "#c7d2fe" : "rgba(224,231,255,0.62)";
   const balanceColors = colorScheme === "dark" ? balanceGradientForVisualStyle(visualStyle, true) : peachOlive ? balanceGradientForVisualStyle(visualStyle) : SALDO_VERDE;
 
   function shiftMonth(d: number) {
@@ -632,7 +632,7 @@ export default function Home({
           onPress={alTocarFila}
           transferGroup={row.transferGroup}
           timeLabel={personalMovementRowTime(row)}
-          separator={index > 0 && !startsDay}
+          separator
         />
       </View>;
     },
@@ -683,7 +683,7 @@ export default function Home({
               onPress={() => shiftMonth(-1)}
               className="w-7 h-9 items-center justify-center"
             >
-              <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+              <ChevronLeft size={18} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
             </TouchableOpacity>
             <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} showMovementCount />
             <TouchableOpacity accessibilityLabel={t("accessibility.nextMonth")} hitSlop={6}
@@ -691,7 +691,7 @@ export default function Home({
               onPress={() => shiftMonth(1)}
               className="w-7 h-9 items-center justify-center"
             >
-              <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+              <ChevronRight size={18} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
             </TouchableOpacity>
           </View>
 
@@ -704,7 +704,7 @@ export default function Home({
             className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <Animated.View style={rotacionCampanaEstilo}>
-              <Bell size={19} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+              <Bell size={19} color={colorScheme === "dark" ? "#b8b2a8" : "#475569"} />
             </Animated.View>
             {hayNotificaciones ? (
               <View className="absolute -top-0.5 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 border-2 border-white dark:border-noche items-center justify-center">
@@ -732,7 +732,7 @@ export default function Home({
           style={SALDO_TARJETA}
         >
           <View className="flex-row items-center justify-between">
-            <Text className={`text-sm font-bold ${(peachOlive && colorScheme !== "dark") ? "text-emerald-800" : "text-white/90"}`}>
+            <Text className={`text-sm font-bold ${(peachOlive && colorScheme !== "dark") ? "text-emerald-800 dark:text-emerald-300" : "text-white/90"}`}>
               {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
             </Text>
             {!editingBudget && (
@@ -761,7 +761,7 @@ export default function Home({
                 onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v, userCurrency))}
                 keyboardType="decimal-pad"
                 autoFocus
-                className={`flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold ${(peachOlive && colorScheme !== "dark") ? "text-slate-900" : "text-white"}`}
+                className={`flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold ${(peachOlive && colorScheme !== "dark") ? "text-slate-900 dark:text-slate-100" : "text-white"}`}
               />
               <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} hitSlop={6}
                 onPress={saveBudgetInline}
@@ -780,7 +780,7 @@ export default function Home({
             <>
               <View className="mt-0.5 flex-row items-center">
                 <Text
-                  className={`min-w-0 flex-1 text-3xl font-extrabold tracking-tight ${(peachOlive && colorScheme !== "dark") ? "text-slate-900" : "text-white"}`}
+                  className={`min-w-0 flex-1 text-3xl font-extrabold tracking-tight ${(peachOlive && colorScheme !== "dark") ? "text-slate-900 dark:text-slate-100" : "text-white"}`}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.62}
@@ -794,7 +794,7 @@ export default function Home({
                 </Text>
               </TouchableOpacity>}
               <View className="mt-2">
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`text-sm font-bold ${(peachOlive && colorScheme !== "dark") ? "text-emerald-800" : "text-slate-200"}`}>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`text-sm font-bold ${(peachOlive && colorScheme !== "dark") ? "text-emerald-800 dark:text-emerald-300" : "text-slate-200"}`}>
                   {t("home.budgetedOf", { amount: formatBudgetDisplay(hideBalance, budget, fmt) })}
                 </Text>
                 <View
@@ -811,9 +811,9 @@ export default function Home({
                     containerStyle={hasPreviousBalanceHistory
                       ? { flexGrow: 1, flexBasis: 0, minHeight: 68 }
                       : { width: "100%", minHeight: 48 }}
-                    className={`w-full items-center justify-center rounded-xl border-[1.5px] border-indigo-200 bg-indigo-100 px-4 py-2 ${hasPreviousBalanceHistory ? "min-h-[68px]" : "min-h-[48px]"}`}
+                    className={`w-full items-center justify-center rounded-xl border-[1.5px] border-indigo-200 bg-indigo-100 px-4 py-2 dark:border-noche-borde dark:bg-noche-3 ${hasPreviousBalanceHistory ? "min-h-[68px]" : "min-h-[48px]"}`}
                   >
-                    <Text className={`text-center font-bold text-indigo-900 ${hasPreviousBalanceHistory ? "text-[14px] leading-[17px]" : "text-[15px] leading-[19px]"}`}>
+                    <Text className={`text-center font-bold text-indigo-900 dark:text-slate-100 ${hasPreviousBalanceHistory ? "text-[14px] leading-[17px]" : "text-[15px] leading-[19px]"}`}>
                       {t(hasPreviousBalanceHistory ? "home.defineBudgetCompact" : "home.setMonthlyBudget")}
                     </Text>
                   </PressableScale>
@@ -924,8 +924,8 @@ export default function Home({
                 ) : null}
               </View>
               <Text
-                className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500"}`}
-                style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
+                className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500 dark:text-rose-300"}`}
+                style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" } : undefined}
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
@@ -987,7 +987,7 @@ export default function Home({
             <>
               <Text
                 className="font-extrabold text-base"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
               >
                 {t(selected.length > 1 ? "home.selectedCountPlural" : "home.selectedCount", {
                   count: selected.length,
@@ -1006,11 +1006,11 @@ export default function Home({
                 {/* BORRAR TODO. Se enseña solo si hay algo que borrar. */}
                 {movimientosBorrablesDelMes.length > 0 && (
                   <TouchableOpacity onPress={() => setConfirmandoBorrarTodo(true)} hitSlop={6}>
-                    <Text className="text-base font-bold text-rose-500">{t("home.deleteAll")}</Text>
+                    <Text className="text-base font-bold text-rose-500 dark:text-rose-300">{t("home.deleteAll")}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={toggleSelectMode}>
-                  <Text className="text-base font-bold text-emerald-600">{t("common.cancel")}</Text>
+                  <Text className="text-base font-bold text-emerald-600 dark:text-emerald-300">{t("common.cancel")}</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -1024,7 +1024,7 @@ export default function Home({
               {compactMonthRows.length > 0 && (
                 <TouchableOpacity onPress={toggleSelectMode} className="min-h-10 flex-row items-center gap-1.5">
                   <ListChecks size={18} color="#059669" />
-                  <Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text>
+                  <Text className="text-[15px] font-bold text-emerald-600 dark:text-emerald-300">{t("common.select")}</Text>
                 </TouchableOpacity>
               )}
             </> : null
@@ -1053,10 +1053,10 @@ export default function Home({
               <Text className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{t("savings.viewGoals")}</Text>
             </TouchableOpacity>
           </View>
-          {personalSavingsSummaries.slice(0, 8).map(({ goal, summary }, index) => <View key={`personal-savings-${goal.id}`}>
-            {index > 0 ? <MovementDivider /> : null}
+          {personalSavingsSummaries.slice(0, 8).map(({ goal, summary }) => <View key={`personal-savings-${goal.id}`}>
             <SavingsFlowSummaryCard testID={`personal-savings-summary-${goal.id}`} goal={goal}
               summary={summary ?? { received: 0, returned: 0 }} view="personal" fmt={fmt} t={t} />
+            <MovementDivider />
           </View>)}
         </View> : null}
         ListEmptyComponent={personalSavingsSummaries.length > 0 && recentFilter === null ? null :
@@ -1139,7 +1139,7 @@ export default function Home({
             onPress={cerrarAvisos}
           />
           <View
-            className="rounded-t-[28px] border-t border-slate-200 bg-white px-5 pt-3 dark:border-noche-borde dark:bg-noche-2"
+            className="rounded-t-[28px] border-t border-slate-200 bg-white px-5 pt-3 dark:border-noche-borde dark:bg-noche-panel"
             style={{ maxHeight: viewportHeight * 0.8, paddingBottom: Math.max(insets.bottom + 12, 24) }}
           >
             <View className="mb-3 h-1.5 w-10 self-center rounded-full bg-slate-300 dark:bg-slate-600" />
@@ -1151,7 +1151,7 @@ export default function Home({
                   onPress={() => setAvisoCalendarioSeleccionado(null)}
                   className="h-10 flex-row items-center gap-1"
                 >
-                  <ChevronLeft size={20} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                  <ChevronLeft size={20} color={colorScheme === "dark" ? "#c6bfb3" : "#475569"} />
                   <Text className="text-base font-extrabold text-slate-900 dark:text-white">{t("home.calendarNoticeDetails")}</Text>
                 </TouchableOpacity>
               ) : (
@@ -1163,7 +1163,7 @@ export default function Home({
                 onPress={cerrarAvisos}
                 className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3"
               >
-                <X size={19} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                <X size={19} color={colorScheme === "dark" ? "#c6bfb3" : "#475569"} />
               </TouchableOpacity>
             </View>
 

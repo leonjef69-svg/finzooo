@@ -7,6 +7,7 @@ import type { DailyCalendarTotal } from "@/utils/reportCalendar";
 import type { Month } from "@/types";
 
 const SPEND_COLORS = ["", "#f0fdf4", "#dcfce7", "#bbf7d0", "#4ade80", "#16a34a"];
+const DARK_SPEND_COLORS = ["", "#253b2c", "#2c5038", "#336846", "#397f52", "#45975f"];
 const WEEKDAYS = {
   es: ["L", "M", "X", "J", "V", "S", "D"],
   en: ["M", "T", "W", "T", "F", "S", "S"],
@@ -125,11 +126,11 @@ export default function DailyActivityCalendar({
                 : 0;
               const hasIncomeOnly = day.income > 0 && day.expense === 0;
               const backgroundColor = intensity > 0
-                ? SPEND_COLORS[intensity]
+                ? (dark ? DARK_SPEND_COLORS : SPEND_COLORS)[intensity]
                 : hasIncomeOnly
-                  ? (dark ? "#12382e" : "#f0fdf4")
-                  : (dark ? "#17212e" : "#f8fafc");
-              const textColor = intensity === 5
+                  ? (dark ? "#253b2c" : "#f0fdf4")
+                  : (dark ? "#302e2b" : "#f8fafc");
+              const textColor = dark ? "#f4f0e8" : intensity === 5
                 ? "#ffffff"
                 : intensity > 0
                   ? "#14532d"
@@ -147,9 +148,9 @@ export default function DailyActivityCalendar({
                   onPress={() => setSelection({ monthKey, day: day.day })}
                   className="h-[35px] w-[13.8%] items-center justify-center rounded-[10px]"
                   style={{
-                    backgroundColor: isSelected && intensity === 0 ? (dark ? "#14532d" : "#dcfce7") : backgroundColor,
+                    backgroundColor: isSelected && intensity === 0 ? (dark ? "#315b43" : "#dcfce7") : backgroundColor,
                     borderWidth: isSelected ? 2 : hasIncomeOnly ? 1 : 0.75,
-                    borderColor: isSelected ? (dark ? "#34d399" : "#047857") : hasIncomeOnly ? (dark ? "#16634b" : "#86efac") : (dark ? "#334155" : "#e2e8f0"),
+                    borderColor: isSelected ? (dark ? "#b3d4b8" : "#047857") : hasIncomeOnly ? (dark ? "#65866b" : "#86efac") : (dark ? "#494641" : "#e2e8f0"),
                   }}
                 >
                   <Text className="text-[13px] font-semibold" style={{ color: textColor }}>

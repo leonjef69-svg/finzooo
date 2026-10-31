@@ -23,7 +23,7 @@ export default function AddChooser({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-panel rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "100%", paddingBottom: 16 + insets.bottom }}
       >
         <View className="items-center mb-4">
@@ -40,7 +40,7 @@ export default function AddChooser({
           <View className="flex-1 min-w-0">
             <Text
               className="font-bold text-sm"
-              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
             >
               {t("addChooser.register")}
             </Text>
@@ -60,7 +60,7 @@ export default function AddChooser({
           <View className="flex-1 min-w-0">
             <Text
               className="font-bold text-sm"
-              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
             >
               {t("addChooser.addVoice")}
             </Text>
@@ -83,7 +83,7 @@ export default function AddChooser({
             <View className="flex-1 min-w-0">
               <Text
                 className="font-bold text-sm"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                style={{ color: colorScheme === "dark" ? "#f4f0e8" : "#0f172a" }}
               >
                 {t("addChooser.addScan")}
               </Text>

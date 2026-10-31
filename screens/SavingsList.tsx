@@ -69,16 +69,16 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
     <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
       onScroll={({ nativeEvent: e }) => { if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - 200) setGoalLimit(n => Math.min(n + 40, goals.length)); }} scrollEventThrottle={160}>
       {soloLectura && <AvisoSoloLectura />}
-      <LinearGradient colors={colorScheme === "dark" ? ["#1b1b1b", "#272727"] : peach ? ["#fae2cf", "#f2cbb0"] : ["#047857", "#0f766e"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 20, padding: 16, borderWidth: colorScheme === "dark" ? 1 : 0, borderColor: "#3a3a3a" }}>
+      <LinearGradient colors={colorScheme === "dark" ? ["#292825", "#201f1d"] : peach ? ["#fae2cf", "#f2cbb0"] : ["#047857", "#0f766e"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 20, padding: 16, borderWidth: colorScheme === "dark" ? 1 : 0, borderColor: "#494641" }}>
         <View className="flex-row items-center justify-between gap-2">
-          <Text className={`flex-1 text-[11px] ${colorScheme === "dark" ? "text-slate-300" : peach ? "text-slate-700" : "text-emerald-100"}`}>{t("savings.personalMoney", { month: monthLabel })}</Text>
+          <Text className={`flex-1 text-[11px] ${colorScheme === "dark" ? "text-slate-300" : peach ? "text-slate-700 dark:text-slate-100" : "text-emerald-100"}`}>{t("savings.personalMoney", { month: monthLabel })}</Text>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("savings.help")} onPress={() => setHelp(value => !value)} className="h-8 w-8 items-center justify-center"><CircleHelp size={16} color={colorScheme === "dark" ? "#d4d4d4" : peach ? "#526b43" : "#d1fae5"} /></TouchableOpacity>
         </View>
-        <Text className={`text-sm font-semibold ${colorScheme === "dark" ? "text-slate-200" : peach ? "text-slate-800" : "text-emerald-100"}`}>{t("savings.personalAvailable")}</Text>
+        <Text className={`text-sm font-semibold ${colorScheme === "dark" ? "text-slate-200" : peach ? "text-slate-800 dark:text-slate-100" : "text-emerald-100"}`}>{t("savings.personalAvailable")}</Text>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className={`mt-1 text-3xl font-extrabold ${libre < 0 ? peach || colorScheme === "dark" ? "text-rose-300" : "text-rose-200" : peach || colorScheme === "dark" ? "text-slate-100" : "text-white"}`}>{fmt(libre)}</Text>
         <View className={`mt-3 flex-row items-center justify-between gap-3 border-t pt-3 ${colorScheme === "dark" ? "border-white/15" : peach ? "border-slate-700/15" : "border-white/20"}`}>
-          <Text className={`flex-1 text-xs font-semibold ${colorScheme === "dark" ? "text-slate-300" : peach ? "text-slate-600" : "text-emerald-100"}`}>{t("savings.inGoals")}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`max-w-[60%] text-lg font-bold ${peach ? "text-slate-900" : "text-white"}`}>{fmt(apartado)}</Text>
+          <Text className={`flex-1 text-xs font-semibold ${colorScheme === "dark" ? "text-slate-300" : peach ? "text-slate-600 dark:text-slate-300" : "text-emerald-100"}`}>{t("savings.inGoals")}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`max-w-[60%] text-lg font-bold ${peach ? "text-slate-900 dark:text-slate-100" : "text-white"}`}>{fmt(apartado)}</Text>
         </View>
       </LinearGradient>
       {help && <View className="mt-2 rounded-xl bg-slate-50 p-3 dark:bg-noche-2"><Text className="text-xs leading-5 text-slate-600 dark:text-slate-200">{t("savings.explain")}</Text><Text className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.older")}</Text></View>}
@@ -123,7 +123,7 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           {menu === goal.id && !soloLectura && <View className="mt-2 flex-row gap-2 border-t border-slate-100 pt-2 dark:border-noche-borde">
             <TouchableOpacity onPress={() => { setPanel({ kind: "edit", id: goal.id }); setMenu(null); }} className="flex-1 items-center py-2"><Text className="text-sm font-bold text-slate-600 dark:text-slate-200">{t("common.edit")}</Text></TouchableOpacity>
             {goal.saved > 0 && <TouchableOpacity onPress={() => { setPanel({ kind: "withdraw", id: goal.id }); setMenu(null); }} className="flex-1 items-center py-2"><Text className="text-center text-xs font-bold text-violet-700 dark:text-violet-300">{t("savings.returnPersonal")}</Text></TouchableOpacity>}
-            <TouchableOpacity onPress={() => setDeleting(goal)} className="flex-1 items-center py-2"><Text className="text-sm font-bold text-rose-500">{t("common.delete")}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setDeleting(goal)} className="flex-1 items-center py-2"><Text className="text-sm font-bold text-rose-500 dark:text-rose-300">{t("common.delete")}</Text></TouchableOpacity>
           </View>}
         </View>;
       })}
@@ -133,10 +133,10 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
           <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("savings.movementSummary")}</Text>
         </View>
         {movementGoals.length === 0 && <View className="items-center rounded-2xl bg-slate-50 p-6 dark:bg-noche-2"><PiggyBank size={30} color="#7c3aed" /><Text className="mt-3 text-center text-sm text-slate-500 dark:text-slate-300">{t("savings.noMovements")}</Text></View>}
-        {movementGoals.slice(0, goalLimit).map((goal, index) => <View key={`movement-${goal.id}`}>
-          {index > 0 ? <MovementDivider /> : null}
+        {movementGoals.slice(0, goalLimit).map(goal => <View key={`movement-${goal.id}`}>
           <SavingsFlowSummaryCard testID={`savings-movement-summary-${goal.id}`}
             goal={goal} summary={fundingSummaries.get(goal.id) ?? { received: 0, returned: 0 }} view="savings" fmt={fmt} t={t} />
+          <MovementDivider />
         </View>)}
       </>}
     </ScrollView>

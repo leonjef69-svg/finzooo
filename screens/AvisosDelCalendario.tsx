@@ -108,7 +108,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
           {/* EL MOTIVO DEL FALLO, SELECCIONABLE PARA COPIARLO. Sin él, "ningún aviso" no dice
               si fue el permiso, el canal o el programado en sí, y cada intento cuesta un día. */}
           {avisosFallo != null && (
-            <Text selectable className="text-[10px] leading-4 text-rose-500 mt-2">
+            <Text selectable className="text-[10px] leading-4 text-rose-500 mt-2 dark:text-rose-300">
               {avisosFallo}
             </Text>
           )}
@@ -149,7 +149,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
         {resultado != null && (
           <Text
             className={`text-[12px] leading-5 mb-1 ${
-              resultado === "listo" ? "text-emerald-600" : "text-amber-600"
+              resultado === "listo" ? "text-emerald-600 dark:text-emerald-300" : "text-amber-600"
             }`}
           >
             {t(`calendario.prueba.${resultado}`)}

@@ -82,7 +82,7 @@ const Fila = memo(function Fila({
       <View className="flex-1 min-w-0">
         <Text
           className="text-sm font-bold"
-          style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
+          style={{ color: oscuro ? "#f4f0e8" : "#0f172a" }}
           numberOfLines={1}
         >
           {title}
@@ -105,7 +105,7 @@ const Fila = memo(function Fila({
           {timeLabel ? <Text className="text-[10px] text-slate-500 dark:text-slate-300">{timeLabel}</Text> : null}
         </View> : <>
           {/* Solo hora/estado; el día se muestra una vez fuera de las tarjetas. */}
-          {isTransfer || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
+          {isTransfer || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f4f0e8" : "#64748b" }} numberOfLines={1}>
             {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : timeLabel ?? tx.time}
           </Text> : null}
           {isTransfer && (timeLabel || tx.time) ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{timeLabel ?? tx.time}</Text> : null}
@@ -113,7 +113,7 @@ const Fila = memo(function Fila({
       </View>
       {!transferGroup ? <View className="items-end self-stretch justify-start">
         <Text
-          className={`text-sm font-extrabold ${isTransfer ? "text-blue-600 dark:text-blue-300" : tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
+          className={`text-sm font-extrabold ${isTransfer ? "text-blue-600 dark:text-blue-300" : tx.type === "expense" ? "text-rose-500 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"}`}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.72}
@@ -247,16 +247,16 @@ export default function History({
   }, [allMonthTx, transactions, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, fmt, t]);
 
   const dibujar = useCallback(
-    ({ item, index }: { item: Renglon; index: number }) =>
+    ({ item }: { item: Renglon }) =>
       item.tipo === "fecha" ? (
         <MovementDateHeader date={item.fecha} monthNames={monthNames} inset />
       ) : (
         <View className="px-5">
-          {index > 0 && renglones[index - 1]?.tipo === "fila" ? <MovementDivider /> : null}
           <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} timeLabel={item.timeLabel} />
+          <MovementDivider />
         </View>
       ),
-    [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses, renglones]
+    [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses]
   );
 
   return (
@@ -327,7 +327,7 @@ export default function History({
                 <Text className="text-xs font-extrabold text-slate-700 dark:text-slate-100">{t("history.advancedFilters")}</Text>
                 {hasAdvancedFilters ? (
                   <TouchableOpacity onPress={() => { setCategoryFilter(""); setMinAmount(""); setMaxAmount(""); }}>
-                    <Text className="text-xs font-bold text-emerald-600">{t("history.clearFilters")}</Text>
+                    <Text className="text-xs font-bold text-emerald-600 dark:text-emerald-300">{t("history.clearFilters")}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -354,9 +354,9 @@ export default function History({
                   keyboardType="decimal-pad"
                   placeholder={t("history.minAmount")}
                   placeholderTextColor="#94a3b8"
-                  className="min-w-0 flex-1 rounded-xl border-[1.5px] border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 dark:border-noche-borde dark:bg-noche dark:text-slate-100"
+                  className="min-w-0 flex-1 rounded-xl border-[1.5px] border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 dark:border-noche-borde dark:bg-noche-3 dark:text-slate-100"
                 />
-                <Text className="text-xs font-bold text-slate-400">—</Text>
+                <Text className="text-xs font-bold text-slate-400 dark:text-slate-300">—</Text>
                 <TextInput
                   disableFullscreenUI
                   value={maxAmount}
@@ -364,7 +364,7 @@ export default function History({
                   keyboardType="decimal-pad"
                   placeholder={t("history.maxAmount")}
                   placeholderTextColor="#94a3b8"
-                  className="min-w-0 flex-1 rounded-xl border-[1.5px] border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 dark:border-noche-borde dark:bg-noche dark:text-slate-100"
+                  className="min-w-0 flex-1 rounded-xl border-[1.5px] border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 dark:border-noche-borde dark:bg-noche-3 dark:text-slate-100"
                 />
               </View>
             </View>
@@ -373,17 +373,17 @@ export default function History({
           {(showIncomeTotal || showExpenseTotal) ? <View className={`px-5 mt-3 mb-3 ${totalsVertical ? "gap-3" : "flex-row gap-3"}`}>
             {showIncomeTotal && (
               <View
-                className={`${totalsVertical ? "w-full" : "flex-1"} flex-row items-center gap-2.5 bg-emerald-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde`}
+                className={`${totalsVertical ? "w-full" : "flex-1"} flex-row items-center gap-2.5 bg-emerald-50 dark:bg-emerald-700 rounded-xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde`}
                 style={CARD_SHADOW}
               >
-                <View className="w-8 h-8 rounded-lg bg-emerald-100 items-center justify-center">
-                  <TrendingUp size={16} color="#059669" />
+                <View className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-white/10 items-center justify-center">
+                  <TrendingUp size={16} color={oscuro ? "#ffffff" : "#059669"} />
                 </View>
                 <View className="flex-1 min-w-0">
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
+                  <Text className="text-[11px] text-slate-500 dark:text-white font-semibold" numberOfLines={1}>
                     {categoryFilter ? `${t("history.totalIncome")} · ${t(catInfo(categoryFilter).label)}` : t("history.totalIncome")}
                   </Text>
-                  <Text className="text-base font-extrabold text-emerald-600" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                  <Text className="text-base font-extrabold text-emerald-600 dark:text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {fmt(totalIncome)}
                   </Text>
                 </View>
@@ -391,17 +391,17 @@ export default function History({
             )}
             {showExpenseTotal && (
               <View
-                className={`${totalsVertical ? "w-full" : "flex-1"} flex-row items-center gap-2.5 bg-rose-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde`}
+                className={`${totalsVertical ? "w-full" : "flex-1"} flex-row items-center gap-2.5 bg-rose-50 dark:bg-rose-700 rounded-xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde`}
                 style={CARD_SHADOW}
               >
-                <View className="w-8 h-8 rounded-lg bg-rose-100 items-center justify-center">
-                  <TrendingDown size={16} color="#e11d48" />
+                <View className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-white/10 items-center justify-center">
+                  <TrendingDown size={16} color={oscuro ? "#ffffff" : "#e11d48"} />
                 </View>
                 <View className="flex-1 min-w-0">
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
+                  <Text className="text-[11px] text-slate-500 dark:text-white font-semibold" numberOfLines={1}>
                     {categoryFilter ? `${t("history.totalExpense")} · ${t(catInfo(categoryFilter).label)}` : t("history.totalExpense")}
                   </Text>
-                  <Text className="text-base font-extrabold text-rose-500" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                  <Text className="text-base font-extrabold text-rose-500 dark:text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {fmt(totalExpense)}
                   </Text>
                 </View>

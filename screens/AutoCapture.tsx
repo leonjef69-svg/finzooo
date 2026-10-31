@@ -101,7 +101,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  const iconColor = colorScheme === "dark" ? "#94a3b8" : "#334155";
+  const iconColor = colorScheme === "dark" ? "#b8b2a8" : "#334155";
 
   // Estado real del servicio de Android. Se refresca al entrar y cada 3
   // segundos mientras la pantalla esté abierta, para poder hacer un Yape,
@@ -378,7 +378,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
               {log.length > 0 && (
                 <TouchableOpacity onPress={clearAutoCaptureLog} className="flex-row items-center gap-1.5">
                   <Trash2 size={13} color="#94a3b8" />
-                  <Text className="text-[11px] font-bold text-slate-400">{t("autoCapture.logClear")}</Text>
+                  <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-300">{t("autoCapture.logClear")}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -428,7 +428,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                     {entry.amount != null && (
                       <Text
                         className={`text-[14px] font-bold ${
-                          entry.type === "expense" ? "text-rose-600" : "text-emerald-600"
+                          entry.type === "expense" ? "text-rose-600 dark:text-rose-300" : "text-emerald-600 dark:text-emerald-300"
                         }`}
                       >
                         {entry.type === "expense" ? "−" : "+"}
@@ -470,13 +470,13 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                           >
                             {t(`autoCapture.result.${entry.result}`)}
                           </Text>
-                          <Text className="text-[10px] text-slate-400">{fmtTime(entry.at)}</Text>
+                          <Text className="text-[10px] text-slate-400 dark:text-slate-300">{fmtTime(entry.at)}</Text>
                         </View>
                         {/* Sin texto = era un aviso de clave. Se anota que llegó,
                             pero su frase no se guarda en el celular. */}
                         <Text
                           className={`text-[11px] leading-4 ${
-                            entry.text ? "text-slate-500 dark:text-slate-300" : "italic text-slate-400"
+                            entry.text ? "text-slate-500 dark:text-slate-300" : "italic text-slate-400 dark:text-slate-300"
                           }`}
                         >
                           {entry.text || t("autoCapture.logHidden")}
@@ -551,7 +551,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       </Text>
                       <Text
                         className={`text-[11px] font-bold ${
-                          stats.connected ? "text-emerald-600" : "text-rose-500"
+                          stats.connected ? "text-emerald-600 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"
                         }`}
                       >
                         {t(stats.connected ? "autoCapture.statusOn" : "autoCapture.statusOff")}
@@ -579,7 +579,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       </Text>
                       <Text
                         className={`text-[11px] font-bold ${
-                          stats.moneySeen > 0 ? "text-emerald-600" : "text-amber-600"
+                          stats.moneySeen > 0 ? "text-emerald-600 dark:text-emerald-300" : "text-amber-600"
                         }`}
                       >
                         {stats.moneySeen > 0 ? stats.moneySeen : t("autoCapture.statusMoneyNone")}
@@ -588,7 +588,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
 
                     {/* POR QUÉ HABLÓ O SE CALLÓ. */}
                     {motivoVoz !== "" && (
-                      <Text className="text-[10px] text-slate-400 mt-2">
+                      <Text className="text-[10px] text-slate-400 mt-2 dark:text-slate-300">
                         {t("autoCapture.speakLast")}: {motivoVoz}
                       </Text>
                     )}
@@ -605,7 +605,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       </Text>
                     )}
 
-                    <Text className="text-[10px] leading-4 text-slate-400 mt-3">
+                    <Text className="text-[10px] leading-4 text-slate-400 mt-3 dark:text-slate-300">
                       {t(
                         stats.totalSeen === 0
                           ? "autoCapture.statusHelpNone"

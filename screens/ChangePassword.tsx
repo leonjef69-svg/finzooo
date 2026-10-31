@@ -96,7 +96,7 @@ export default function ChangePassword({
               error={errors.confirmPassword}
             />
             {errors.general ? (
-              <Text className="text-rose-500 text-xs font-medium text-center">{errors.general}</Text>
+              <Text className="text-rose-500 text-xs font-medium text-center dark:text-rose-300">{errors.general}</Text>
             ) : null}
 
             <TouchableOpacity

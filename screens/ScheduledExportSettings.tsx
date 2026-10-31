@@ -438,7 +438,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             </Text>
             <Text
               className={`text-xs font-semibold mt-0.5 ${
-                schedule.enabled ? "text-emerald-600" : "text-slate-400 dark:text-slate-500"
+                schedule.enabled ? "text-emerald-600 dark:text-emerald-300" : "text-slate-400 dark:text-slate-500"
               }`}
             >
               {schedule.enabled ? t("schedExport.on") : t("schedExport.off")}
@@ -713,7 +713,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   placeholderTextColor="#94a3b8"
                   className="w-16 text-center border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
                 />
-                <Text className="text-lg font-extrabold text-slate-400">:</Text>
+                <Text className="text-lg font-extrabold text-slate-400 dark:text-slate-300">:</Text>
                 <TextInput
                   disableFullscreenUI                  value={minutoTexto}
                   onChangeText={(v) => escribirHora(v, "minuto")}
@@ -1102,7 +1102,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   <Text
                     className={`flex-1 text-xs ${
                       i === 6 && !notifOk
-                        ? "text-rose-500 font-semibold"
+                        ? "text-rose-500 font-semibold dark:text-rose-300"
                         : "text-slate-700 dark:text-slate-200"
                     }`}
                     numberOfLines={1}
@@ -1132,7 +1132,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               <Play size={17} color={probando || !espacio ? "#94a3b8" : "#059669"} />
               <Text
                 className={`font-extrabold ${
-                  probando || !espacio ? "text-slate-400" : "text-emerald-700 dark:text-emerald-300"
+                  probando || !espacio ? "text-slate-400 dark:text-slate-300" : "text-emerald-700 dark:text-emerald-300"
                 }`}
               >
                 {t(probando ? "schedExport.testRunning" : "schedExport.testNow")}

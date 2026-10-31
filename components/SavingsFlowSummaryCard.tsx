@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
+import { useColorScheme } from "nativewind";
 import type { Goal } from "@/types";
 import type { GoalFundingSummary } from "@/utils/savingsSummary";
 
@@ -31,9 +32,11 @@ function SavingsSummaryHeader({ name, returnedLabel, allowInline }: { name: stri
 function AmountCell({ label, amount, color, align = "left", inline = false, fmt }: {
   label: string; amount: number; color: string; align?: "left" | "right"; inline?: boolean; fmt: (value: number) => string;
 }) {
+  const { colorScheme } = useColorScheme();
+  const darkAmounts: Record<string, string> = { "#7c3aed": "#c4b5fd", "#475569": "#c6bfb3", "#059669": "#81c39a", "#0f766e": "#8ac9b8" };
   return <View className={inline ? "min-w-0 flex-1 flex-row items-center justify-between gap-3" : `min-w-0 flex-1 ${align === "right" ? "items-end" : "items-start"}`}>
     <Text className={`${inline ? "min-w-0 flex-1 " : ""}text-[10px] leading-[13px] text-slate-500 dark:text-slate-300`} numberOfLines={1}>{label}</Text>
-    <Text className={`${inline ? "max-w-[50%] text-right" : "mt-0.5"} text-xs font-extrabold`} style={{ color }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(amount)}</Text>
+    <Text className={`${inline ? "max-w-[50%] text-right" : "mt-0.5"} text-xs font-extrabold`} style={{ color: colorScheme === "dark" ? darkAmounts[color] ?? color : color }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(amount)}</Text>
   </View>;
 }
 

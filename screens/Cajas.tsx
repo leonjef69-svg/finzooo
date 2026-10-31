@@ -1104,7 +1104,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       <SpaceSwitcher active="boxes" />
       <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
         <View className="flex-1 items-center justify-center bg-black/40 px-6">
-          <View accessibilityViewIsModal className="w-full rounded-2xl bg-white p-6 dark:bg-noche">
+          <View accessibilityViewIsModal className="w-full rounded-2xl bg-white p-6 dark:bg-noche-3">
             <ActivityIndicator size="large" color="#059669" />
             <Text accessibilityLiveRegion="polite" className="mt-4 text-center text-sm text-slate-900 dark:text-slate-100">{t("boxes.moneyWorking")}</Text>
           </View>
@@ -1114,7 +1114,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       {repairCloudChanged ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t("boxes.repairCloudChanged")}</Text> : null}
       <Modal transparent visible={repairReviewVisible} animationType="fade" onRequestClose={() => setRepairReviewVisible(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View style={{ maxHeight: "88%" }} className="rounded-t-3xl bg-white px-5 pt-4 pb-5 dark:bg-noche">
+          <View style={{ maxHeight: "88%" }} className="rounded-t-3xl bg-white px-5 pt-4 pb-5 dark:bg-noche-panel">
             <View className="mb-2 flex-row items-center justify-between">
               <Text className="flex-1 text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.repairReview")}</Text>
               <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} onPress={() => setRepairReviewVisible(false)} className="min-h-11 min-w-11 items-end justify-center">
@@ -1211,7 +1211,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           {linkCandidates.length > linkLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setLinkLimit(value => value + 20)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("common.show")}</Text></TouchableOpacity> : null}
           <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => setLinkReview(null)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("common.cancel")}</Text></TouchableOpacity>
         </View> : null}
-        {compartiendo && !caja ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja || cajasOcultas.has(caja.id) ? (
+        {compartiendo && !caja ? <Text className="py-8 text-center text-slate-500 dark:text-slate-300">{t("common.loading")}</Text> : lista || !caja || cajasOcultas.has(caja.id) ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
             <View className="mb-3 flex-row gap-3">
@@ -1229,7 +1229,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <TextInput disableFullscreenUI editable={!guardando} autoComplete="off" importantForAutofill="no" value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
                 <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
-                {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
+                {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
               </View>
             ) : null}
             {uniendoCaja ? <View className="mb-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
@@ -1258,12 +1258,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{cajasSeleccionadas.length} {cajasSeleccionadas.length === 1 ? "seleccionada" : "seleccionadas"}</Text>
                 <View className="flex-row items-center gap-3">
                   <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!cajasSeleccionadas.length} onPress={() => borrarCajas()} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!cajasSeleccionadas.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
-                  <TouchableOpacity onPress={confirmarBorrarTodasLasCajas} hitSlop={6}><Text className="text-sm font-bold text-rose-500">{t("home.deleteAll")}</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => { setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={confirmarBorrarTodasLasCajas} hitSlop={6}><Text className="text-sm font-bold text-rose-500 dark:text-rose-300">{t("home.deleteAll")}</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600 dark:text-emerald-300">{t("common.cancel")}</Text></TouchableOpacity>
                 </View>
               </> : <>
                 <View className="flex-row items-center gap-2"><Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.myBoxes")}</Text>{!ready || (accountUid && !compartidasConocidas && cargandoCompartidas) ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#64748b" /> : null}</View>
-                {cajasEnLista.length > 0 ? <TouchableOpacity accessibilityLabel={t("common.select")} onPress={() => { setSeleccionandoCajas(true); setCajasSeleccionadas([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity> : null}
+                {cajasEnLista.length > 0 ? <TouchableOpacity accessibilityLabel={t("common.select")} onPress={() => { setSeleccionandoCajas(true); setCajasSeleccionadas([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600 dark:text-emerald-300">{t("common.select")}</Text></TouchableOpacity> : null}
               </>}
             </View> : null}
             {cajasEnLista.map((item) => (
@@ -1285,7 +1285,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
               <View className="ml-2.5 flex-1"><Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text><Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{saldosCompartidas[item.id] === undefined ? "…" : formatAmount(saldosCompartidas[item.id], currencySymbolFor(item.currency), item.currency)}</Text></View><ArrowLeftRight size={17} color="#64748b" />
             </TouchableOpacity>) : null}
-            {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={actualizarListaCajas} className="min-h-11 justify-center"><Text className="text-sm text-slate-500">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
+            {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={actualizarListaCajas} className="min-h-11 justify-center"><Text className="text-sm text-slate-500 dark:text-slate-300">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
             {ready && cajasEnLista.length === 0 && (verArchivadas || (!compartidasEnLista.length && !cargandoCompartidas && !errorCompartidas)) && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
                 <Boxes size={28} color="#94a3b8" />
@@ -1300,8 +1300,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
             <Text className="text-2xl font-extrabold text-teal-700 dark:text-teal-300">{fmt(saldoActual)}</Text>
             <Text className="text-sm leading-6 text-slate-600 dark:text-slate-300">{t("boxes.archiveReadOnly")}</Text>
             {filasArchivadas.slice(0, movementLimit).map(({ key, item }, index) => <View key={key}>
-              {startsMovementDay(filasArchivadas, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : <MovementDivider />}
+              {startsMovementDay(filasArchivadas, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
               <View className="py-3"><Text className="font-bold text-slate-900 dark:text-slate-100">{item.descripcion}</Text>{horaDe(item.creadoEn) ? <Text className="text-xs text-slate-500 dark:text-slate-300">{horaDe(item.creadoEn)}</Text> : null}<Text className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.tipo === "ingreso" ? "+" : "−"}{fmt(item.monto)}</Text></View>
+              <MovementDivider />
             </View>)}
             {movimientos.length > movementLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setMovementLimit(value => value + 60)} className="min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("common.show")}</Text></TouchableOpacity> : null}
             <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => void cambiarArchivoCaja(caja.id, false)} className="min-h-11 items-center justify-center rounded-xl border border-teal-300"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.archiveRestore")}</Text></TouchableOpacity>
@@ -1355,8 +1356,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>
                 <View className="flex-row items-center gap-3">
                   <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!seleccionados.length} onPress={confirmarBorrarSeleccionados} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
-                  <TouchableOpacity onPress={confirmarBorrarTodo} hitSlop={6}><Text className="text-sm font-bold text-rose-500">{t("home.deleteAll")}</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={confirmarBorrarTodo} hitSlop={6}><Text className="text-sm font-bold text-rose-500 dark:text-rose-300">{t("home.deleteAll")}</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600 dark:text-emerald-300">{t("common.cancel")}</Text></TouchableOpacity>
                 </View>
               </> : movimientos.length > 0 ? <>
                 <MovementAllButton label={t("boxes.history")} activeFilter={filter !== null} onPress={() => setFilter(null)} />
@@ -1364,10 +1365,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                   {recentMovementTypes.income ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.filterIncome")} accessibilityState={{ selected: filter === "ingreso" }} onPress={() => setFilter("ingreso")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "ingreso" ? "bg-emerald-200" : "bg-emerald-50"}`}><ArrowUp size={19} color="#047857" strokeWidth={2.6} /></TouchableOpacity> : null}
                   {recentMovementTypes.expense ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.filterExpense")} accessibilityState={{ selected: filter === "gasto" }} onPress={() => setFilter("gasto")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "gasto" ? "bg-rose-200" : "bg-rose-50"}`}><ArrowDown size={19} color="#be123c" strokeWidth={2.6} /></TouchableOpacity> : null}
                 </View>
-                <TouchableOpacity accessibilityLabel={t("boxes.selectMovements")} onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel={t("boxes.selectMovements")} onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600 dark:text-emerald-300">{t("common.select")}</Text></TouchableOpacity>
               </> : null}
             </View>
-            {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map((row, index) => {
+            {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500 dark:text-slate-300">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map((row, index) => {
               const { key, item, transferGroup } = row;
               const rowTime = linkedMovementRowTime(row);
               const transferencia = isLinkedSpaceTransfer(item);
@@ -1377,12 +1378,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               const startsDay = startsMovementDay(filasVisibles, index, row => row.item.fecha);
               return <View key={key}>
                 {startsDay ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
-                {index > 0 && !startsDay ? <MovementDivider /> : null}
+
               <TouchableOpacity disabled={!seleccionando} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`min-h-[62px] flex-row items-center border-l-2 px-2 py-3 ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950/40" : "border-transparent"}`}>
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-                {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text>{rowTime || item.method ? <Text className="text-xs text-slate-500 dark:text-slate-300">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text> : null}</View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
+                {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text>{rowTime || item.method ? <Text className="text-xs text-slate-500 dark:text-slate-300">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text> : null}</View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
                 {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${filaSeleccionada ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
-              </TouchableOpacity></View>;
+              </TouchableOpacity><MovementDivider /></View>;
             })}
             {cajaEnRevision ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairReview")} onPress={() => setRepairReviewVisible(true)} className="mt-3 min-h-11 items-center justify-center">
               <Text className="text-sm text-slate-500 dark:text-slate-400">{t("boxes.repairReview")}</Text>

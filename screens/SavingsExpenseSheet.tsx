@@ -25,7 +25,7 @@ export default function SavingsExpenseSheet({ needed, free, onCancel, onConfirm,
   const { animatedPaddingStyle, keyboardVisible, onFieldFocus, onFieldBlur } = useKeyboardAnimatedPadding();
   return <Animated.View style={[{ position: "absolute", inset: 0, justifyContent: "flex-end" }, animatedPaddingStyle]}>
     <View className="absolute inset-0 bg-slate-900/40" />
-    <View className="rounded-t-3xl bg-white p-5 dark:bg-noche-2" style={{ maxHeight: "100%", paddingBottom: keyboardVisible ? 20 : insets.bottom + 24 }}>
+    <View className="rounded-t-3xl bg-white p-5 dark:bg-noche-panel" style={{ maxHeight: "100%", paddingBottom: keyboardVisible ? 20 : insets.bottom + 24 }}>
       <ScrollView keyboardShouldPersistTaps="handled">
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savings.expenseTitle")}</Text>
         <Text className="my-3 text-sm text-slate-600 dark:text-slate-200">{t("savings.expenseBody", { free: fmt(Math.max(0, free)), amount: fmt(needed) })}</Text>

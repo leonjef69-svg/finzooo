@@ -3,12 +3,27 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBa
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, X } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useColorScheme } from "nativewind";
+import { NOCHE } from "@/constants/style";
 
 export const ENTRY_COLORS = {
   background: "#f7f5ee", paper: "#fffdf8", ink: "#28352a", muted: "#73786b",
   line: "#e4e5da", olive: "#506946", soft: "#edf1e4", peach: "#f5e9dc",
   brown: "#8a613c", error: "#a74436", scrim: "rgba(37,50,37,0.4)",
+  primary: "#506946", onPrimary: "#fffdf8",
 };
+type EntryColors = typeof ENTRY_COLORS;
+const ENTRY_DARK_COLORS: EntryColors = {
+  background: NOCHE.fondo, paper: NOCHE.tarjeta, ink: NOCHE.texto,
+  muted: NOCHE.textoSuave, line: NOCHE.borde, olive: "#81c39a",
+  soft: NOCHE.encima, peach: NOCHE.encima, brown: "#d8b88e",
+  error: "#e6a0a7", scrim: "rgba(0,0,0,0.6)", primary: "#39734d", onPrimary: "#fffdf8",
+};
+export function useEntryTheme() {
+  const { colorScheme } = useColorScheme();
+  const dark = colorScheme === "dark";
+  return { dark, colors: dark ? ENTRY_DARK_COLORS : ENTRY_COLORS, styles: dark ? darkEntryStyles : entryStyles };
+}
 export const ENTRY_FONT = { regular: "FinoEntryRegular", medium: "FinoEntryMedium", bold: "FinoEntryBold" };
 export const ENTRY_FONTS = {
   FinoEntryRegular: require("../assets/fonts/NunitoSans_400Regular.ttf"),
@@ -20,11 +35,12 @@ export const ENTRY_FONTS = {
 export function EntryScreen({ children, onBack, disabled = false, center = false, contentStyle }: {
   children: ReactNode; onBack?: () => void; disabled?: boolean; center?: boolean; contentStyle?: StyleProp<ViewStyle>;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles, dark } = useEntryTheme();
   const insets = useSafeAreaInsets();
   const { t } = useAppData();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={entryStyles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor={ENTRY_COLORS.background} />
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} backgroundColor={ENTRY_COLORS.background} />
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" bounces={false}
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 6, paddingBottom: insets.bottom + 20 }}>
         <View style={entryStyles.header}>
@@ -38,20 +54,23 @@ export function EntryScreen({ children, onBack, disabled = false, center = false
 }
 
 export function EntryHeading({ title, subtitle, icon }: { title: string; subtitle?: string; icon?: ReactNode }) {
+  const { styles: entryStyles } = useEntryTheme();
   return <View style={{ marginBottom: 20 }}><View style={entryStyles.headingRow}>{icon ? <View style={entryStyles.headingIcon}>{icon}</View> : null}<Text style={[entryStyles.title, { flex: 1 }]}>{title}</Text></View>{subtitle ? <Text style={entryStyles.subtitle}>{subtitle}</Text> : null}</View>;
 }
 
 export function EntryButton({ label, onPress, disabled = false, loading = false, secondary = false }: {
   label: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   return <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={disabled || loading}
     accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading, busy: loading }}
     style={[entryStyles.button, secondary && entryStyles.secondaryButton, (disabled || loading) && { opacity: 0.65 }]}>
-    {loading ? <ActivityIndicator color={secondary ? ENTRY_COLORS.olive : ENTRY_COLORS.paper} /> : <Text style={[entryStyles.buttonText, secondary && { color: ENTRY_COLORS.ink }]}>{label}</Text>}
+    {loading ? <ActivityIndicator color={secondary ? ENTRY_COLORS.olive : ENTRY_COLORS.onPrimary} /> : <Text style={[entryStyles.buttonText, secondary && { color: ENTRY_COLORS.ink }]}>{label}</Text>}
   </TouchableOpacity>;
 }
 
 export function EntryLink({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const { styles: entryStyles } = useEntryTheme();
   return <TouchableOpacity onPress={onPress} disabled={disabled} accessibilityRole="button" style={entryStyles.link}><Text style={entryStyles.linkText}>{label}</Text></TouchableOpacity>;
 }
 
@@ -59,6 +78,7 @@ export function EntryLink({ label, onPress, disabled = false }: { label: string;
 export function EntryPanel({ title, onBack, closeLabel, children, large = false }: {
   title: string; onBack: () => void; closeLabel: string; children: ReactNode; large?: boolean;
 }) {
+  const { colors: ENTRY_COLORS, styles: entryStyles } = useEntryTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   return <View style={[entryStyles.panelOverlay, { paddingTop: insets.top + 24 }]}>
@@ -70,7 +90,7 @@ export function EntryPanel({ title, onBack, closeLabel, children, large = false 
   </View>;
 }
 
-export const entryStyles = StyleSheet.create({
+function createEntryStyles(ENTRY_COLORS: EntryColors) { return StyleSheet.create({
   screen: { flex: 1, backgroundColor: ENTRY_COLORS.background },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, minHeight: 52, width: "100%", maxWidth: 460, alignSelf: "center" },
   headerSpacer: { width: 42 }, back: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: ENTRY_COLORS.line, backgroundColor: ENTRY_COLORS.paper, alignItems: "center", justifyContent: "center" },
@@ -83,8 +103,8 @@ export const entryStyles = StyleSheet.create({
   text: { fontFamily: ENTRY_FONT.regular, fontSize: 14, lineHeight: 21, color: ENTRY_COLORS.ink },
   muted: { fontFamily: ENTRY_FONT.regular, fontSize: 12, lineHeight: 18, color: ENTRY_COLORS.muted },
   error: { fontFamily: ENTRY_FONT.medium, color: ENTRY_COLORS.error, fontSize: 12, lineHeight: 18, marginVertical: 8 },
-  button: { width: "100%", minHeight: 51, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: ENTRY_COLORS.olive, marginBottom: 9 },
-  buttonText: { fontFamily: ENTRY_FONT.bold, color: ENTRY_COLORS.paper, fontSize: 15 },
+  button: { width: "100%", minHeight: 51, paddingVertical: 13, paddingHorizontal: 14, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: ENTRY_COLORS.primary, marginBottom: 9 },
+  buttonText: { fontFamily: ENTRY_FONT.bold, color: ENTRY_COLORS.onPrimary, fontSize: 15 },
   secondaryButton: { backgroundColor: ENTRY_COLORS.paper, borderWidth: 1, borderColor: ENTRY_COLORS.line },
   link: { minHeight: 44, alignItems: "center", justifyContent: "center", paddingVertical: 8 },
   linkText: { fontFamily: ENTRY_FONT.bold, fontSize: 13, color: ENTRY_COLORS.olive },
@@ -95,4 +115,6 @@ export const entryStyles = StyleSheet.create({
   panelHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 },
   panelTitle: { fontFamily: ENTRY_FONT.bold, fontSize: 21, color: ENTRY_COLORS.ink, flex: 1 },
   close: { width: 42, height: 42, borderRadius: 12, backgroundColor: ENTRY_COLORS.background, alignItems: "center", justifyContent: "center" },
-});
+}); }
+export const entryStyles = createEntryStyles(ENTRY_COLORS);
+const darkEntryStyles = createEntryStyles(ENTRY_DARK_COLORS);

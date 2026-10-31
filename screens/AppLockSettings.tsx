@@ -226,7 +226,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
     <View className="flex-1 justify-end bg-black/45" style={{ paddingTop: insets.top + 24 }} accessibilityViewIsModal>
       <Pressable testID="app-lock-settings-backdrop" accessibilityRole="button" accessibilityLabel={t("common.close")}
         disabled={busy} onPress={closePanel} className="absolute inset-0" />
-      <View testID="app-lock-settings-sheet" className="rounded-t-[28px] bg-white dark:bg-noche px-5 pt-2"
+      <View testID="app-lock-settings-sheet" className="rounded-t-[28px] bg-white dark:bg-noche-panel px-5 pt-2"
         style={{ maxHeight: height - insets.top - 24, paddingBottom: Math.max(insets.bottom, 12) + 8 }}>
       <View className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-600 self-center my-2" />
       <View className="pb-2 flex-row items-center justify-between gap-2">
@@ -242,7 +242,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
       <ScrollView style={{ flexGrow: 0 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
         {step !== "idle" && <TouchableOpacity testID="app-lock-settings-cancel" accessibilityRole="button" accessibilityLabel={t("common.cancel")}
           disabled={busy} onPress={reset} className="min-h-11 self-start flex-row items-center gap-1 mb-2">
-          <ChevronLeft size={17} color="#059669" /><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text>
+          <ChevronLeft size={17} color="#059669" /><Text className="text-sm font-bold text-emerald-600 dark:text-emerald-300">{t("common.cancel")}</Text>
         </TouchableOpacity>}
         {step !== "idle" ? (
           <View className="items-center pb-3">
@@ -251,9 +251,9 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
               {t(conHuella && kind !== "none" && step !== "verify" ? "lock.backupHint" : "lock.stepHint", { count: PIN_LENGTH })}
             </Text>
             <PinPad value={pin} onChange={(value) => { if (!saving.current) setPin(value); }} disabled={busy} error={error} deleteLabel={t("lock.eraseDigit")} biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")} />
-            {busy && <Text accessibilityLiveRegion="polite" className="text-xs text-slate-500 mt-3">{t("common.loading")}</Text>}
+            {busy && <Text accessibilityLiveRegion="polite" className="text-xs text-slate-500 mt-3 dark:text-slate-300">{t("common.loading")}</Text>}
             {message !== "" && (
-              <Text className="text-xs text-rose-500 mt-6 text-center">{message}</Text>
+              <Text className="text-xs text-rose-500 mt-6 text-center dark:text-rose-300">{message}</Text>
             )}
           </View>
         ) : (
@@ -315,7 +315,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
           {loaded && kind === "none" && <Text className="mt-3 px-1 text-[11px] text-slate-500 dark:text-slate-300">
             {t("lock.biometricUnavailable")}
           </Text>}
-          {message !== "" && <Text className="mt-3 text-xs text-rose-500">{message}</Text>}
+          {message !== "" && <Text className="mt-3 text-xs text-rose-500 dark:text-rose-300">{message}</Text>}
 
           {/* LOS CINCO PÁRRAFOS, DETRÁS DE UN TOQUE (19/08/2026)
               La pantalla tenía varios bloques de texto sobre el método, la recuperación

@@ -178,7 +178,7 @@ export default function NuevoPagoProgramado({
   const Dibujo = iconoDe(icono);
   const tinta = (color && COLOR_HEX_600[color]) || TINTA[tipo];
   const repeticion = textoDeRepeticion(dia, repite);
-  const campo = oscuro ? "bg-slate-800" : "bg-slate-100";
+  const campo = oscuro ? "bg-noche-3 border border-noche-borde" : "bg-slate-100";
 
   /**
    * LA FOTO, RECORTADA A UN CUADRADO Y ACHICADA A 256.
@@ -284,13 +284,13 @@ export default function NuevoPagoProgramado({
               key={x}
               onPress={() => setTipo(x)}
               className={`flex-1 py-2.5 rounded-xl items-center ${
-                tipo === x ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-100 dark:bg-noche-2"
+                tipo === x ? "bg-slate-900 dark:bg-emerald-700" : "bg-slate-100 dark:bg-noche-2"
               }`}
             >
               <Text
                 className={`text-[13px] ${
                   tipo === x
-                    ? "text-white dark:text-slate-900 font-bold"
+                    ? "text-white dark:text-white font-bold"
                     : "text-slate-600 dark:text-slate-300"
                 }`}
               >
@@ -411,14 +411,14 @@ export default function NuevoPagoProgramado({
                     onPress={() => setIconoElegido(null)}
                     className="py-2.5 mt-2.5 rounded-xl items-center bg-white dark:bg-noche-2"
                   >
-                    <Text className="text-[12px] font-bold text-rose-600">
+                    <Text className="text-[12px] font-bold text-rose-600 dark:text-rose-300">
                       {t("calendario.nuevo.quitarFoto")}
                     </Text>
                   </TouchableOpacity>
                 )}
                 {/* Se dice que la foto no viaja: quien cambie de celular y no lo sepa creería
                     que se perdió. Ver pagosParaLaNube — el documento tiene tope de 1 MB. */}
-                <Text className="text-[11px] leading-4 text-slate-400 mt-2.5">
+                <Text className="text-[11px] leading-4 text-slate-400 mt-2.5 dark:text-slate-300">
                   {t("calendario.nuevo.fotoNota")}
                 </Text>
               </View>
@@ -436,7 +436,7 @@ export default function NuevoPagoProgramado({
                       borderRadius: 18,
                       backgroundColor: COLOR_HEX_600[k],
                       borderWidth: color === k ? 3 : 0,
-                      borderColor: oscuro ? "#f1f5f9" : "#0f172a",
+                      borderColor: oscuro ? "#f4f0e8" : "#0f172a",
                     }}
                   />
                 ))}
@@ -448,7 +448,7 @@ export default function NuevoPagoProgramado({
         <View className="flex-row gap-2.5 mb-3">
           {!esRecordatorio && (
             <View className={`flex-1 h-[50px] rounded-2xl px-4 flex-row items-center ${campo}`}>
-              <Text className="text-[13px] text-slate-400 mr-1.5">{currencySymbolFor(userCurrency)}</Text>
+              <Text className="text-[13px] text-slate-400 mr-1.5 dark:text-slate-300">{currencySymbolFor(userCurrency)}</Text>
               <TextInput
                 disableFullscreenUI                value={monto}
                 onChangeText={(v) => setMonto(soloMonto(v))}
@@ -519,7 +519,7 @@ export default function NuevoPagoProgramado({
                 keyboardType="number-pad"
                 className="w-8 text-[17px] text-center text-slate-900 dark:text-slate-100"
               />
-              <Text className="text-[17px] text-slate-400">:</Text>
+              <Text className="text-[17px] text-slate-400 dark:text-slate-300">:</Text>
               <TextInput
                 disableFullscreenUI                value={horaMM}
                 onChangeText={(v) => setHoraMM(soloNumeros(v, 59))}
@@ -543,7 +543,7 @@ export default function NuevoPagoProgramado({
             className="flex-row items-center justify-center gap-2 py-3.5 mt-2"
           >
             <Trash2 size={15} color="#e11d48" />
-            <Text className="text-[13px] font-bold text-rose-600">
+            <Text className="text-[13px] font-bold text-rose-600 dark:text-rose-300">
               {t("calendario.nuevo.borrar")}
             </Text>
           </TouchableOpacity>

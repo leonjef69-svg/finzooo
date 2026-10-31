@@ -77,9 +77,10 @@ export const SALDO_TARJETA = {
  */
 export const NOCHE = {
   fondo: "#000000",
-  tarjeta: "#1b1b1b",
-  encima: "#272727",
-  borde: "#3a3a3a",
-  texto: "#f5f5f5",
-  textoSuave: "#b8b8b8",
+  tarjeta: "#242321",
+  encima: "#302e2b",
+  panel: "#211f1d",
+  borde: "#494641",
+  texto: "#f4f0e8",
+  textoSuave: "#b8b2a8",
 } as const;

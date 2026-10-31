@@ -70,13 +70,13 @@ assert.match(inicio, /showPreviousBalanceCard \? <Animated\.View entering=\{Fade
   "la tarjeta anterior entra y sale con una transición breve");
 assert.match(inicio, /layout=\{LinearTransition\.duration\(240\)\}/,
   "el contenido inferior acompaña el alto de la tarjeta con una transición suave");
-assert.match(inicio, /className=\{`text-sm font-bold \$\{peachOlive \? "text-emerald-800" : "text-emerald-100"\}`\}>\s*\{t\("home\.budgetedOf", \{ amount: formatBudgetDisplay\(hideBalance, budget, fmt\) \}\)\}/,
+assert.match(inicio, /className=\{`text-sm font-bold[^`]+`\}>\s*\{t\("home\.budgetedOf", \{ amount: formatBudgetDisplay\(hideBalance, budget, fmt\) \}\)\}/,
   "el presupuesto del mes va después del monto en una sola frase legible");
-assert.match(inicio, /className="mt-2 h-2 overflow-hidden rounded-full"\s+style=\{\{ backgroundColor: peachOlive \? "rgba\(101, 118, 74, 0\.16\)" : "rgba\(255, 255, 255, 0\.27\)" \}\}/,
+assert.match(inicio, /className="mt-2 h-2 overflow-hidden rounded-full"\s+style=\{\{ backgroundColor: \(peachOlive && colorScheme !== "dark"\) \? "rgba\(101, 118, 74, 0\.16\)" : "rgba\(255, 255, 255, 0\.27\)" \}\}/,
   "la barra de presupuesto queda algo más gruesa y su fondo se adapta al tema");
-assert.match(inicio, /className="flex-1 text-base text-slate-600 dark:text-slate-200 font-semibold" numberOfLines=\{1\}>\s*\{t\("home\.spent"\)\}/,
+assert.match(inicio, /className="flex-1 text-base text-slate-600 dark:text-white font-semibold" numberOfLines=\{1\}>\s*\{t\("home\.spent"\)\}/,
   "Gastado mantiene el rótulo legible junto a la flecha y en una sola línea");
-assert.match(inicio, /className="flex-1 text-base text-slate-600 dark:text-slate-200 font-semibold" numberOfLines=\{1\}>\s*\{t\("home\.income"\)\}/,
+assert.match(inicio, /className="flex-1 text-base text-slate-600 dark:text-white font-semibold" numberOfLines=\{1\}>\s*\{t\("home\.income"\)\}/,
   "Ingresos mantiene el rótulo legible junto a la flecha y en una sola línea");
 
 console.log("El presupuesto conserva el monto exacto y separa presupuesto y saldo anterior.");
