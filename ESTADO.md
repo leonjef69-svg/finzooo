@@ -1,3 +1,18 @@
+# Reportes: total de dona en hueco libre y montos diarios en esquina — 31/10/2026 — desarrollo
+
+La tarjeta de gastos/ingresos por categoría coloca su resumen en una fila
+compacta inmediatamente debajo de la dona cuando la posición está libre. Si
+una burbuja o conector de categoría ocupa esa franja, conserva la distribución
+actual debajo del gráfico. No altera categorías, importes ni selección.
+
+En Gastos diarios, los montos de Ingresos y Gastos quedan alineados a la derecha
+de sus etiquetas, en las esquinas de cada mitad. Los montos largos pueden
+ocupar más de una línea sin perder cifras. No modifica datos ni guardados.
+
+Marca `31oct-reportes-total-y-diario`. Sin pruebas automatizadas ni revisión
+visual del emulador en esta entrega. No hay cambios nativos, AAB, OTA ni
+publicación. Sigue/falta: revisar ambos estados visuales en el emulador habitual.
+
 # Candidato Google Play 1.0.9 / código 11 — 30/10/2026 — pendiente
 
 La captura de Play corresponde a la versión publicada 10 (1.0.8): compatibilidad

@@ -1,3 +1,12 @@
+# 31/10/2026 — total del gráfico de categorías y cifras de Gastos diarios (desarrollo)
+
+Marca `31oct-reportes-total-y-diario`. El resumen pasa al hueco libre bajo la
+dona solo cuando no choca con iconos ni conectores; de lo contrario permanece
+debajo del gráfico. En Gastos diarios, cada importe queda alineado a la derecha
+de su etiqueta. Solo presentación: sin cambios en datos, almacenamiento ni
+código nativo. Sin pruebas automatizadas ni revisión en emulador. No es APK,
+OTA ni publicación. Falta verificación visual en el emulador habitual.
+
 ## 30/10/2026 — apariencia oscura mate completa (desarrollo)
 
 Marca `30oct-oscuro-mate-completo`: paleta oscura común, superficies elevadas,

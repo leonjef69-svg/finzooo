@@ -31,6 +31,10 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
   const selectedId = selectedItem?.id ?? null;
   const circumference = 2 * Math.PI * radius;
   const { sectors } = useMemo(() => crearSectoresVisibles(items.map(item => item.value)), [items]);
+  const connectors = useMemo(
+    () => items.map((_, index) => crearConectorRosquilla(sectors[index].middle, positions[index], layout)),
+    [items, sectors, positions, layout],
+  );
   const toggle = (id: string) => setSelected(current => current === id ? null : id);
   const centerLabel = selectedItem?.name ?? t("reports.allCategories");
   const amountLabel = selectedItem?.name ?? totalLabel;
@@ -42,6 +46,27 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
   const centerWidth = Math.max(36, (radius - 12) * 2);
   const compactCenter = radius < 44;
 
+  // Si debajo de la dona queda un hueco real, el resumen lo ocupa como una
+  // fila. Solo se eleva cuando caben juntos el nombre y el monto y no toca
+  // iconos ni conectores; con otra categoría abajo, conserva su lugar original.
+  const summaryHeight = 46;
+  const summaryTop = centerY + radius + 12;
+  const summaryBottom = summaryTop + summaryHeight;
+  const totalTextWidth = amountLabel.length * 7 + centerValue.length * 8.5 + 36;
+  const visualBottom = Math.max(
+    centerY + radius + 10,
+    ...positions.map(point => point.y + bubble / 2),
+    ...connectors.flatMap(connector => connector.points.map(point => point.y)),
+  );
+  const blocksSummary = positions.some(point =>
+    point.y + bubble / 2 > summaryTop && point.y - bubble / 2 < summaryBottom,
+  ) || connectors.some(connector => connector.points.some(point => point.y >= summaryTop && point.y <= summaryBottom));
+  const canPlaceSummaryInGap = totalTextWidth <= layout.width - 24
+    && summaryTop >= 0
+    && summaryBottom <= layout.height
+    && summaryBottom >= visualBottom
+    && !blocksSummary;
+
   if (total <= 0) return null;
 
   return (
@@ -50,7 +75,7 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
       <Svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`}>
         {items.map((item, index) => (
           <Path key={`line-${item.id}`}
-            d={crearConectorRosquilla(sectors[index].middle, positions[index], layout).path}
+            d={connectors[index].path}
             fill="none" stroke={item.color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"
             strokeOpacity={selectedId == null || selectedId === item.id ? 1 : 0.25} />
         ))}
@@ -104,10 +129,25 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
       })}
       </View>
       <View accessible accessibilityLiveRegion="polite" accessibilityLabel={`${amountLabel}: ${centerValue}`}
-        className="bg-slate-50 dark:bg-noche-3 rounded-2xl" style={{ width: "100%", padding: 12, marginTop: 10 }}>
-        <Text className="text-slate-500 dark:text-slate-300" style={{ fontFamily: ENTRY_FONT.medium, fontSize: 13, textAlign: "center", marginBottom: 4 }}>{amountLabel}</Text>
+        className="bg-slate-50 dark:bg-noche-3 rounded-2xl"
+        style={{
+          width: "100%",
+          padding: 12,
+          marginTop: canPlaceSummaryInGap ? summaryTop - layout.height : 10,
+          minHeight: canPlaceSummaryInGap ? summaryHeight : undefined,
+          flexDirection: canPlaceSummaryInGap ? "row" : "column",
+          alignItems: "center",
+          justifyContent: canPlaceSummaryInGap ? "space-between" : "center",
+          gap: canPlaceSummaryInGap ? 8 : 0,
+        }}>
+        <Text className="text-slate-500 dark:text-slate-300"
+          style={{ fontFamily: ENTRY_FONT.medium, fontSize: 13, textAlign: canPlaceSummaryInGap ? "left" : "center", flexShrink: 1, marginBottom: canPlaceSummaryInGap ? 0 : 4 }}>
+          {amountLabel}
+        </Text>
         <Text selectable className="text-slate-900 dark:text-slate-100"
-          style={{ fontFamily: ENTRY_FONT.bold, fontSize: Math.max(16, Math.min(26, (layout.width - 24) / Math.max(1, centerValue.length * 0.61))), textAlign: "center" }}>{centerValue}</Text>
+          style={{ fontFamily: ENTRY_FONT.bold, fontSize: canPlaceSummaryInGap ? 16 : Math.max(16, Math.min(26, (layout.width - 24) / Math.max(1, centerValue.length * 0.61))), textAlign: canPlaceSummaryInGap ? "right" : "center" }}>
+          {centerValue}
+        </Text>
       </View>
     </View>
   );

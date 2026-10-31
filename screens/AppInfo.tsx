@@ -28,7 +28,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? "1.0.9";
  * La versión comercial no sirve para distinguir dos ajustes de la misma entrega.
  * Esta sí.
  */
-const CODE_MARKER = "30oct-play-abierta-r8-1.0.9";
+const CODE_MARKER = "31oct-reportes-total-y-diario";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();

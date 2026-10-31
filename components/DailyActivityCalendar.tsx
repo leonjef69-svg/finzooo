@@ -170,25 +170,23 @@ export default function DailyActivityCalendar({
           </Text>
         ) : (
           <View className="flex-row items-start">
-            <View className="flex-1 pr-3">
-              <Text className="text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">
+            <View className="flex-1 pr-3 flex-row items-start justify-between gap-1">
+              <Text className="shrink-0 text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">
                 {t("reports.calendarIncome")}
               </Text>
               <Text
-                numberOfLines={2}
-                className={`mt-0.5 text-[15px] font-extrabold ${selected.income > 0 ? "text-emerald-700 dark:text-emerald-300" : "text-slate-400 dark:text-slate-500"}`}
+                className={`min-w-0 flex-1 text-right text-[15px] font-extrabold ${selected.income > 0 ? "text-emerald-700 dark:text-emerald-300" : "text-slate-400 dark:text-slate-500"}`}
               >
                 {activityText(selected.income, t("reports.calendarNoIncome"), "+")}
               </Text>
             </View>
             <View className="h-10 w-[2px] bg-slate-400 dark:bg-slate-500" />
-            <View className="flex-1 pl-3">
-              <Text className="text-[12px] font-semibold text-rose-700 dark:text-rose-300">
+            <View className="flex-1 pl-3 flex-row items-start justify-between gap-1">
+              <Text className="shrink-0 text-[12px] font-semibold text-rose-700 dark:text-rose-300">
                 {t("reports.calendarExpense")}
               </Text>
               <Text
-                numberOfLines={2}
-                className={`mt-0.5 text-right text-[15px] font-extrabold ${selected.expense > 0 ? "text-rose-700 dark:text-rose-300" : "text-slate-400 dark:text-slate-500"}`}
+                className={`min-w-0 flex-1 text-right text-[15px] font-extrabold ${selected.expense > 0 ? "text-rose-700 dark:text-rose-300" : "text-slate-400 dark:text-slate-500"}`}
               >
                 {activityText(selected.expense, t("reports.calendarNoExpense"), "−")}
               </Text>
