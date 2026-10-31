@@ -41,26 +41,20 @@ module.exports = {
         emerald: dynamicScale("emerald"),
         rose: dynamicScale("rose"),
         /*
-         * EL MODO OSCURO, EN CARBON. Antes era negro puro (#000000) y el problema no era el
-         * color: era que LA TARJETA Y EL FONDO ERAN LO MISMO. Lo unico que las separaba era un
-         * borde delgado, asi que la pantalla se veia plana y las filas se confundian entre si.
+         * EL MODO OSCURO: fondo negro, tarjetas carbón y controles más claros. El borde mantiene
+         * separación entre filas sin teñir los neutros de azul.
          *
-         * Ahora la tarjeta es un tono mas clara que el fondo y se distingue sola, sin depender
-         * del borde. Es lo que hacen casi todas las apps, y es lo que eligio el (21/08/2026)
-         * viendo las cuatro opciones dibujadas.
-         *
-         * El gris es neutro a proposito: en una app de dinero, el unico color fuerte de la
-         * pantalla tiene que ser el del saldo.
+         * Los ingresos y gastos usan verde y rojo; los demás elementos conservan neutros.
          */
         noche: {
           // El fondo de la pantalla.
           DEFAULT: "#000000",
           // Las tarjetas y las filas. UN TONO MAS CLARO QUE EL FONDO: esa es toda la idea.
-          2: "#1e1e1e",
+          2: "#1b1b1b",
           // Lo que va encima de una tarjeta: un campo, un boton apagado.
-          3: "#2a2a2a",
+          3: "#272727",
           // Las lineas. Mas claras que las tarjetas o no se ven.
-          borde: "#2f2f2f",
+          borde: "#3a3a3a",
         },
       },
     },

@@ -9,6 +9,10 @@ export function screenBackgroundForVisualStyle(style: VisualStyle, isDark: boole
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
+const DARK_NEUTRAL_SLATE = ["#fafafa", "#f2f2f2", "#e5e5e5", "#b8b8b8", "#a3a3a3", "#858585", "#686868", "#484848", "#303030", "#1b1b1b", "#0a0a0a"] as const;
+const DARK_EMERALD = ["#ecfdf5", "#d1fae5", "#a7f3d0", "#86d1a7", "#57b980", "#30976a", "#287c58", "#246b4a", "#164d36", "#103927", "#0a251b"] as const;
+const DARK_ROSE = ["#fff1f2", "#ffe4e6", "#fecdd3", "#e6a0a7", "#dc7b86", "#ce5a68", "#ac4654", "#923a45", "#6c2d36", "#4a2229", "#2d171a"] as const;
+
 const CLASSIC = {
   slate: ["#f8fafc", "#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b", "#475569", "#334155", "#1e293b", "#0f172a", "#020617"],
   emerald: ["#ecfdf5", "#d1fae5", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981", "#059669", "#047857", "#065f46", "#064e3b", "#022c22"],
@@ -34,7 +38,9 @@ export function nativewindThemeVariables(style: VisualStyle, isDark: boolean): R
   };
 
   for (const color of ["slate", "emerald", "rose"] as const) {
-    const shades = palette[color];
+    const shades = isDark
+      ? color === "slate" ? DARK_NEUTRAL_SLATE : color === "emerald" ? DARK_EMERALD : DARK_ROSE
+      : palette[color];
     SHADES.forEach((shade, index) => {
       variables[`--fino-${color}-${shade}`] = rgbTriplet(shades[index]);
     });
@@ -47,6 +53,7 @@ export function accentForVisualStyle(style: VisualStyle): string {
   return style === "peachOlive" ? "#65764a" : "#059669";
 }
 
-export function balanceGradientForVisualStyle(style: VisualStyle): readonly [string, string] {
+export function balanceGradientForVisualStyle(style: VisualStyle, isDark = false): readonly [string, string] {
+  if (isDark) return ["#1b1b1b", "#272727"];
   return style === "peachOlive" ? ["#f4d9c4", "#efd1b7"] : ["#059669", "#0f766e"];
 }

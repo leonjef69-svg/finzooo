@@ -68,15 +68,15 @@ export default function SavingsList({ goals, onBack, disponible, apartado, libre
     <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
       onScroll={({ nativeEvent: e }) => { if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - 200) setGoalLimit(n => Math.min(n + 40, goals.length)); }} scrollEventThrottle={160}>
       {soloLectura && <AvisoSoloLectura />}
-      <LinearGradient colors={peach ? ["#fae2cf", "#f2cbb0"] : ["#047857", "#0f766e"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 20, padding: 16 }}>
+      <LinearGradient colors={colorScheme === "dark" ? ["#1b1b1b", "#272727"] : peach ? ["#fae2cf", "#f2cbb0"] : ["#047857", "#0f766e"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 20, padding: 16, borderWidth: colorScheme === "dark" ? 1 : 0, borderColor: "#3a3a3a" }}>
         <View className="flex-row items-center justify-between gap-2">
-          <Text className={`flex-1 text-[11px] ${peach ? "text-slate-700" : "text-emerald-100"}`}>{t("savings.personalMoney", { month: monthLabel })}</Text>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("savings.help")} onPress={() => setHelp(value => !value)} className="h-8 w-8 items-center justify-center"><CircleHelp size={16} color={peach ? "#526b43" : "#d1fae5"} /></TouchableOpacity>
+          <Text className={`flex-1 text-[11px] ${colorScheme === "dark" ? "text-slate-300" : peach ? "text-slate-700" : "text-emerald-100"}`}>{t("savings.personalMoney", { month: monthLabel })}</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("savings.help")} onPress={() => setHelp(value => !value)} className="h-8 w-8 items-center justify-center"><CircleHelp size={16} color={colorScheme === "dark" ? "#d4d4d4" : peach ? "#526b43" : "#d1fae5"} /></TouchableOpacity>
         </View>
-        <Text className={`text-sm font-semibold ${peach ? "text-slate-800" : "text-emerald-100"}`}>{t("savings.personalAvailable")}</Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className={`mt-1 text-3xl font-extrabold ${libre < 0 ? peach ? "text-rose-700" : "text-rose-200" : peach ? "text-slate-900" : "text-white"}`}>{fmt(libre)}</Text>
-        <View className={`mt-3 flex-row items-center justify-between gap-3 border-t pt-3 ${peach ? "border-slate-700/15" : "border-white/20"}`}>
-          <Text className={`flex-1 text-xs font-semibold ${peach ? "text-slate-600" : "text-emerald-100"}`}>{t("savings.inGoals")}</Text>
+        <Text className={`text-sm font-semibold ${colorScheme === "dark" ? "text-slate-200" : peach ? "text-slate-800" : "text-emerald-100"}`}>{t("savings.personalAvailable")}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className={`mt-1 text-3xl font-extrabold ${libre < 0 ? peach || colorScheme === "dark" ? "text-rose-300" : "text-rose-200" : peach || colorScheme === "dark" ? "text-slate-100" : "text-white"}`}>{fmt(libre)}</Text>
+        <View className={`mt-3 flex-row items-center justify-between gap-3 border-t pt-3 ${colorScheme === "dark" ? "border-white/15" : peach ? "border-slate-700/15" : "border-white/20"}`}>
+          <Text className={`flex-1 text-xs font-semibold ${colorScheme === "dark" ? "text-slate-300" : peach ? "text-slate-600" : "text-emerald-100"}`}>{t("savings.inGoals")}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`max-w-[60%] text-lg font-bold ${peach ? "text-slate-900" : "text-white"}`}>{fmt(apartado)}</Text>
         </View>
       </LinearGradient>

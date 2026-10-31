@@ -77,9 +77,9 @@ export const SALDO_TARJETA = {
  */
 export const NOCHE = {
   fondo: "#000000",
-  tarjeta: "#1e1e1e",
-  encima: "#2a2a2a",
-  borde: "#2f2f2f",
-  texto: "#f1f5f9",
-  textoSuave: "#94a3b8",
+  tarjeta: "#1b1b1b",
+  encima: "#272727",
+  borde: "#3a3a3a",
+  texto: "#f5f5f5",
+  textoSuave: "#b8b8b8",
 } as const;
