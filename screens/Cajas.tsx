@@ -1216,19 +1216,19 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
             <View className="mb-3 flex-row gap-3">
               <TouchableOpacity onPress={() => { setUniendoCaja(false); setCreando(true); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={18} color="#fff" /><Text className="font-bold text-white">{t("family.create")}</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => { setCreando(false); setUniendoCaja(value => !value); setCodigoCaja(""); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setCreando(false); setUniendoCaja(value => !value); setCodigoCaja(""); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-noche-borde dark:bg-noche-2"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
             </View>
             {creando ? (
               <View className="mb-3 gap-2">
                 <View className="flex-row items-center gap-2">
-                <TextInput disableFullscreenUI editable={!guardando} value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
+                <TextInput disableFullscreenUI editable={!guardando} value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:border-noche-borde dark:text-slate-100" />
                 <TouchableOpacity accessibilityLabel={t("common.save")} accessibilityState={{ busy: guardando }} disabled={guardando || !ready} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
                 <TouchableOpacity accessibilityLabel={t("common.cancel")} disabled={guardando} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
                 </View>
                 <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
-                <TextInput disableFullscreenUI editable={!guardando} autoComplete="off" importantForAutofill="no" value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <TextInput disableFullscreenUI editable={!guardando} autoComplete="off" importantForAutofill="no" value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:border-noche-borde dark:text-slate-100" />
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
-                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
+                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:border-slate-500 dark:bg-noche-3" : "border-slate-200 dark:border-noche-borde dark:bg-noche-2"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
                 {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500 dark:text-slate-300">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
               </View>
             ) : null}
@@ -1245,7 +1245,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 autoCapitalize="characters"
                 placeholder={t("family.codePlaceholder")}
                 placeholderTextColor="#94a3b8"
-                className="h-11 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100"
+                className="h-11 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:border-noche-borde dark:text-slate-100"
               />
               <View className="mt-2 flex-row gap-2">
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} disabled={cargandoUnion} onPress={() => { setUniendoCaja(false); setCodigoCaja(""); }} className="min-h-10 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={19} color="#64748b" /></TouchableOpacity>
@@ -1271,9 +1271,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 key={item.id}
                 disabled={guardando || (!seleccionandoCajas && creando)}
                 onPress={() => seleccionandoCajas ? setCajasSeleccionadas(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]) : (setCajaId(item.id), setLista(false))}
-                className={`mb-2 min-h-[76px] flex-row items-center rounded-2xl border-[1.5px] bg-white px-3 py-2 dark:bg-noche-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-500 bg-teal-50 dark:border-teal-500 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}
+                className={`mb-2 min-h-[76px] flex-row items-center rounded-2xl border-[1.5px] bg-white px-3 py-2 dark:bg-noche-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-500 bg-teal-50 dark:border-slate-500 dark:bg-noche-3" : "border-slate-200 dark:border-noche-borde"}`}
               >
-                <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
+                <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-noche-3"><Boxes size={19} color="#0d9488" /></View>
                 <View className="ml-2.5 flex-1">
                   <Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text>
                   <Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{fmt(saldosPrivadas.get(item.id) ?? 0)}</Text>
@@ -1282,7 +1282,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </TouchableOpacity>
             ))}
             {!verArchivadas ? compartidasEnLista.map(item => <TouchableOpacity key={`shared:${item.id}`} accessibilityRole="button" disabled={guardando || seleccionandoCajas || creando} onPress={() => abrirCompartida(item)} className="mb-2 min-h-[76px] flex-row items-center rounded-2xl border-[1.5px] border-slate-200 bg-white px-3 py-2 dark:border-noche-borde dark:bg-noche-2">
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-noche-3"><Boxes size={19} color="#0d9488" /></View>
               <View className="ml-2.5 flex-1"><Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text><Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{saldosCompartidas[item.id] === undefined ? "…" : formatAmount(saldosCompartidas[item.id], currencySymbolFor(item.currency), item.currency)}</Text></View><ArrowLeftRight size={17} color="#64748b" />
             </TouchableOpacity>) : null}
             {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={actualizarListaCajas} className="min-h-11 justify-center"><Text className="text-sm text-slate-500 dark:text-slate-300">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
@@ -1312,8 +1312,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
             <View className="mb-2 mt-1 flex-row items-center justify-between">
               <TouchableOpacity onPress={() => setLista(true)} className="flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
               <View className="flex-row items-center gap-2">
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${t("family.members")}: ${accountUid ? 1 : 0}`} onPress={() => setVerMiembros(true)} className="h-10 flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 dark:bg-emerald-950"><UsersRound size={17} color="#059669" /><Text className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{t("family.members")}</Text><Text className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">{accountUid ? 1 : 0}</Text></TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.inviteAccessibility")} accessibilityState={{ disabled: compartiendo || guardando || (cajaEnRevision && !caja.sharingPending) }} disabled={compartiendo || guardando || (cajaEnRevision && !caja.sharingPending)} onPress={() => void compartirCaja()} className={`h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950 ${cajaEnRevision && !caja.sharingPending ? "opacity-40" : ""}`}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${t("family.members")}: ${accountUid ? 1 : 0}`} onPress={() => setVerMiembros(true)} className="h-10 flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 dark:bg-noche-3"><UsersRound size={17} color="#059669" /><Text className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{t("family.members")}</Text><Text className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">{accountUid ? 1 : 0}</Text></TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.inviteAccessibility")} accessibilityState={{ disabled: compartiendo || guardando || (cajaEnRevision && !caja.sharingPending) }} disabled={compartiendo || guardando || (cajaEnRevision && !caja.sharingPending)} onPress={() => void compartirCaja()} className={`h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-noche-3 ${cajaEnRevision && !caja.sharingPending ? "opacity-40" : ""}`}>
                 <UserPlus size={19} color="#0d9488" />
               </TouchableOpacity>
               </View>

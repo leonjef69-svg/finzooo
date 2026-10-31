@@ -974,7 +974,7 @@ function Fila({
         >
           {pago.nombre}
         </Text>
-        <Text className="text-[12px] mt-0.5" style={{ color: pagado ? "#94a3b8" : color }} numberOfLines={1}>
+        <Text className="text-[12px] mt-0.5" style={{ color: pagado ? "#94a3b8" : estado === "vencido" && oscuro ? "#f5f2eb" : color }} numberOfLines={1}>
           {cuando}
         </Text>
       </View>

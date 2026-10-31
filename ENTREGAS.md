@@ -21,6 +21,15 @@ No es entrega de APK/OTA ni despliegue de servicios.
 
 # Entregas de Fino
 
+## 30/10/2026 — espaciado de Negocio y superficies oscuras coherentes (desarrollo)
+
+Marca `30oct-negocio-espaciado-y-superficies-neutras`. Se arregla el espacio
+entre controles de paneles de Negocio; se neutralizan tarjetas y bordes oscuros
+de creación/listas de Familia y Cajas y se aclara el aviso de pago vencido.
+Verificado en el emulador habitual, sin guardar ni alterar datos. TypeScript,
+ESLint, 287 pruebas y 8 auditores aprobados. Es un cambio visual de desarrollo,
+no requiere APK ni publicación.
+
 ## 30/10/2026 — fondo carbón cálido (desarrollo)
 
 Marca `30oct-carbon-calido`. Fondo `#11110F`, barra inferior `#1A1916` y

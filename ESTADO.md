@@ -1,3 +1,26 @@
+# Negocio con más espacio y superficies oscuras coherentes — 30/10/2026 — desarrollo
+
+Marca `30oct-negocio-espaciado-y-superficies-neutras`. Se corrigió la causa del
+panel apretado en Negocio: sus controles estaban agrupados dentro de una sola
+vista, por lo que el espacio del panel no se aplicaba entre ellos. Ahora tienen
+separación visible y uniforme en registrar, filtros, Mis negocios, categorías y
+formularios. Sin cambios en cálculos ni guardados.
+
+En modo oscuro, los formularios y tarjetas de Familia/Cajas usan bordes y
+superficies carbón neutrales, para verse iguales entre ambos espacios; se
+conserva el verde para acciones principales e indicadores. El aviso de pago
+vencido del calendario usa texto claro en oscuro para que se lea sobre su
+indicador de urgencia.
+
+Actualización solo visual; no modifica datos ni almacenamiento. Verificado en
+emulador habitual: paneles Filtros, Mis negocios y formularios de Negocio con
+separación legible; tarjetas oscuras de Familia/Cajas con superficie neutral; y
+aviso vencido del calendario con texto claro. Solo navegación y apertura/cierre
+de paneles: sin guardar, crear ni alterar movimientos o saldos. `npx tsc --noEmit`,
+ESLint y `node pruebas/correr.mjs`: correctos, 287 pruebas y 8 auditores.
+Qué sigue/falta: no queda trabajo pendiente para este ajuste visual. No requiere
+APK ni publicación; para verlo, abrir Negocio en el emulador habitual.
+
 # Fondo carbón cálido para toda la app — 30/10/2026 — desarrollo
 
 Marca `30oct-carbon-calido`. Fondo general `#11110F` y barra inferior

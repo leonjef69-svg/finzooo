@@ -239,6 +239,6 @@ export default function BusinessWorkspace({negocioId,onBack,soloLectura=false,in
         <MovementDivider/>
       </View>;
     }}/>
-    {panel?<BusinessSheet title={sheetTitle()} onClose={close} onBack={panels.length>1?back:undefined} backLabel={copy("back")} closeLabel={copy("close")}><View pointerEvents={saving?"none":"auto"}>{sheetBody()}</View>{saving?<Text accessibilityLiveRegion="polite" className="text-sm text-slate-600 dark:text-slate-300">{app.t("common.saving")}</Text>:null}{error?<Text accessibilityRole="alert" className="text-sm font-semibold text-rose-700 dark:text-rose-300">{error}</Text>:null}</BusinessSheet>:null}
+    {panel?<BusinessSheet title={sheetTitle()} onClose={close} onBack={panels.length>1?back:undefined} backLabel={copy("back")} closeLabel={copy("close")}><View pointerEvents={saving?"none":"auto"} className="gap-3">{sheetBody()}</View>{saving?<Text accessibilityLiveRegion="polite" className="text-sm text-slate-600 dark:text-slate-300">{app.t("common.saving")}</Text>:null}{error?<Text accessibilityRole="alert" className="text-sm font-semibold text-rose-700 dark:text-rose-300">{error}</Text>:null}</BusinessSheet>:null}
   </View>;
 }
