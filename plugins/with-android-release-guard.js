@@ -1,7 +1,13 @@
-const { withAndroidManifest, withAppBuildGradle } = require("expo/config-plugins");
+const { withAndroidManifest, withAppBuildGradle, withGradleProperties } = require("expo/config-plugins");
 
 const BEGIN = "// FINO_RELEASE_SIGNING_BEGIN";
 const END = "// FINO_RELEASE_SIGNING_END";
+const BUNDLE_EXCLUDES_BEGIN = "// FINO_RELEASE_BUNDLE_EXCLUDES_BEGIN";
+const BUNDLE_EXCLUDES_END = "// FINO_RELEASE_BUNDLE_EXCLUDES_END";
+const RELEASE_PROPERTIES = [
+  ["android.enableMinifyInReleaseBuilds", "true"],
+  ["android.enableShrinkResourcesInReleaseBuilds", "true"],
+];
 // Se guardan nombres de variables, nunca valores privados ni una clave en Git.
 const SIGNING = String.raw`
 ${BEGIN}
@@ -53,6 +59,39 @@ function configureReleaseSigningGradle(contents) {
   return contents.trimEnd() + "\n" + SIGNING.trim() + "\n";
 }
 
+function configureReleaseGradleProperties(properties) {
+  if (!Array.isArray(properties)) throw new Error("No se reconocen las propiedades Gradle Android.");
+  for (const [key, value] of RELEASE_PROPERTIES) {
+    const matches = properties.filter(item => item.type === "property" && item.key === key);
+    if (matches.length > 1) throw new Error(`Propiedad Gradle duplicada: ${key}`);
+    if (matches.length === 1) matches[0].value = value;
+    else properties.push({ type: "property", key, value });
+  }
+  return properties;
+}
+
+function configureReleaseBundleSources(contents) {
+  if (typeof contents !== "string" || !/android\s*\{/.test(contents)) {
+    throw new Error("No se reconoce el build.gradle Android; revisar la exclusión temporal antes de compilar.");
+  }
+  const first = contents.indexOf(BUNDLE_EXCLUDES_BEGIN);
+  if (first !== -1) {
+    const last = contents.indexOf(BUNDLE_EXCLUDES_END, first);
+    if (last === -1 || contents.indexOf(BUNDLE_EXCLUDES_BEGIN, first + BUNDLE_EXCLUDES_BEGIN.length) !== -1) {
+      throw new Error("Exclusión de carpetas temporales incompleta o duplicada.");
+    }
+    contents = contents.slice(0, first) + contents.slice(last + BUNDLE_EXCLUDES_END.length);
+  } else if (contents.includes(BUNDLE_EXCLUDES_END)) {
+    throw new Error("Exclusión de carpetas temporales incompleta.");
+  }
+  contents = contents.replace(
+    /getDefaultProguardFile\(["']proguard-android\.txt["']\)/g,
+    'getDefaultProguardFile("proguard-android-optimize.txt")',
+  );
+  const rules = `${BUNDLE_EXCLUDES_BEGIN}\ntasks.withType(com.facebook.react.tasks.BundleHermesCTask).configureEach {\n    sources.exclude(".tmp/**", "**/.tmp/**")\n}\n${BUNDLE_EXCLUDES_END}`;
+  return contents.trimEnd() + "\n" + rules + "\n";
+}
+
 function configurePrivateAndroidComponents(manifest) {
   manifest.manifest.$ ??= {};
   manifest.manifest.$["xmlns:tools"] = "http://schemas.android.com/tools";
@@ -82,13 +121,22 @@ function withAndroidReleaseGuard(config) {
     result.modResults = configurePrivateAndroidComponents(result.modResults);
     return result;
   });
-  return withAppBuildGradle(config, result => {
+  config = withAppBuildGradle(config, result => {
     if (result.modResults.language !== "groovy") throw new Error("Firma Android: lenguaje no compatible; revisar antes de publicar.");
-    result.modResults.contents = configureReleaseSigningGradle(result.modResults.contents);
+    result.modResults.contents = configureReleaseBundleSources(
+      configureReleaseSigningGradle(result.modResults.contents),
+    );
     return result;
   });
+  config = withGradleProperties(config, result => {
+    result.modResults = configureReleaseGradleProperties(result.modResults);
+    return result;
+  });
+  return config;
 }
 
 module.exports = withAndroidReleaseGuard;
 module.exports.configureReleaseSigningGradle = configureReleaseSigningGradle;
+module.exports.configureReleaseGradleProperties = configureReleaseGradleProperties;
+module.exports.configureReleaseBundleSources = configureReleaseBundleSources;
 module.exports.configurePrivateAndroidComponents = configurePrivateAndroidComponents;

@@ -8,6 +8,11 @@ const baseline = process.env.FINO_TEST_RELEASE_POLICY_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 const app = JSON.parse(read("app.json")).expo;
+const packageLock = JSON.parse(read("package-lock.json"));
+assert.equal(app.version, "1.0.9", "El AAB nuevo debe mostrar una versión distinta en Play");
+assert.equal(app.android.versionCode, 11, "Cada AAB de Play necesita un código mayor que el anterior");
+assert.equal(packageLock.version, app.version, "package-lock debe coincidir con la versión comercial");
+assert.equal(packageLock.packages[""].version, app.version, "La raíz de package-lock debe coincidir con la versión comercial");
 assert.ok(app.plugins.includes("./plugins/with-android-release-guard"), "La configuración reconstruida debe conservar firma y componentes privados");
 const require = createRequire(import.meta.url), module = { exports: {} };
 vm.runInNewContext(read("plugins/with-android-release-guard.js"), { module, exports: module.exports, require });
@@ -33,6 +38,22 @@ const previousConfiguration = template + "\nandroid { signingConfigs { release {
 const existing = plugin.configureReleaseSigningGradle(previousConfiguration);
 assert.equal(plugin.configureReleaseSigningGradle(existing), existing);
 assert.ok(existing.includes(previousConfiguration.trimEnd()));
+
+const optimized = plugin.configureReleaseBundleSources(signed);
+assert.equal(plugin.configureReleaseBundleSources(optimized), optimized, "Prebuild repetido no duplica exclusiones");
+assert.match(optimized, /proguard-android-optimize\.txt/, "La plantilla SDK 54 debe conservar reglas optimizadas R8");
+assert.match(optimized, /sources\.exclude\("\.tmp\/\*\*", "\*\*\/.tmp\/\*\*"\)/, "La compilación no inspecciona temporales locales ajenos a la app");
+assert.throws(() => plugin.configureReleaseBundleSources("plugins {}"), /No se reconoce/);
+assert.throws(() => plugin.configureReleaseBundleSources(optimized + "\n// FINO_RELEASE_BUNDLE_EXCLUDES_BEGIN"), /duplicada/);
+
+const gradleProperties = [{ type: "comment", value: "# Mantener comentarios previos" }, { type: "property", key: "android.enableMinifyInReleaseBuilds", value: "false" }];
+plugin.configureReleaseGradleProperties(gradleProperties);
+assert.equal(JSON.stringify(gradleProperties.filter(item => item.type === "property")), JSON.stringify([
+  { type: "property", key: "android.enableMinifyInReleaseBuilds", value: "true" },
+  { type: "property", key: "android.enableShrinkResourcesInReleaseBuilds", value: "true" },
+]));
+assert.equal(plugin.configureReleaseGradleProperties(gradleProperties), gradleProperties, "Prebuild repetido no duplica propiedades R8");
+assert.throws(() => plugin.configureReleaseGradleProperties([{ type: "property", key: "android.enableMinifyInReleaseBuilds", value: "false" }, { type: "property", key: "android.enableMinifyInReleaseBuilds", value: "false" }]), /duplicada/);
 
 const manifest = { manifest: { $: { "xmlns:android": "http://schemas.android.com/apk/res/android" }, application: [{
   $: { "android:allowBackup": "false" },
@@ -60,11 +81,15 @@ assert.throws(() => plugin.configurePrivateAndroidComponents({ manifest: {} }), 
 const configured = plugin({});
 const request = { projectRoot: process.cwd(), platform: "android" };
 const result = await configured.mods.android.appBuildGradle({ ...configured, modRequest: { ...request, modName: "appBuildGradle" }, modResults: { language: "groovy", contents: template } });
-assert.equal(result.modResults.contents, signed);
+assert.equal(result.modResults.contents, optimized);
 await assert.rejects(configured.mods.android.appBuildGradle({ ...configured, modRequest: request, modResults: { language: "kotlin", contents: template } }), /lenguaje no compatible/);
+const propertiesResult = await configured.mods.android.gradleProperties({ ...configured, modRequest: { ...request, modName: "gradleProperties" }, modResults: [] });
+assert.equal(JSON.stringify(propertiesResult.modResults.filter(item => item.type === "property")), JSON.stringify(gradleProperties.filter(item => item.type === "property")));
 const manifestResult = await configured.mods.android.manifest({ ...configured, modRequest: { ...request, modName: "manifest" }, modResults: structuredClone(manifest) });
 assert.equal(JSON.stringify(manifestResult.modResults), once);
 const clipboardPaths = fs.readFileSync("node_modules/expo-clipboard/android/src/main/res/xml/clipboard_provider_paths.xml", "utf8");
 assert.match(clipboardPaths, /<cache-path name="clipboard_files" path="\.clipboard\/"/);
 assert.ok(!clipboardPaths.includes("root-path"));
-console.log("Release: plugin original y mods Expo sobre plantilla SDK real; firma reproducible/idempotente sin secretos, componentes limitados y arranque/recorte/proveedor conservados. Gradle/Android final se verifican aparte.");
+const buildScript = fs.readFileSync("generar-aab.bat", "utf8");
+assert.match(buildScript, /GRADLE_USER_HOME=.*\.gradle-cache/i, "La entrega reutiliza la caché Gradle local si está instalada");
+console.log("Release: versión Play, plugin Expo 54 y propiedades R8 idempotentes; exclusión de temporales y caché local; firma sin secretos y componentes Android conservados.");

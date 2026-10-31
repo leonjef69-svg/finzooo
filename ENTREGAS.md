@@ -21,6 +21,21 @@ No es entrega de APK/OTA ni despliegue de servicios.
 
 # Entregas de Fino
 
+## 30/10/2026 — candidato Google Play 1.0.9 / código 11 (pendiente)
+
+Preparación para corregir la advertencia DEX de Play: R8 y reducción de recursos
+activados de forma permanente desde el plugin Expo, con reglas optimizadas. El
+paquete JavaScript de entrega se generó (3,868 módulos) y el ajuste nativo quedó
+verificado tras `expo prebuild`. Se corrigió también el uso de la caché Gradle
+local y se evitó escanear temporales privados.
+
+La compilación Android no terminó: Windows denegó acceso a
+`Android SDK/build-tools/36.0.0/core-lambda-stubs.jar`; no hay claves de firma
+disponibles en esta sesión. **No existe AAB para subir**, no se tocó Google Play
+ni los datos de la cuenta. La alerta DEX sigue sin confirmación de resolución.
+Sigue/falta: compilar con acceso al SDK y firma local, verificar el porcentaje
+DEX en Play y probar la versión antes de publicar en prueba abierta.
+
 ## 30/10/2026 — espaciado de Negocio y superficies oscuras coherentes (desarrollo)
 
 Marca `30oct-negocio-espaciado-y-superficies-neutras`. Se arregla el espacio

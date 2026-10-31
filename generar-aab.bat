@@ -6,6 +6,7 @@ set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
 set "ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk"
 set "ANDROID_SDK_ROOT=%ANDROID_HOME%"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
+if exist "%~dp0.gradle-cache\wrapper\dists\gradle-8.14.3-bin" set "GRADLE_USER_HOME=%~dp0.gradle-cache"
 
 if not exist "%JAVA_HOME%\bin\java.exe" (
   echo ERROR: No se encontro Java de Android Studio.

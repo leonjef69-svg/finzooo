@@ -1,3 +1,30 @@
+# Candidato Google Play 1.0.9 / código 11 — 30/10/2026 — pendiente
+
+La captura de Play corresponde a la versión publicada 10 (1.0.8): compatibilidad
+con páginas de memoria de 16 KB aprobada; DEX sin optimizar (51.8 MB, 1 % de
+ofuscación). Google anuncia desde febrero de 2027 un mínimo de 25 % en
+ofuscación, optimización y reducción para apps con más de 10 MB DEX. La alerta
+no se da por resuelta hasta analizar un AAB nuevo en Play.
+
+Se preparó la versión candidata 1.0.9 / código 11. El plugin Expo permanente
+activa R8 y reducción de recursos en entregas, aplica reglas ProGuard optimizadas
+y excluye `.tmp` local del escaneo de fuentes; el generador reutiliza la caché
+Gradle ya instalada. `expo prebuild` regeneró Android y se verificaron ahí los
+ajustes. El paquete JavaScript de entrega se generó correctamente (3,868 módulos),
+sin leer ni modificar los archivos de `.tmp`.
+
+**Aún no hay AAB.** La compilación de R8 se detuvo al leer
+`Android SDK/build-tools/36.0.0/core-lambda-stubs.jar` por acceso denegado de
+Windows. Kotlin también informó que no podía usar su archivo temporal, aunque
+continuó con la alternativa integrada. Las claves de firma no están disponibles
+en las variables de esta sesión; no se intentó firmar con claves falsas ni se
+subió nada a Google Play. No se modificaron datos de la app.
+
+**Sigue/falta:** completar la compilación en una sesión con lectura del Android
+SDK y las claves de firma configuradas localmente; luego inspeccionar el AAB y
+su porcentaje DEX en Play, y probar el arranque de esa versión antes de subirla
+a la prueba abierta. No actualizar Play Store todavía.
+
 # Negocio con más espacio y superficies oscuras coherentes — 30/10/2026 — desarrollo
 
 Marca `30oct-negocio-espaciado-y-superficies-neutras`. Se corrigió la causa del

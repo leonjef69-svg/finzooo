@@ -14,7 +14,7 @@ import * as textRecognizer from "@/modules/text-recognizer";
 import * as notificationReader from "@/modules/notification-reader";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 
-const APP_VERSION = Constants.expoConfig?.version ?? "1.0.8";
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.9";
 
 /**
  * Marca de la versión del CÓDIGO, no de la app.
@@ -28,7 +28,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? "1.0.8";
  * La versión comercial no sirve para distinguir dos ajustes de la misma entrega.
  * Esta sí.
  */
-const CODE_MARKER = "30oct-negocio-espaciado-y-superficies-neutras";
+const CODE_MARKER = "30oct-play-abierta-r8-1.0.9";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();
