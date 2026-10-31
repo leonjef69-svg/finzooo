@@ -21,6 +21,14 @@ No es entrega de APK/OTA ni despliegue de servicios.
 
 # Entregas de Fino
 
+## 30/10/2026 — fondo carbón cálido (desarrollo)
+
+Marca `30oct-carbon-calido`. Fondo `#11110F`, barra inferior `#1A1916` y
+tarjetas elevadas `#242321`; Personal, Familia, Cajas y demás pantallas. Solo
+presentación, conserva datos y modo claro. Emulador habitual confirmado en los
+tres espacios. TypeScript/ESLint y 285 pruebas/ocho auditores aprobados (tarjetas
+excluidas). No requiere APK; no es OTA ni publicación.
+
 ## 25/10/2026 — elegir tipo por fila al importar (desarrollo)
 
 Marca `25oct-importacion-tipo-por-movimiento`, base `dfbc4a97`. Ingreso/Gasto

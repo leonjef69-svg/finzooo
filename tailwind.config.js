@@ -41,14 +41,14 @@ module.exports = {
         emerald: dynamicScale("emerald"),
         rose: dynamicScale("rose"),
         /*
-         * EL MODO OSCURO: fondo negro, tarjetas carbón y controles más claros. El borde mantiene
+         * EL MODO OSCURO: fondo carbón cálido, tarjetas carbón y controles más claros. El borde mantiene
          * separación entre filas sin teñir los neutros de azul.
          *
          * Los ingresos y gastos usan verde y rojo; los demás elementos conservan neutros.
          */
         noche: {
           // El fondo de la pantalla.
-          DEFAULT: "#000000",
+          DEFAULT: "#11110f",
           // Las tarjetas y las filas. UN TONO MAS CLARO QUE EL FONDO: esa es toda la idea.
           2: "#242321",
           // Lo que va encima de una tarjeta: un campo, un boton apagado.
@@ -56,6 +56,7 @@ module.exports = {
           panel: "#211f1d",
           // Las lineas. Mas claras que las tarjetas o no se ven.
           borde: "#494641",
+          navegacion: "#1a1916",
         },
       },
     },

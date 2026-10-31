@@ -25,6 +25,7 @@ import {
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { useAppData } from "@/contexts/AppDataContext";
+import { NOCHE } from "@/constants/style";
 import { anunciosActivos } from "@/constants/anuncios";
 import { AHORRO_PRO_ANUAL, PRECIOS } from "@/constants/precios";
 import { comprarPlan, comprasDisponibles, restaurarCompra, type PlanDeCompra } from "@/utils/compras";
@@ -162,7 +163,7 @@ export default function Premium({
     );
   }
 
-  const fondo = dark ? "#000000" : "#f7f5ee";
+  const fondo = dark ? NOCHE.fondo : "#f7f5ee";
   const textoBoton = dark ? "#142018" : "#ffffff";
 
   return (

@@ -1,7 +1,18 @@
+# Fondo carbón cálido para toda la app — 30/10/2026 — desarrollo
+
+Marca `30oct-carbon-calido`. Fondo general `#11110F` y barra inferior
+`#1A1916`, con tarjetas `#242321` y controles `#302E2B`. Personal, Familia,
+Cajas y el resto de la app usan la misma paleta. El modo claro queda igual.
+Actualización solo visual: no toca datos ni añade almacenamiento. Emulador
+habitual recargado por Metro y confirmado visualmente en Personal, Familia y
+Cajas; misma cuenta, sin crear ni guardar movimientos. TypeScript, ESLint,
+285 pruebas y ocho auditores aprobados (tarjetas excluidas). No requiere APK;
+no es publicación de app ni OTA.
+
 # Apariencia oscura mate completa — 30/10/2026 — desarrollo
 
-Marca `30oct-oscuro-mate-completo`. Fondo negro, superficies carbón cálido
-`#242321`, controles `#302e2b`, paneles `#211f1d`, texto marfil y secundarios
+Marca `30oct-oscuro-mate-completo` (base anterior al fondo carbón cálido).
+Fondo negro, superficies carbón cálido `#242321`, controles `#302e2b`, paneles `#211f1d`, texto marfil y secundarios
 legibles. Una paleta oscura compartida por Clásico y Melocotón/oliva; las paletas
 claras conservan sus valores. Se extiende a formularios, menús, selectores,
 acceso/configuración inicial, idioma/moneda, bloqueo, exportación/importación,

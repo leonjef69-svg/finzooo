@@ -91,6 +91,13 @@ console.log("\n--- EL COLOR DEL MODO OSCURO SALE DE UN SOLO SITIO ---");
     }
   }
 
+  const barraEstilo = /navegacion:\s*"(#[0-9a-fA-F]{6})"/.exec(estilo);
+  const barraTw = /navegacion:\s*"(#[0-9a-fA-F]{6})"/.exec(tw);
+  ok(barraEstilo && barraTw, "la barra inferior tiene un tono propio del carbón cálido");
+  if (barraEstilo && barraTw) {
+    ok(barraEstilo[1].toLowerCase() === barraTw[1].toLowerCase(), "la barra inferior coincide en TypeScript y Tailwind");
+  }
+
   // La tarjeta TIENE que ser mas clara que el fondo: es la razon entera del cambio.
   if (deTw) {
     const claro = (h) => parseInt(h.slice(1), 16);

@@ -12,7 +12,7 @@ const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.Sc
 const component = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "SharedBoxesForAccount");
 const renderCode = component.body.statements.findLast(ts.isReturnStatement).expression.getText(tree);
 const React = { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
-const ui = Object.fromEntries(["View", "Text", "ScrollView", "TouchableOpacity", "TextInput", "BackButton", "SpaceSwitcher", "ActivityIndicator", "LegalAcceptancePanel", "MovementAllButton", "SpaceOverviewTotals", "SpaceMovementSheet", "SpaceInvitationSheet", "SpaceMembersSheet", "SpacePaymentMethod", "ArrowLeftRight", "UsersRound", "UserPlus", "Pencil", "Plus", "X", "Check", "RefreshCw", "ListChecks", "ArrowUp", "ArrowDown", "Trash2", "LogOut", "ArrowRightLeft", "ContentReportButton", "SpaceTransferAmounts", "MovementDateHeader"].map(name => [name, name]));
+const ui = Object.fromEntries(["View", "Text", "ScrollView", "TouchableOpacity", "TextInput", "BackButton", "SpaceSwitcher", "ActivityIndicator", "LegalAcceptancePanel", "MovementAllButton", "SpaceOverviewTotals", "SpaceMovementSheet", "SpaceInvitationSheet", "SpaceMembersSheet", "SpacePaymentMethod", "ArrowLeftRight", "UsersRound", "UserPlus", "Pencil", "Plus", "X", "Check", "RefreshCw", "ListChecks", "ArrowUp", "ArrowDown", "Trash2", "LogOut", "ArrowRightLeft", "ContentReportButton", "SpaceTransferAmounts", "MovementDateHeader", "MovementDivider"].map(name => [name, name]));
 const source = ts.transpileModule(`globalThis.render=()=>(${renderCode});`, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React,
 } }).outputText;

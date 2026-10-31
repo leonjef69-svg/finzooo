@@ -24,7 +24,7 @@ export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
   const accentColor = isDark ? NOCHE.texto : accentForVisualStyle(visualStyle);
-  const surfaceColor = isDark ? NOCHE.panel : visualStyle === "peachOlive" ? "#fff8ef" : "#ffffff";
+  const surfaceColor = isDark ? NOCHE.navegacion : visualStyle === "peachOlive" ? "#fff8ef" : "#ffffff";
   const insets = useSafeAreaInsets();
   return (
     <Tabs
