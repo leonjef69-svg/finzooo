@@ -893,12 +893,12 @@ export default function Home({
         <Animated.View layout={LinearTransition.duration(240)} className="px-5 mt-3 gap-2.5">
           {showPreviousBalanceCard ? <Animated.View entering={FadeInDown.duration(220)} exiting={FadeOutUp.duration(180)} style={{ width: "100%" }}>
             <PressableScale
-              className="bg-teal-50 dark:bg-teal-950/30 rounded-2xl px-3 py-1.5 border-[1.5px] border-teal-300 dark:border-teal-800 justify-center"
+              className="bg-teal-50 dark:bg-noche-2 rounded-2xl px-3 py-1.5 border-[1.5px] border-teal-300 dark:border-noche-borde justify-center"
               style={[softShadow, { minHeight: 58 }]}
             >
               <View className="flex-row items-center gap-2 mb-0">
                 <Text className="text-base">🕒</Text>
-                <Text className="flex-1 text-sm text-teal-800 dark:text-teal-200 font-bold" numberOfLines={2}>
+                <Text className="flex-1 text-sm text-teal-800 dark:text-slate-100 font-bold" numberOfLines={2}>
                   {t("home.previousBalance")}
                 </Text>
                 {carryoverActive ? (
@@ -907,9 +907,9 @@ export default function Home({
                     accessibilityRole="button"
                     accessibilityLabel={t("home.restoreCarryoverConfirm")}
                     hitSlop={6}
-                    className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 items-center justify-center border-[1.5px] border-emerald-400 dark:border-emerald-600"
+                    className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-noche-3 items-center justify-center border-[1.5px] border-emerald-400 dark:border-noche-borde"
                   >
-                    <RotateCcw size={18} strokeWidth={2.5} color="#047857" />
+                    <RotateCcw size={18} strokeWidth={2.5} color={colorScheme === "dark" ? "#d4d4d4" : "#047857"} />
                   </TouchableOpacity>
                 ) : prevBalance !== 0 ? (
                   <TouchableOpacity

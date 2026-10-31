@@ -82,7 +82,7 @@ export default function DonutChart({ data, formatValue, totalLabel, width = 340 
         style={{ position: "absolute", left: centerX - centerWidth / 2, top: centerY - Math.min(38, radius - 12), width: centerWidth, height: Math.min(76, (radius - 12) * 2), alignItems: "center", justifyContent: "center", gap: 4 }}>
         {!compactCenter ? <Text className="text-slate-500 dark:text-slate-300" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.3}
           style={{ fontFamily: ENTRY_FONT.medium, fontSize: 12, lineHeight: 16, textAlign: "center" }}>{centerLabel}</Text> : null}
-        <Text className="text-slate-900 dark:text-slate-100" style={{ fontFamily: ENTRY_FONT.bold, fontSize: compactCenter ? 15 : 22, color: selectedItem?.color }}>{selectedPercentage}</Text>
+        <Text className="text-slate-900 dark:text-slate-100" style={{ fontFamily: ENTRY_FONT.bold, fontSize: compactCenter ? 15 : 22, ...(selectedItem ? { color: selectedItem.color } : {}) }}>{selectedPercentage}</Text>
       </View>
 
       {items.map((item, index) => {
